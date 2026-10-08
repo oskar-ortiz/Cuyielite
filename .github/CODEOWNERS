@@ -1,0 +1,7 @@
+# Solicita revisión automática en cada PR (no bloquea el merge en plan gratuito).
+/backend/ @oskar-ortiz @DieryValencia
+/client/  @oskar-ortiz @DieryValencia
+/ml/      @DieryValencia @oskar-ortiz
+/rag/     @DieryValencia @oskar-ortiz
+/db/      @DieryValencia @oskar-ortiz
+/docs/    @oskar-ortiz @DieryValencia

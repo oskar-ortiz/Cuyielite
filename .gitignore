@@ -1,0 +1,30 @@
+# Secretos y entorno
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Node / Ionic
+node_modules/
+dist/
+www/
+android/app/build/
+.gradle/
+
+# Modelos y datos (no subir)
+*.pkl
+*.joblib
+db/seeds/real_*
+*.dump
+
+# Editor / SO / logs
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log

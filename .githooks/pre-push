@@ -1,0 +1,14 @@
+#!/bin/sh
+# Bloquea el push directo a main. main solo se toca por acuerdo de ambos integrantes.
+# Para hacerlo a propósito:  ALLOW_MAIN=1 git push origin main
+while read local_ref local_sha remote_ref remote_sha; do
+  if [ "$remote_ref" = "refs/heads/main" ] && [ "$ALLOW_MAIN" != "1" ]; then
+    echo ""
+    echo "BLOQUEADO: push directo a main."
+    echo "Trabaja en dev (o en una rama feat/*) y abre un Pull Request."
+    echo "Si el equipo ya lo acordó: ALLOW_MAIN=1 git push origin main"
+    echo ""
+    exit 1
+  fi
+done
+exit 0

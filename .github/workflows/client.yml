@@ -1,0 +1,21 @@
+name: client
+on:
+  pull_request:
+    branches: [dev, main]
+    paths: ["client/**", ".github/workflows/client.yml"]
+jobs:
+  build:
+    # Se activa cuando exista client/package.json (después de crear el proyecto Ionic).
+    if: ${{ hashFiles('client/package.json') != '' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+      - run: npm run lint --if-present
+      - run: npm run build
