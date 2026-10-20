@@ -5,7 +5,7 @@
 |---|---|
 | `main` | Versión estable. **No se toca** salvo que ambos integrantes lo hayan acordado (release o entrega). |
 | `dev` | Rama de integración y rama por defecto. Aquí llega todo el trabajo. |
-| `feat/*`, `fix/*`, `docs/*` | Ramas cortas, una por historia de usuario. |
+| `feat/*`, `fix/*`, `docs/*`, `chore/*` | Ramas cortas, una por historia de usuario o tarea (chore para configuración, CI y mantenimiento). |
 
 ## Flujo diario
 1. `git switch dev && git pull`
@@ -13,6 +13,9 @@
 3. Commits pequeños y claros, por ejemplo: `feat(sync): agrega push de delta`.
 4. Subir la rama y abrir un Pull Request **hacia `dev`**.
 5. El otro integrante revisa y aprueba; después se hace merge y se borra la rama.
+
+## Commits
+Formato: `tipo(ámbito): descripción`. Tipos habituales: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`.
 
 ## Pasar a `main`
 Solo con acuerdo de ambos: PR de `dev` a `main`, con pruebas en verde y, si aplica, un tag de versión.
