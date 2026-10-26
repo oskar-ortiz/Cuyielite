@@ -203,6 +203,8 @@ C4Component
 
 Modelo relacional aplicable tanto a la instancia central de PostgreSQL como a la instancia local de PostgreSQL (cliente), dado que ambas capas comparten el mismo motor de base de datos tras la actualización de stack descrita en el numeral 0, lo cual simplifica la consistencia estructural entre ambas capas de persistencia frente al esquema dual anterior (PostgreSQL/SQLite).
 
+En `EMBEDDINGS_SENA`, el campo `embedding` usa `VECTOR(384)`, según el ADR 0002.
+
 ```mermaid
 erDiagram
     GALPONES ||--o{ POZAS : contiene
@@ -398,12 +400,12 @@ CREATE TABLE alertas (
     deleted_at TIMESTAMPTZ
 );
 
--- Tabla de embeddings para el motor RAG (dimensión ejemplo: 1536)
+-- Tabla de embeddings para el motor RAG (dimensión derivada del modelo local: 384; ADR 0002)
 CREATE TABLE embeddings_sena (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     documento_fuente VARCHAR(255) NOT NULL,
     contenido_chunk TEXT NOT NULL,
-    embedding VECTOR(1536) NOT NULL,
+    embedding VECTOR(384) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -525,6 +527,8 @@ flowchart TD
 ---
 
 ## 9. Diagrama de Arquitectura — Motor RAG (Embeddings + pgvector + LLM)
+
+La generación local de embeddings utiliza `intfloat/multilingual-e5-small` o `BAAI/bge-small-es-v1.5` (384 dimensiones); la dimensión `VECTOR(384)` y su validación se registran en el ADR 0002.
 
 ```mermaid
 flowchart LR
