@@ -22,7 +22,7 @@ jobs:
       - uses: actions/setup-node@v4
         if: steps.check.outputs.exists == 'true'
         with:
-          node-version: "20"
+          node-version: "24"
       - run: npm ci
         if: steps.check.outputs.exists == 'true'
       - run: npm run lint --if-present
