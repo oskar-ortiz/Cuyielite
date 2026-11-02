@@ -1,3 +1,12 @@
-def test_smoke():
-    # Prueba de ejemplo para que la CI funcione desde el primer día.
-    assert True
+"""Prueba de humo del endpoint de salud."""
+
+from fastapi.testclient import TestClient
+
+from backend.app.main import app
+
+
+def test_health():
+    response = TestClient(app).get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
