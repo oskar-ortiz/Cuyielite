@@ -16,7 +16,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import type { Galpon, Poza } from '../data/galpones.repository';
-import { getElectronRepository } from '../data/galpones.repository.electron';
+import { getGalponesRepository } from '../data/galpones.repository.factory';
 import './galpones.css';
 
 const GalponDetalle: React.FC = () => {
@@ -30,7 +30,7 @@ const GalponDetalle: React.FC = () => {
   useEffect(() => {
     if (!id) return;
     let active = true;
-    const repo = getElectronRepository();
+    const repo = getGalponesRepository();
     Promise.all([repo.listGalpones(), repo.listPozasByGalpon(id)])
       .then(([galpones, pozasData]) => {
         if (!active) return;

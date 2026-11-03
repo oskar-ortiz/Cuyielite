@@ -9,8 +9,8 @@ const { listGalpones, listPozasByGalpon } = vi.hoisted(() => ({
   listPozasByGalpon: vi.fn(),
 }));
 
-vi.mock('../data/galpones.repository.electron', () => ({
-  getElectronRepository: () => ({ listGalpones, listPozasByGalpon }),
+vi.mock('../data/galpones.repository.factory', () => ({
+  getGalponesRepository: () => ({ listGalpones, listPozasByGalpon }),
 }));
 
 const renderDetalle = (ruta: string) =>

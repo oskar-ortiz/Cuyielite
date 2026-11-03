@@ -12,7 +12,7 @@ import {
 import { useEffect, useState } from 'react';
 
 import type { Galpon } from '../data/galpones.repository';
-import { getElectronRepository } from '../data/galpones.repository.electron';
+import { getGalponesRepository } from '../data/galpones.repository.factory';
 import './galpones.css';
 
 const Galpones: React.FC = () => {
@@ -22,7 +22,7 @@ const Galpones: React.FC = () => {
 
   useEffect(() => {
     let active = true;
-    getElectronRepository()
+    getGalponesRepository()
       .listGalpones()
       .then((data) => {
         if (active) setGalpones(data);
