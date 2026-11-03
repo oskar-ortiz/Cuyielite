@@ -1,13 +1,42 @@
-import { registerPlugin } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
+import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { IonBackButton, IonButtons, IonContent, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/react';
 import React, { useState } from 'react';
 
-interface SqlitePocPlugin {
+interface WindowsPlugin {
   saveValue(options: { value: string }): Promise<{ ok: boolean }>;
   readValue(): Promise<{ value: string | null }>;
 }
 
-const SqlitePocPlugin = registerPlugin<SqlitePocPlugin>('SqlitePoc');
+const WindowsPlugin = registerPlugin<WindowsPlugin>('SqlitePoc');
+
+const sqlite = new SQLiteConnection(CapacitorSQLite);
+
+async function androidSave(value: string): Promise<boolean> {
+  const db: SQLiteDBConnection = await sqlite.createConnection('poc', false, 'no-encryption', 1, false);
+  await db.open();
+  await db.execute('CREATE TABLE IF NOT EXISTS poc (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
+  await db.run('INSERT INTO poc (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value', [
+    'poc',
+    value,
+  ]);
+  await db.close();
+  await sqlite.closeConnection('poc', false);
+  return true;
+}
+
+async function androidRead(): Promise<string | null> {
+  const db: SQLiteDBConnection = await sqlite.createConnection('poc', false, 'no-encryption', 1, false);
+  await db.open();
+  await db.execute('CREATE TABLE IF NOT EXISTS poc (key TEXT PRIMARY KEY, value TEXT NOT NULL)');
+  const res = await db.query('SELECT value FROM poc WHERE key = ?', ['poc']);
+  await db.close();
+  await sqlite.closeConnection('poc', false);
+  const rows = res.values ?? [];
+  return rows.length ? (rows[0].value as string) : null;
+}
+
+const isAndroid = Capacitor.getPlatform() === 'android';
 
 const SqlitePoc: React.FC = () => {
   const [saved, setSaved] = useState<string | null>(null);
@@ -19,8 +48,14 @@ const SqlitePoc: React.FC = () => {
   const save = async () => {
     const value = generateValue();
     try {
-      const r = await SqlitePocPlugin.saveValue({ value });
-      if (r.ok) {
+      let ok = false;
+      if (isAndroid) {
+        ok = await androidSave(value);
+      } else {
+        const r = await WindowsPlugin.saveValue({ value });
+        ok = r.ok;
+      }
+      if (ok) {
         setSaved(value);
         setStatus('guardado');
       } else {
@@ -33,8 +68,14 @@ const SqlitePoc: React.FC = () => {
 
   const load = async () => {
     try {
-      const r = await SqlitePocPlugin.readValue();
-      setRead(r.value);
+      let value: string | null = null;
+      if (isAndroid) {
+        value = await androidRead();
+      } else {
+        const r = await WindowsPlugin.readValue();
+        value = r.value;
+      }
+      setRead(value);
       setStatus('leído');
     } catch (e) {
       setStatus('error: ' + String(e));
