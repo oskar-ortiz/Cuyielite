@@ -1,5 +1,6 @@
 import {
   IonBackButton,
+  IonButton,
   IonButtons,
   IonChip,
   IonContent,
@@ -11,8 +12,9 @@ import {
   IonRouterLink,
   IonTitle,
   IonToolbar,
+  useIonViewWillEnter,
 } from '@ionic/react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import type { Galpon, Poza } from '../data/galpones.repository';
@@ -27,14 +29,25 @@ const GalponDetalle: React.FC = () => {
   const [notFound, setNotFound] = useState<boolean>(!id);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!id) return;
-    let active = true;
+  const requestIdRef = useRef(0);
+  const load = useCallback(() => {
+    if (!id) {
+      setNotFound(true);
+      setLoading(false);
+      return;
+    }
+    const currentId = id;
+    const requestId = ++requestIdRef.current;
+    setLoading(true);
+    setError(null);
+    setNotFound(false);
+    setGalpon(null);
+    setPozas([]);
     const repo = getGalponesRepository();
-    Promise.all([repo.listGalpones(), repo.listPozasByGalpon(id)])
+    Promise.all([repo.listGalpones(), repo.listPozasByGalpon(currentId)])
       .then(([galpones, pozasData]) => {
-        if (!active) return;
-        const found = galpones.find((g) => g.id === id) ?? null;
+        if (requestId !== requestIdRef.current) return;
+        const found = galpones.find((g) => g.id === currentId) ?? null;
         if (!found) {
           setNotFound(true);
         } else {
@@ -43,18 +56,26 @@ const GalponDetalle: React.FC = () => {
         }
       })
       .catch((e) => {
-        if (active) {
-          setNotFound(false);
-          setError(String(e));
-        }
+        if (requestId !== requestIdRef.current) return;
+        setNotFound(false);
+        setError(String(e));
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (requestId === requestIdRef.current) setLoading(false);
       });
-    return () => {
-      active = false;
-    };
   }, [id]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+    return () => {
+      requestIdRef.current = -1;
+    };
+  }, [load]);
+
+  useIonViewWillEnter(() => {
+    load();
+  });
 
   if (loading) {
     return (
@@ -120,6 +141,9 @@ const GalponDetalle: React.FC = () => {
             <IonBackButton defaultHref="/galpones" text="Galpones" />
           </IonButtons>
           <IonTitle>{galpon.nombre}</IonTitle>
+          <IonButtons slot="end">
+            <IonButton routerLink={`/galpones/${id}/pozas/nueva`}>Nueva poza</IonButton>
+          </IonButtons>
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen>

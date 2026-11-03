@@ -2,6 +2,8 @@ import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { Navigate, Route } from 'react-router-dom';
 
+import CrearGalpon from './pages/CrearGalpon';
+import CrearPoza from './pages/CrearPoza';
 import GalponDetalle from './pages/GalponDetalle';
 import Galpones from './pages/Galpones';
 import SqlitePoc from './pages/SqlitePoc';
@@ -44,7 +46,9 @@ const App: React.FC = () => (
       <IonRouterOutlet>
         <Route path="/" element={<Navigate to="/galpones" replace />} />
         <Route path="/galpones" element={<Galpones />} />
+        <Route path="/galpones/nuevo" element={<CrearGalpon />} />
         <Route path="/galpones/:id" element={<GalponDetalle />} />
+        <Route path="/galpones/:id/pozas/nueva" element={<CrearPoza />} />
         <Route path="/sqlite-poc" element={<SqlitePoc />} />
       </IonRouterOutlet>
     </IonReactRouter>
