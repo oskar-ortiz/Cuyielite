@@ -12,11 +12,11 @@ function makeDb() {
     exec: (sql: string) => db.exec(sql),
     run: (sql: string, params?: unknown[]) => {
       const stmt = db.prepare(sql);
-      stmt.run(...(params ?? []));
+      stmt.run(...((params ?? []) as any[]));
     },
     query: (sql: string, params?: unknown[]) => {
       const stmt = db.prepare(sql);
-      const rows = params ? stmt.all(...params) : stmt.all();
+      const rows = params ? stmt.all(...(params as any[])) : stmt.all();
       return { values: rows };
     },
   };
@@ -104,11 +104,11 @@ describe('galpones.migration', () => {
       exec: (sql: string) => db1.exec(sql),
       run: (sql: string, params?: unknown[]) => {
         const stmt = db1.prepare(sql);
-        stmt.run(...(params ?? []));
+        stmt.run(...((params ?? []) as any[]));
       },
       query: (sql: string, params?: unknown[]) => {
         const stmt = db1.prepare(sql);
-        const rows = params ? stmt.all(...params) : stmt.all();
+        const rows = params ? stmt.all(...(params as any[])) : stmt.all();
         return { values: rows };
       },
     };
@@ -127,11 +127,11 @@ describe('galpones.migration', () => {
       exec: (sql: string) => db2.exec(sql),
       run: (sql: string, params?: unknown[]) => {
         const stmt = db2.prepare(sql);
-        stmt.run(...(params ?? []));
+        stmt.run(...((params ?? []) as any[]));
       },
       query: (sql: string, params?: unknown[]) => {
         const stmt = db2.prepare(sql);
-        const rows = params ? stmt.all(...params) : stmt.all();
+        const rows = params ? stmt.all(...(params as any[])) : stmt.all();
         return { values: rows };
       },
     };

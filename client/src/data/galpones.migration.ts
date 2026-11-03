@@ -144,7 +144,7 @@ export async function migrateAndSeed(db: MigrationDb): Promise<void> {
 
   // Leer user_version.
   const versionRows = await db.query('PRAGMA user_version');
-  const version = Number(versionRows.values?.[0]?.user_version ?? 0);
+  const version = Number((versionRows.values?.[0] as { user_version?: number } | undefined)?.user_version ?? 0);
 
   if (version > SCHEMA_VERSION) {
     throw new Error(`Esquema incompatible: user_version ${version} > ${SCHEMA_VERSION}`);

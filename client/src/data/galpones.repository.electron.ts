@@ -36,6 +36,6 @@ export function createElectronRepository(plugin: ElectronSqlitePlugin): Galpones
 }
 
 export function getElectronRepository(): GalponesRepository {
-  const plugin = Capacitor.Plugins.SqlitePoc as unknown as ElectronSqlitePlugin;
+  const plugin = (Capacitor as unknown as { Plugins: { SqlitePoc: ElectronSqlitePlugin } }).Plugins.SqlitePoc;
   return createElectronRepository(plugin);
 }
