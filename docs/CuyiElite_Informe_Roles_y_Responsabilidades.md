@@ -25,10 +25,10 @@ Metodología de desarrollo: Extreme Programming (XP).
 ## 3. Oskar Julián Ortiz Ortiz — Ingeniero de Software, Tech Lead / Arquitecto
 
 ### 3.1 Responsabilidades principales
-1. **Arquitectura del sistema:** mantener los diagramas C4 (Nivel 2 y 3), el diagrama UML de contexto y el DER; decidir y documentar cambios de stack (Ionic + React con Capacitor y SQLite local en Android y Windows, conforme a la ADR 0002).
+1. **Arquitectura del sistema:** mantener los diagramas C4 (Nivel 2 y 3), el diagrama UML de contexto y el DER; decidir y documentar cambios de stack (Ionic + React, con Capacitor en Android y la plataforma Electron en Windows, y SQLite local en ambos, conforme a las ADR 0002 y 0003).
 2. **Sincronización offline-first:** diseñar e implementar el `SyncWorker`, la detección de conectividad, el empaquetado del delta (`updated_at > synced_at`) y la resolución de conflictos Last Write Wins en marcas UTC.
 3. **Backend FastAPI:** capas Controllers, Services, Repositories y Schemas; endpoints de sincronización (`/sync/push`, `/sync/pull`), autenticación y esquemas Pydantic v2.
-4. **Cliente Ionic + React:** estructura de la aplicación, pantallas de registro en campo (galpones, pozas, cuyes, partos, pesajes, mortalidad) y empaquetado con Capacitor para Android y Windows.
+4. **Cliente Ionic + React:** estructura de la aplicación, pantallas de registro en campo (galpones, pozas, cuyes, partos, pesajes, mortalidad) y empaquetado con Capacitor para Android y con la plataforma Electron para Windows (ADR 0003).
 5. **Calidad de ingeniería:** definir estándares de codificación (PEP 8, ESLint/Prettier), configurar el repositorio Git, la integración continua y las pruebas con `pytest`.
 
 ### 3.2 Entregables

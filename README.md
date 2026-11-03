@@ -5,7 +5,7 @@ Trabajo de Grado, Universidad Cooperativa de Colombia (UCC), Ingeniería de Soft
 Validación de campo: Centro Agropecuario Lope (SENA).
 
 ## Stack
-- Cliente: Ionic + React + Capacitor (Android / Windows)
+- Cliente: Ionic + React (Android con Capacitor; Windows con la plataforma Electron)
 - Persistencia local: SQLite (Android / Windows)
 - Backend: Python FastAPI (Controllers, Services, Repositories)
 - Base central: PostgreSQL + pgvector
@@ -14,6 +14,11 @@ Validación de campo: Centro Agropecuario Lope (SENA).
 La elección de SQLite local y PostgreSQL + pgvector central está registrada en
 [docs/decisiones/0002-persistencia-local-sqlite.md](docs/decisiones/0002-persistencia-local-sqlite.md).
 El DDL del esquema local en SQLite queda pendiente de diseño con Diery.
+
+El empaquetado del cliente Windows está en
+[docs/decisiones/0003-cliente-windows-electron.md](docs/decisiones/0003-cliente-windows-electron.md):
+Capacitor cubre Android y Windows se entrega con la plataforma adicional
+`@capawesome/capacitor-electron` sobre Electron.
 
 ## Estructura
 ```
@@ -34,6 +39,15 @@ cp .env.example .env               # completar valores
 docker compose up -d               # PostgreSQL + pgvector central en localhost:5432
 pip install -r backend/requirements.txt
 pytest backend
+```
+
+Cliente Windows (Electron):
+```bash
+cd client
+npm install
+npm run build:electron                        # bundle sin el plugin legacy
+npx cap sync @capawesome/capacitor-electron
+cd electron && npm install && npm run build && npm start
 ```
 
 ## Cómo trabajamos

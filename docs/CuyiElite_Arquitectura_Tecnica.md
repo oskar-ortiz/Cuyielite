@@ -22,12 +22,18 @@ Metodología: Extreme Programming (XP)
 
 ### Cambio 1: Framework de cliente — de React Native/Expo a Ionic
 
-Por recomendación del asesor, el cliente multiplataforma migra a **Ionic + React**, empaquetado mediante **Capacitor** para su distribución nativa en Android y Windows Desktop. Esta es la variante confirmada por el equipo, por ser la ruta oficialmente soportada por Ionic:
+Por recomendación del asesor, el cliente multiplataforma migra a **Ionic + React**, empaquetado con **Capacitor** en Android y con la plataforma **Electron** en Windows Desktop (ADR 0003). Esta es la variante confirmada por el equipo, por ser la ruta oficialmente soportada por Ionic:
 
-- **Ionic + React (con Capacitor) — decisión confirmada:** el cliente se construye con componentes web de Ionic (`@ionic/react`) y se empaqueta como app nativa (Android/Windows) mediante Capacitor. Es la combinación estándar y con mejor soporte oficial de Ionic.
+- **Ionic + React (con Capacitor) — decisión confirmada:** el cliente se construye con componentes web de Ionic (`@ionic/react`) y se empaqueta como app nativa: Android con Capacitor y Windows con la plataforma Electron adicional (ADR 0003). Es la combinación estándar y con mejor soporte oficial de Ionic.
 - *(Alternativa descartada) Ionic + React Native:* se evaluó integrar componentes visuales de Ionic sobre una base de React Native, pero se descartó por ser una combinación menos convencional (Ionic está pensado principalmente para Capacitor/Cordova, no para el runtime de React Native), lo cual habría exigido un spike técnico adicional para validar compatibilidad de librerías antes de comprometer el desarrollo de los módulos de campo.
 
-**Justificación de la decisión:** Ionic + React con Capacitor es la ruta de menor riesgo técnico para el equipo, al ser el camino oficialmente soportado por Ionic tanto para Android como para Windows Desktop, evitando la incertidumbre de compatibilidad que implicaría combinarlo con React Native.
+**Justificación de la decisión:** Ionic + React con Capacitor es la ruta de menor riesgo técnico para el equipo, al ser el camino oficialmente soportado por Ionic para Android y al reutilizar la misma base de código en Windows mediante la plataforma Electron (ADR 0003), evitando la incertidumbre de compatibilidad que implicaría combinarlo con React Native.
+
+> **Corrección (ADR 0003, 2026-11-02):** el texto original de este cambio
+> presentaba a Capacitor con soporte nativo también para Windows Desktop. El
+> núcleo oficial de Capacitor cubre **Android e iOS**; Windows se empaqueta con
+> la plataforma adicional **`@capawesome/capacitor-electron` sobre Electron**.
+> Ver el Cambio 4 y la ADR 0003.
 
 ### Cambio 2 (histórico, sustituido): Persistencia local — de SQLite/WatermelonDB a PostgreSQL local
 
@@ -53,6 +59,15 @@ Pendiente de diseño con Diery (no decidido en esta actualización):
 - Cifrado, migraciones y política de backups locales.
 
 Las reglas de sincronización (Last Write Wins, asignación de `updated_at` y contratos `/sync`) no cambian con este cambio de motor.
+
+### Cambio 4: Cliente Windows — plataforma Electron adicional
+
+El cliente Windows se empaqueta con la plataforma adicional **`@capawesome/capacitor-electron` 0.2.2** (licencia MIT) sobre **Electron 45.2.1**, no con el núcleo de Capacitor. Android sigue usando Capacitor 8.6.0. Ambos targets comparten la misma base de código Ionic + React, el mismo `appId` (`co.ucc.cuyielite`) y el mismo nombre de aplicación (`CuyiElite`).
+
+- El bundle web se compila dos veces: `npm run build` para web/Android (con `@vitejs/plugin-legacy`) y `npm run build:electron` para Windows, sin el plugin legacy, porque Electron ya incluye un Chromium moderno y la CSP de la plataforma bloquea los scripts inline que ese plugin inyecta.
+- El renderer carga los assets locales del build; no se usa `server.url` en la entrega.
+- Se conservan `sandbox`, `contextIsolation` y la CSP estricta; no se expone Node, SQL ni archivos al renderer.
+- El instalador Windows y la prueba de persistencia real quedan pendientes. La configuración completa está en la ADR 0003 (`docs/decisiones/0003-cliente-windows-electron.md`).
 
 ---
 
@@ -140,7 +155,7 @@ C4Container
     Person(admin, "Administrador / Investigador SENA", "Consulta reportes, predicciones ML y el asistente RAG")
 
     System_Boundary(cuyielite, "Sistema CuyiElite") {
-        Container(app_mobile, "Aplicación Cliente", "Ionic + React + Capacitor - Android / Windows Desktop", "Interfaz offline-first para captura de datos en campo: galpones, pozas, cuyes, partos, pesajes, mortalidad")
+        Container(app_mobile, "Aplicación Cliente", "Ionic + React - Android (Capacitor) / Windows (Electron)", "Interfaz offline-first para captura de datos en campo: galpones, pozas, cuyes, partos, pesajes, mortalidad")
         ContainerDb(db_local, "Base de Datos Local", "SQLite (Android / Windows)", "Persistencia local inmediata en el dispositivo; almacena entidades con campos de control delta (created_at, updated_at, synced_at, deleted_at)")
         Container(sync_worker, "Worker de Sincronización", "Background Task (JS/Native)", "Detecta conectividad, empaqueta el delta local y resuelve conflictos mediante Last Write Wins (LWW)")
 
@@ -169,7 +184,7 @@ C4Container
 
 ### Explicación de módulos
 
-- **Aplicación Cliente (Ionic + React + Capacitor):** interfaz multiplataforma (Android móvil y Windows Desktop) empleada por el técnico de campo, construida sobre Ionic + React y empaquetada mediante Capacitor. Prioriza la disponibilidad sobre la consistencia inmediata (offline-first), permitiendo el registro ininterrumpido de datos en el Centro Agropecuario Lope, incluso en ausencia de conectividad a internet.
+- **Aplicación Cliente (Ionic + React):** interfaz multiplataforma (Android móvil y Windows Desktop) empleada por el técnico de campo, construida sobre Ionic + React. Android se empaqueta con Capacitor y Windows con la plataforma Electron adicional (ADR 0003). Prioriza la disponibilidad sobre la consistencia inmediata (offline-first), permitiendo el registro ininterrumpido de datos en el Centro Agropecuario Lope, incluso en ausencia de conectividad a internet.
 - **Base de Datos Local (SQLite):** capa de persistencia embebida que garantiza lectura y escritura inmediata sin latencia de red ni proceso de servidor en el dispositivo (Android y Windows). Cada entidad incorpora los campos de control delta necesarios para la sincronización posterior. El DDL de SQLite y su mapeo con el esquema central quedan pendientes de diseño con Diery (ADR 0002, numeral 0).
 - **Worker de Sincronización:** proceso en segundo plano encargado de monitorear el estado de conectividad del dispositivo, calcular el delta pendiente (registros con `updated_at > synced_at`) y ejecutar el protocolo de sincronización contra la API central.
 - **API Central (FastAPI):** puerta de entrada única al ecosistema de datos centralizados, estructurada en capas de Controllers (rutas), Services (lógica de negocio) y Repositories (acceso a datos), lo cual favorece la mantenibilidad y las pruebas unitarias exigidas por la metodología XP.

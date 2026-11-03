@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:electron": "tsc && vite build --mode electron",
     "preview": "vite preview",
     "lint": "npm run eslint && npm run typecheck:e2e && npm run prettier -- --check",
     "lint:fix": "npm run eslint -- --fix && npm run prettier -- --write",
@@ -23,6 +24,7 @@
     "@capacitor/haptics": "8.0.2",
     "@capacitor/keyboard": "8.0.6",
     "@capacitor/status-bar": "8.0.4",
+    "@capawesome/capacitor-electron": "0.2.2",
     "@ionic/react": "^9.0.0",
     "@ionic/react-router": "^9.0.0",
     "ionicons": "^8.1.0",
