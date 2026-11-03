@@ -4,6 +4,7 @@ import { Navigate, Route } from 'react-router-dom';
 
 import GalponDetalle from './pages/GalponDetalle';
 import Galpones from './pages/Galpones';
+import SqlitePoc from './pages/SqlitePoc';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -44,6 +45,7 @@ const App: React.FC = () => (
         <Route path="/" element={<Navigate to="/galpones" replace />} />
         <Route path="/galpones" element={<Galpones />} />
         <Route path="/galpones/:id" element={<GalponDetalle />} />
+        <Route path="/sqlite-poc" element={<SqlitePoc />} />
       </IonRouterOutlet>
     </IonReactRouter>
   </IonApp>

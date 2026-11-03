@@ -1,0 +1,12 @@
+{
+  "name": "capacitor-sqlite-poc",
+  "version": "0.0.1",
+  "private": true,
+  "description": "PoC local: SQLite con node:sqlite para Windows/Electron (Capawesome).",
+  "main": "electron/dist/plugin.mjs",
+  "capacitor": {
+    "electron": {
+      "src": "electron"
+    }
+  }
+}
