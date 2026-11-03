@@ -1,6 +1,14 @@
 import { Capacitor } from '@capacitor/core';
 
-import type { CreateGalponInput, CreatePozaInput, Galpon, GalponesRepository, Poza } from './galpones.repository';
+import type {
+  CreateGalponInput,
+  CreatePozaInput,
+  Galpon,
+  GalponesRepository,
+  Poza,
+  UpdateGalponInput,
+  UpdatePozaInput,
+} from './galpones.repository';
 
 interface ElectronSqlitePlugin {
   initializeDatabase(): Promise<{ ok: boolean }>;
@@ -13,6 +21,18 @@ interface ElectronSqlitePlugin {
   }>;
   createPoza(options: { galponId: string; codigo: string; tipo: string; capacidadMaxima: number }): Promise<{
     poza: { id: string; galpon_id: string; codigo: string; tipo: string; capacidad_maxima: number };
+  }>;
+  updateGalpon(options: { id: string; nombre: string; ubicacion: string | null }): Promise<{
+    galpon: { id: string; nombre: string; ubicacion: string | null } | null;
+  }>;
+  updatePoza(options: {
+    galponId: string;
+    pozaId: string;
+    codigo: string;
+    tipo: string;
+    capacidadMaxima: number;
+  }): Promise<{
+    poza: { id: string; galpon_id: string; codigo: string; tipo: string; capacidad_maxima: number } | null;
   }>;
 }
 
@@ -51,6 +71,30 @@ export function createElectronRepository(plugin: ElectronSqlitePlugin): Galpones
         tipo: input.tipo,
         capacidadMaxima: input.capacidadMaxima,
       });
+      return {
+        id: result.poza.id,
+        galponId: result.poza.galpon_id,
+        codigo: result.poza.codigo,
+        tipo: result.poza.tipo,
+        capacidadMaxima: result.poza.capacidad_maxima,
+      };
+    },
+    async updateGalpon(id: string, input: UpdateGalponInput): Promise<Galpon> {
+      await plugin.initializeDatabase();
+      const result = await plugin.updateGalpon({ id, nombre: input.nombre, ubicacion: input.ubicacion });
+      if (!result.galpon) throw new Error('Galpón no encontrado');
+      return { id: result.galpon.id, nombre: result.galpon.nombre, ubicacion: result.galpon.ubicacion };
+    },
+    async updatePoza(galponId: string, pozaId: string, input: UpdatePozaInput): Promise<Poza> {
+      await plugin.initializeDatabase();
+      const result = await plugin.updatePoza({
+        galponId,
+        pozaId,
+        codigo: input.codigo,
+        tipo: input.tipo,
+        capacidadMaxima: input.capacidadMaxima,
+      });
+      if (!result.poza) throw new Error('Poza no encontrada');
       return {
         id: result.poza.id,
         galponId: result.poza.galpon_id,

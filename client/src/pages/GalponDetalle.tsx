@@ -142,6 +142,7 @@ const GalponDetalle: React.FC = () => {
           </IonButtons>
           <IonTitle>{galpon.nombre}</IonTitle>
           <IonButtons slot="end">
+            <IonButton routerLink={`/galpones/${id}/editar`}>Editar galpón</IonButton>
             <IonButton routerLink={`/galpones/${id}/pozas/nueva`}>Nueva poza</IonButton>
           </IonButtons>
         </IonToolbar>
@@ -160,6 +161,9 @@ const GalponDetalle: React.FC = () => {
                   <h2>{poza.codigo}</h2>
                   <p>{poza.tipo}</p>
                 </IonLabel>
+                <IonButton slot="end" routerLink={`/galpones/${id}/pozas/${poza.id}/editar`}>
+                  Editar
+                </IonButton>
               </IonItem>
             ))}
           </IonList>
