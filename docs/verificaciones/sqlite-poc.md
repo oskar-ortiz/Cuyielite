@@ -54,7 +54,30 @@ Verificación tras agregar `@capacitor-community/sqlite@8.1.1`:
   ejecución 2 leyó `poc-mw066l5l-57spj02n` (IGUALES), 0 errores de consola.
 - La instalación existente de CuyiElite no se modificó.
 
-## Android (emulador)
+## Android — repositorio de galpones con red desactivada (paso 6)
+
+Prueba en emulador con red desactivada (airplane_mode_on=1, wifi_on=0, mobile_data=0):
+- Listado: 4 galpones (Norte, Sur, Occidente, Este).
+- Detalle de Galpón Norte: P-101, P-102, P-103 (solo sus pozas).
+- Galpón Este: "Este galpón todavía no tiene pozas registradas."
+- Cierre total (`adb shell am force-stop`) y reapertura: listado y detalle funcionan.
+- `getConnection()` comparte una sola inicialización.
+- UUID, relaciones y capacidades conservadas (cubierto por tests del módulo compartido).
+- Red restaurada a airplane=0, wifi=1, mobile_data=1. Backend apagado.
+
+## Android — repositorio de galpones (paso 5)
+
+Prueba en emulador con red desactivada (airplane_mode_on=1, wifi_on=0, mobile_data=0):
+- Listado: 4 galpones (Norte, Sur, Occidente, Este).
+- Detalle de Galpón Norte: P-101, P-102, P-103 (solo sus pozas).
+- Galpón Este: "Este galpón todavía no tiene pozas registradas."
+- Cierre total (`adb shell am force-stop`) y reapertura: listado y detalle funcionan.
+- `getConnection()` comparte una sola inicialización (migración ejecutada una vez).
+- UUID, relaciones y capacidades conservadas (cubierto por tests unitarios del
+  módulo compartido; la UI no expone IDs).
+- Red restaurada a airplane=0, wifi=1, mobile_data=1. Backend apagado.
+
+## Android (emulador) — PoC SQLite (/sqlite-poc)
 
 Entorno instalado:
 - Android Studio 2026.2.2.8 (Otter+), JDK 21 (Zulu 21.0.13), Android SDK en
@@ -70,6 +93,14 @@ Prueba en emulador:
 3. Ejecución 2: navegar a PoC SQLite, pulsar solo "Leer valor" (sin "Guardar").
    Valor leído: `poc-mw060lbd-rrajkjd4`.
 4. Comparación: IGUALES. 0 errores de consola.
+
+Prueba adicional con red del emulador desactivada:
+- Antes: airplane_mode_on=0, wifi_on=1, mobile_data=1.
+- Se activó modo avión (airplane_mode_on=1, wifi_on=0, mobile_data=0).
+- Ejecución 1: guardar valor `poc-mw060lbd-rrajkjd4` (ya guardado previamente).
+- Cierre total (`adb shell am force-stop`).
+- Ejecución 2: solo "Leer valor" → `poc-mw060lbd-rrajkjd4` (IGUALES), 0 errores.
+- Restaurado: airplane_mode_on=0, wifi_on=1, mobile_data=1. Backend permaneció apagado.
 
 ## Resultado
 
