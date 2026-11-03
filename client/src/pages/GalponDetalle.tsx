@@ -12,16 +12,87 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
-import { galponesDemo, pozasDemo } from '../data/galpones.demo';
+import type { Galpon, Poza } from '../data/galpones.repository';
+import { getElectronRepository } from '../data/galpones.repository.electron';
 import './galpones.css';
 
 const GalponDetalle: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const galpon = galponesDemo.find((g) => g.id === id);
+  const [galpon, setGalpon] = useState<Galpon | null>(null);
+  const [pozas, setPozas] = useState<Poza[]>([]);
+  const [loading, setLoading] = useState<boolean>(!!id);
+  const [notFound, setNotFound] = useState<boolean>(!id);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!galpon) {
+  useEffect(() => {
+    if (!id) return;
+    let active = true;
+    const repo = getElectronRepository();
+    Promise.all([repo.listGalpones(), repo.listPozasByGalpon(id)])
+      .then(([galpones, pozasData]) => {
+        if (!active) return;
+        const found = galpones.find((g) => g.id === id) ?? null;
+        if (!found) {
+          setNotFound(true);
+        } else {
+          setGalpon(found);
+          setPozas(pozasData);
+        }
+      })
+      .catch((e) => {
+        if (active) {
+          setNotFound(false);
+          setError(String(e));
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <IonPage>
+        <IonHeader>
+          <IonToolbar>
+            <IonButtons slot="start">
+              <IonBackButton defaultHref="/galpones" text="Galpones" />
+            </IonButtons>
+            <IonTitle>Cargando…</IonTitle>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent fullscreen>
+          <p className="estado-vacio">Cargando galpón…</p>
+        </IonContent>
+      </IonPage>
+    );
+  }
+
+  if (error) {
+    return (
+      <IonPage>
+        <IonHeader>
+          <IonToolbar>
+            <IonButtons slot="start">
+              <IonBackButton defaultHref="/galpones" text="Galpones" />
+            </IonButtons>
+            <IonTitle>Error</IonTitle>
+          </IonToolbar>
+        </IonHeader>
+        <IonContent fullscreen>
+          <p className="estado-vacio">Error al cargar el galpón: {error}</p>
+        </IonContent>
+      </IonPage>
+    );
+  }
+
+  if (notFound || !galpon) {
     return (
       <IonPage>
         <IonHeader>
@@ -40,8 +111,6 @@ const GalponDetalle: React.FC = () => {
       </IonPage>
     );
   }
-
-  const pozas = pozasDemo.filter((poza) => poza.galponId === galpon.id);
 
   return (
     <IonPage>
