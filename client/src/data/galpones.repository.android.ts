@@ -1,7 +1,15 @@
 import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite';
 
 import { migrateAndSeed, type MigrationDb } from './galpones.migration';
-import type { CreateGalponInput, CreatePozaInput, Galpon, GalponesRepository, Poza } from './galpones.repository';
+import type {
+  CreateGalponInput,
+  CreatePozaInput,
+  Galpon,
+  GalponesRepository,
+  Poza,
+  UpdateGalponInput,
+  UpdatePozaInput,
+} from './galpones.repository';
 import { normalizeGalpon, normalizePoza, validateGalpon, validatePoza } from './galpones.validation';
 
 const sqlite = new SQLiteConnection(CapacitorSQLite);
@@ -95,6 +103,55 @@ export function createAndroidRepository(): GalponesRepository {
       return {
         id,
         galponId: input.galponId,
+        codigo: normalized.codigo,
+        tipo: normalized.tipo,
+        capacidadMaxima: normalized.capacidadMaxima,
+      };
+    },
+    async updateGalpon(id: string, input: UpdateGalponInput): Promise<Galpon> {
+      const validation = validateGalpon(input);
+      if (!validation.ok) throw new Error(validation.errors.join('; '));
+      const normalized = normalizeGalpon(input);
+      const db = await getConnection();
+      const exists = await db.query('SELECT nombre, ubicacion FROM galpones WHERE id = ? AND deleted_at IS NULL', [id]);
+      if (!exists.values?.length) throw new Error('Galpón no encontrado');
+      const row = exists.values[0] as { nombre: string; ubicacion: string | null };
+      if (row.nombre === normalized.nombre && row.ubicacion === normalized.ubicacion) {
+        return { id, nombre: row.nombre, ubicacion: row.ubicacion };
+      }
+      const now = new Date().toISOString();
+      await db.run(
+        'UPDATE galpones SET nombre = ?, ubicacion = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL',
+        [normalized.nombre, normalized.ubicacion, now, id],
+      );
+      return { id, nombre: normalized.nombre, ubicacion: normalized.ubicacion };
+    },
+    async updatePoza(galponId: string, pozaId: string, input: UpdatePozaInput): Promise<Poza> {
+      const validation = validatePoza(input);
+      if (!validation.ok) throw new Error(validation.errors.join('; '));
+      const normalized = normalizePoza(input);
+      const db = await getConnection();
+      const exists = await db.query(
+        'SELECT codigo, tipo, capacidad_maxima FROM pozas WHERE id = ? AND galpon_id = ? AND deleted_at IS NULL',
+        [pozaId, galponId],
+      );
+      if (!exists.values?.length) throw new Error('Poza no encontrada');
+      const row = exists.values[0] as { codigo: string; tipo: string; capacidad_maxima: number };
+      if (
+        row.codigo === normalized.codigo &&
+        row.tipo === normalized.tipo &&
+        row.capacidad_maxima === normalized.capacidadMaxima
+      ) {
+        return { id: pozaId, galponId, codigo: row.codigo, tipo: row.tipo, capacidadMaxima: row.capacidad_maxima };
+      }
+      const now = new Date().toISOString();
+      await db.run(
+        'UPDATE pozas SET codigo = ?, tipo = ?, capacidad_maxima = ?, updated_at = ? WHERE id = ? AND galpon_id = ? AND deleted_at IS NULL',
+        [normalized.codigo, normalized.tipo, normalized.capacidadMaxima, now, pozaId, galponId],
+      );
+      return {
+        id: pozaId,
+        galponId,
         codigo: normalized.codigo,
         tipo: normalized.tipo,
         capacidadMaxima: normalized.capacidadMaxima,
