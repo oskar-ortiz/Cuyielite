@@ -4,6 +4,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 
 import { migrateAndSeed } from './galpones.migration.js';
+import { normalizeGalpon, normalizePoza, validateGalpon, validatePoza } from './galpones.validation.js';
 
 // Base de prueba del paso 1 (poc.db) — no se modifica aquí.
 const POC_DB_DIR = path.join(app.getPath('userData'), 'sqlite-poc');
@@ -38,7 +39,7 @@ function makeAdapter(db) {
 class SqlitePoc {
   static __capacitorElectronPlugin = {
     name: 'SqlitePoc',
-    methods: ['saveValue', 'readValue', 'initializeDatabase', 'listGalpones', 'listPozasByGalpon'],
+    methods: ['saveValue', 'readValue', 'initializeDatabase', 'listGalpones', 'listPozasByGalpon', 'createGalpon', 'createPoza'],
   };
 
   async load() {}
@@ -97,6 +98,42 @@ class SqlitePoc {
       await migrateAndSeed(makeAdapter(db));
       const rows = db.prepare('SELECT id, galpon_id, codigo, tipo, capacidad_maxima FROM pozas WHERE galpon_id = ? AND deleted_at IS NULL').all(galponId);
       return { pozas: rows };
+    } finally {
+      db.close();
+    }
+  }
+
+  async createGalpon({ nombre, ubicacion }) {
+    const validation = validateGalpon({ nombre, ubicacion });
+    if (!validation.ok) throw new Error(validation.errors.join('; '));
+    const normalized = normalizeGalpon({ nombre, ubicacion });
+
+    const db = openDb(GALPONES_DB_PATH);
+    try {
+      await migrateAndSeed(makeAdapter(db));
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
+      db.prepare('INSERT INTO galpones (id, nombre, ubicacion, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?)').run(id, normalized.nombre, normalized.ubicacion, now, now, null);
+      return { galpon: { id, nombre: normalized.nombre, ubicacion: normalized.ubicacion } };
+    } finally {
+      db.close();
+    }
+  }
+
+  async createPoza({ galponId, codigo, tipo, capacidadMaxima }) {
+    const validation = validatePoza({ codigo, tipo, capacidadMaxima });
+    if (!validation.ok) throw new Error(validation.errors.join('; '));
+    const normalized = normalizePoza({ codigo, tipo, capacidadMaxima });
+
+    const db = openDb(GALPONES_DB_PATH);
+    try {
+      await migrateAndSeed(makeAdapter(db));
+      const exists = db.prepare('SELECT 1 FROM galpones WHERE id = ?').get(galponId);
+      if (!exists) throw new Error('El galpón no existe');
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
+      db.prepare('INSERT INTO pozas (id, galpon_id, codigo, tipo, capacidad_maxima, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)').run(id, galponId, normalized.codigo, normalized.tipo, normalized.capacidadMaxima, now, now, null);
+      return { poza: { id, galpon_id: galponId, codigo: normalized.codigo, tipo: normalized.tipo, capacidad_maxima: normalized.capacidadMaxima } };
     } finally {
       db.close();
     }

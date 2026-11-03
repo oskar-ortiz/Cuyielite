@@ -1,7 +1,8 @@
 import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite';
 
 import { migrateAndSeed, type MigrationDb } from './galpones.migration';
-import type { Galpon, GalponesRepository, Poza } from './galpones.repository';
+import type { CreateGalponInput, CreatePozaInput, Galpon, GalponesRepository, Poza } from './galpones.repository';
+import { normalizeGalpon, normalizePoza, validateGalpon, validatePoza } from './galpones.validation';
 
 const sqlite = new SQLiteConnection(CapacitorSQLite);
 
@@ -64,6 +65,40 @@ export function createAndroidRepository(): GalponesRepository {
           capacidadMaxima: r.capacidad_maxima,
         }),
       );
+    },
+    async createGalpon(input: CreateGalponInput): Promise<Galpon> {
+      const validation = validateGalpon(input);
+      if (!validation.ok) throw new Error(validation.errors.join('; '));
+      const normalized = normalizeGalpon(input);
+      const db = await getConnection();
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
+      await db.run(
+        'INSERT INTO galpones (id, nombre, ubicacion, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?)',
+        [id, normalized.nombre, normalized.ubicacion, now, now, null],
+      );
+      return { id, nombre: normalized.nombre, ubicacion: normalized.ubicacion };
+    },
+    async createPoza(input: CreatePozaInput): Promise<Poza> {
+      const validation = validatePoza(input);
+      if (!validation.ok) throw new Error(validation.errors.join('; '));
+      const normalized = normalizePoza(input);
+      const db = await getConnection();
+      const exists = await db.query('SELECT 1 FROM galpones WHERE id = ?', [input.galponId]);
+      if (!exists.values?.length) throw new Error('El galpón no existe');
+      const id = crypto.randomUUID();
+      const now = new Date().toISOString();
+      await db.run(
+        'INSERT INTO pozas (id, galpon_id, codigo, tipo, capacidad_maxima, created_at, updated_at, deleted_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [id, input.galponId, normalized.codigo, normalized.tipo, normalized.capacidadMaxima, now, now, null],
+      );
+      return {
+        id,
+        galponId: input.galponId,
+        codigo: normalized.codigo,
+        tipo: normalized.tipo,
+        capacidadMaxima: normalized.capacidadMaxima,
+      };
     },
   };
 }

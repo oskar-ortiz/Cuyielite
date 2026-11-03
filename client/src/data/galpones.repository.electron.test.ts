@@ -15,6 +15,10 @@ describe('ElectronGalponesRepository', () => {
       listPozasByGalpon: vi.fn().mockResolvedValue({
         pozas: [{ id: 'p1', galpon_id: 'g1', codigo: 'P-101', tipo: 'cría', capacidad_maxima: 50 }],
       }),
+      createGalpon: vi.fn().mockResolvedValue({ galpon: { id: 'g3', nombre: 'Nuevo', ubicacion: null } }),
+      createPoza: vi
+        .fn()
+        .mockResolvedValue({ poza: { id: 'p2', galpon_id: 'g1', codigo: 'P-X', tipo: 'cría', capacidad_maxima: 10 } }),
     };
 
     const repo = createElectronRepository(plugin);
