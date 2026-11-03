@@ -1,4 +1,5 @@
 import {
+  IonButton,
   IonChip,
   IonContent,
   IonHeader,
@@ -8,8 +9,9 @@ import {
   IonPage,
   IonTitle,
   IonToolbar,
+  useIonViewWillEnter,
 } from '@ionic/react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { Galpon } from '../data/galpones.repository';
 import { getGalponesRepository } from '../data/galpones.repository.factory';
@@ -20,29 +22,46 @@ const Galpones: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let active = true;
+  const requestIdRef = useRef(0);
+  const load = useCallback(() => {
+    const requestId = ++requestIdRef.current;
+    setLoading(true);
+    setError(null);
     getGalponesRepository()
       .listGalpones()
       .then((data) => {
-        if (active) setGalpones(data);
+        if (requestId !== requestIdRef.current) return;
+        setGalpones(data);
       })
       .catch((e) => {
-        if (active) setError(String(e));
+        if (requestId !== requestIdRef.current) return;
+        setError(String(e));
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (requestId === requestIdRef.current) setLoading(false);
       });
-    return () => {
-      active = false;
-    };
   }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load();
+    return () => {
+      requestIdRef.current = -1;
+    };
+  }, [load]);
+
+  useIonViewWillEnter(() => {
+    load();
+  });
 
   return (
     <IonPage>
       <IonHeader>
         <IonToolbar>
           <IonTitle>Galpones</IonTitle>
+          <IonButton slot="end" routerLink="/galpones/nuevo">
+            Nuevo
+          </IonButton>
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen>
