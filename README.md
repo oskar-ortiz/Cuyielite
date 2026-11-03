@@ -6,10 +6,14 @@ Validación de campo: Centro Agropecuario Lope (SENA).
 
 ## Stack
 - Cliente: Ionic + React + Capacitor (Android / Windows)
-- Persistencia local: PostgreSQL (administrado con DBeaver)
+- Persistencia local: SQLite (Android / Windows)
 - Backend: Python FastAPI (Controllers, Services, Repositories)
 - Base central: PostgreSQL + pgvector
 - IA: Random Forest (scikit-learn) y motor RAG
+
+La elección de SQLite local y PostgreSQL + pgvector central está registrada en
+[docs/decisiones/0002-persistencia-local-sqlite.md](docs/decisiones/0002-persistencia-local-sqlite.md).
+El DDL del esquema local en SQLite queda pendiente de diseño con Diery.
 
 ## Estructura
 ```
@@ -27,7 +31,7 @@ git clone <url-del-repo>
 cd cuyielite
 sh scripts/setup.sh                # activa el bloqueo de push a main
 cp .env.example .env               # completar valores
-docker compose up -d               # PostgreSQL + pgvector en localhost:5432
+docker compose up -d               # PostgreSQL + pgvector central en localhost:5432
 pip install -r backend/requirements.txt
 pytest backend
 ```
