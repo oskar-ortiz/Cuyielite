@@ -16,7 +16,8 @@
     "test": "npm run test:unit && npm run test:e2e",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "build:migration": "tsc src/data/galpones.migration.ts --module esnext --target es2022 --outDir plugins/sqlite-poc/electron/dist --esModuleInterop --skipLibCheck --moduleResolution bundler"
   },
   "dependencies": {
     "@capacitor-community/sqlite": "8.1.1",
