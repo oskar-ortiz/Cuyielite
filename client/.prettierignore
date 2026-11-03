@@ -3,3 +3,12 @@
 # Gradle's build output.
 android/
 ios/
+
+# Electron generated products (ignored by electron/.gitignore, which Prettier
+# does not read).
+electron/node_modules/
+electron/build/
+electron/dist/
+electron/app/
+electron/generated/
+electron/vendor/
