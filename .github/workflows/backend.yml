@@ -5,14 +5,40 @@ on:
     paths: ["backend/**", "db/**", ".github/workflows/backend.yml"]
   push:
     branches: [dev]
-    paths: ["backend/**", "db/**"]
+    paths: ["backend/**", "db/**", ".github/workflows/backend.yml"]
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: cuyielite
+          POSTGRES_PASSWORD: cuyielite
+          POSTGRES_DB: cuyielite_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://cuyielite:cuyielite@localhost:5432/cuyielite_test
+      TEST_DATABASE_URL: postgresql://cuyielite:cuyielite@localhost:5432/cuyielite_test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - run: pip install -r backend/requirements.txt
+      - name: Apply DDL
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in db/ddl/central/*.sql; do
+            psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"
+          done
+        env:
+          PGPASSWORD: cuyielite
       - run: pytest backend
