@@ -8,11 +8,17 @@ Asesores: Ing. Cristian Camilo Ordoñez Quintero, Mangin Luis Montenegro
 Campo de validación: Centro Agropecuario Lope del SENA (Pasto, Nariño)
 Metodología: Extreme Programming (XP)
 
-> **Nota de actualización técnica (recomendación del asesor):** el stack original definía React Native + Expo con persistencia local en WatermelonDB/SQLite. Por recomendación del asesor, el proyecto migra a **Ionic + React** (empaquetado mediante Capacitor) para el cliente, y a **PostgreSQL como motor de base de datos local**, administrado mediante **DBeaver** como herramienta cliente de administración de bases de datos. Los diagramas y scripts de este documento se actualizaron para reflejar este cambio. Ver numeral 0 para el detalle y las implicaciones técnicas de esta decisión.
+> **Nota de actualización técnica (ADR 0002):** el stack original definía React Native + Expo con persistencia local en WatermelonDB/SQLite. Por recomendación del asesor, el cliente migra a **Ionic + React** (empaquetado mediante Capacitor). Para la persistencia local se evaluó PostgreSQL y, tras la validación con el asesor, quedó definida **SQLite en Android y Windows**, manteniendo **PostgreSQL + pgvector** como base central. La ADR 0002 (`docs/decisiones/0002-persistencia-local-sqlite.md`) formaliza esa decisión y sustituye solo la elección de base local de la ADR 0001. Los diagramas y el DDL central de este documento reflejan el estado vigente; el numeral 0 conserva el historial de la recomendación inicial de PostgreSQL local, ya sustituida.
 
 ---
 
-## 0. Actualización del Stack Tecnológico — Cliente y Persistencia Local (Recomendación del Asesor)
+## 0. Historial de Actualizaciones del Stack Tecnológico — Cliente y Persistencia Local
+
+> **Sección histórica.** Registra las recomendaciones sucesivas sobre el cliente y la
+> persistencia local, con su resultado final. El estado vigente es: **SQLite** como base
+> local en **Android y Windows** y **PostgreSQL + pgvector** como base central, conforme a
+> la ADR 0002. Todo lo que indica PostgreSQL como base local se conserva como antecedente
+> y **no es la configuración actual**.
 
 ### Cambio 1: Framework de cliente — de React Native/Expo a Ionic
 
@@ -23,16 +29,30 @@ Por recomendación del asesor, el cliente multiplataforma migra a **Ionic + Reac
 
 **Justificación de la decisión:** Ionic + React con Capacitor es la ruta de menor riesgo técnico para el equipo, al ser el camino oficialmente soportado por Ionic tanto para Android como para Windows Desktop, evitando la incertidumbre de compatibilidad que implicaría combinarlo con React Native.
 
-### Cambio 2: Persistencia local — de SQLite/WatermelonDB a PostgreSQL local
+### Cambio 2 (histórico, sustituido): Persistencia local — de SQLite/WatermelonDB a PostgreSQL local
+
+**Resultado de la validación (ADR 0002, 2026-11-02):** la base local no se mantiene en PostgreSQL; pasa a **SQLite** en Android y Windows. El texto siguiente se conserva como registro de la recomendación inicial y de la duda técnica que motivó su revisión.
 
 Por recomendación del asesor, la base de datos local deja de ser SQLite/WatermelonDB y pasa a ser **una instancia de PostgreSQL** administrada mediante **DBeaver** (cliente de administración de bases de datos, no un motor de base de datos en sí mismo — DBeaver se usa para inspeccionar y administrar la instancia local de PostgreSQL, de forma análoga a como podría usarse para la instancia central).
 
-**Consideración técnica que el equipo debe validar con el asesor:** WatermelonDB/SQLite se eligió originalmente porque son motores embebidos, livianos y diseñados para ejecutarse dentro de una aplicación móvil sin un proceso de servidor independiente — una condición importante para el escenario offline-first en campo, donde el dispositivo (celular Android del técnico) no siempre tiene capacidad ni corresponde ejecutar un servidor de base de datos completo. PostgreSQL, en cambio, es un motor cliente-servidor que requiere un proceso `postgres` corriendo (ya sea nativo o en contenedor). Esta arquitectura es viable sin inconvenientes en el **cliente de Windows Desktop**, donde sí es razonable instalar una instancia local de PostgreSQL. Para el **cliente móvil Android**, se recomienda validar con el asesor una de estas dos rutas antes de avanzar:
+**Consideración técnica que el equipo debía validar con el asesor (histórico):** WatermelonDB/SQLite se eligió originalmente porque son motores embebidos, livianos y diseñados para ejecutarse dentro de una aplicación móvil sin un proceso de servidor independiente — una condición importante para el escenario offline-first en campo, donde el dispositivo (celular Android del técnico) no siempre tiene capacidad ni corresponde ejecutar un servidor de base de datos completo. PostgreSQL, en cambio, es un motor cliente-servidor que requiere un proceso `postgres` corriendo (ya sea nativo o en contenedor). Esta arquitectura es viable sin inconvenientes en el **cliente de Windows Desktop**, donde sí es razonable instalar una instancia local de PostgreSQL. Para el **cliente móvil Android**, se recomendaba validar con el asesor una de estas dos rutas antes de avanzar:
 
 1. Ejecutar PostgreSQL empaquetado para Android (existen distribuciones experimentales, pero con soporte y estabilidad limitados en producción), o
 2. Mantener PostgreSQL como base de datos local únicamente en el cliente de escritorio, y definir junto con el asesor qué motor usará específicamente el cliente móvil de campo.
 
-Este documento asume, en los diagramas siguientes, que la base de datos local (en cualquiera de los clientes) es PostgreSQL, conforme a la instrucción recibida, y dejamos consignada esta observación para que el equipo la resuelva formalmente con el asesor antes de la fase de construcción (Fase 3, numeral 3.3 del documento de metodología).
+Este documento asumió, mientras la validación estuvo pendiente, que la base de datos local (en cualquiera de los clientes) era PostgreSQL. Esa suposición quedó sustituida por la ADR 0002: la base local vigente es SQLite en Android y Windows. Ver Cambio 3.
+
+### Cambio 3: Persistencia local vigente — SQLite en Android y Windows
+
+La validación con el asesor se comunicó y Oskar la confirmó: la base local no se mantiene en PostgreSQL y pasa a **SQLite**, en **Android y Windows**. La base **central** sigue siendo **PostgreSQL + pgvector**, sin cambios. El registro formal está en la ADR 0002 (`docs/decisiones/0002-persistencia-local-sqlite.md`), que sustituye únicamente la elección de base local de la ADR 0001; Ionic + React y FastAPI mantienen su alcance.
+
+Pendiente de diseño con Diery (no decidido en esta actualización):
+
+- Esquema/DDL de SQLite y su mapeo con el esquema central: no se traducen automáticamente UUID, TIMESTAMPTZ, triggers ni el dialecto de PostgreSQL.
+- Conector o plugin de SQLite y su empaquetado en Windows.
+- Cifrado, migraciones y política de backups locales.
+
+Las reglas de sincronización (Last Write Wins, asignación de `updated_at` y contratos `/sync`) no cambian con este cambio de motor.
 
 ---
 
@@ -45,7 +65,7 @@ Este documento asume, en los diagramas siguientes, que la base de datos local (e
 Para el desarrollo del sistema CuyiElite se adoptó la metodología ágil **Extreme Programming (XP)**, propuesta por Kent Beck, en razón de las siguientes características particulares del proyecto:
 
 - **Equipo de desarrollo reducido** (dos ingenieros de software: Oskar Julián Ortiz Ortiz y Diery Alejandro Valencia Itacual), condición para la cual XP fue originalmente concebida, a diferencia de metodologías orientadas a equipos numerosos como SAFe o LeSS.
-- **Requisitos susceptibles de evolución constante**, dado que el sistema se valida directamente en campo (Centro Agropecuario Lope del SENA) y los criterios zootécnicos —como las variables de entrada del modelo de Machine Learning— pueden ajustarse conforme el asesor técnico y los productores retroalimenten el prototipo. La propia actualización de stack documentada en el numeral 0 de este documento (migración a Ionic + React y a PostgreSQL local) es evidencia directa de este principio de adaptación continua.
+- **Requisitos susceptibles de evolución constante**, dado que el sistema se valida directamente en campo (Centro Agropecuario Lope del SENA) y los criterios zootécnicos —como las variables de entrada del modelo de Machine Learning— pueden ajustarse conforme el asesor técnico y los productores retroalimenten el prototipo. La propia actualización de stack documentada en el numeral 0 de este documento (migración a Ionic + React y definición de SQLite como base local) es evidencia directa de este principio de adaptación continua.
 - **Necesidad de entregas funcionales tempranas y frecuentes**, permitiendo validar con los asesores (Ing. Cristian Camilo Ordoñez Quintero y Mangin Luis Montenegro) el avance real del sistema en cada iteración, en lugar de esperar a un único entregable final.
 - **Alto componente técnico e incertidumbre de diseño**, propio de la integración de tres subsistemas complejos —sincronización offline-first, modelo de Machine Learning y motor RAG— donde el diseño simple y el refactoring continuo reducen el riesgo de sobre-ingeniería prematura.
 
@@ -72,7 +92,7 @@ Para el desarrollo del sistema CuyiElite se adoptó la metodología ágil **Extr
 
 1. **Historias de Usuario (User Stories):** los requisitos se documentan como historias breves desde la perspectiva del técnico de campo o del investigador (p. ej., *"Como técnico de campo, quiero registrar el peso de un cuy sin conexión a internet, para no perder el dato si no hay señal en el galpón"*).
 2. **Juego de la Planificación (Planning Game):** al inicio de cada iteración se priorizan las historias de usuario según valor para el proyecto (p. ej., el módulo de sincronización offline se priorizó sobre el motor RAG, al ser prerrequisito funcional del sistema).
-3. **Entregas Pequeñas (Small Releases):** el sistema se construye por incrementos funcionales verificables, siguiendo el orden natural de dependencia entre capas: primero el modelo de datos y la persistencia local (PostgreSQL local, numeral 0), luego la sincronización, después el módulo de Machine Learning, y finalmente el motor RAG.
+3. **Entregas Pequeñas (Small Releases):** el sistema se construye por incrementos funcionales verificables, siguiendo el orden natural de dependencia entre capas: primero el modelo de datos y la persistencia local (SQLite, numeral 0), luego la sincronización, después el módulo de Machine Learning, y finalmente el motor RAG.
 4. **Diseño Simple (Simple Design):** se evita construir abstracciones no requeridas por la iteración actual; por ejemplo, el modelo Random Forest se implementó en su forma más simple antes de evaluar ajuste de hiperparámetros o validación cruzada avanzada.
 5. **Pruebas (Testing First):** se establecen pruebas unitarias con `pytest` para los `Services` y `Repositories` del backend FastAPI antes o durante la implementación de cada funcionalidad, garantizando cobertura sobre la lógica crítica (especialmente la resolución de conflictos LWW).
 6. **Refactorización (Refactoring):** revisión periódica del código para mejorar su estructura sin alterar su comportamiento externo, aplicada especialmente a la capa de `Repositories` conforme crece el número de entidades sincronizables.
@@ -93,7 +113,7 @@ El desarrollo se organiza en iteraciones cortas (recomendado: 1 a 2 semanas), ca
 | Control de versiones | Git + repositorio remoto (GitHub/GitLab) | Integración continua y propiedad colectiva del código |
 | Gestión de historias de usuario | Tablero Kanban (Trello, Jira o similar) | Visualización del Planning Game e iteraciones |
 | Pruebas automatizadas | `pytest` (backend), Jest/React Testing Library (cliente Ionic + React) | Soporte a la práctica de Testing First |
-| Administración de base de datos local | **DBeaver** | Inspección y administración de la instancia local de PostgreSQL durante el desarrollo (ver numeral 0) |
+| Administración de bases de datos | **DBeaver** (base central PostgreSQL) | Inspección y administración de la instancia central durante el desarrollo; la herramienta para el archivo SQLite local queda pendiente de decisión (ADR 0002) |
 | Integración continua | GitHub Actions / GitLab CI | Ejecución automática de pruebas en cada integración |
 | Documentación técnica y diagramas | Mermaid.js, Miro | Diagramas de arquitectura, DER y flujos, versionables y colaborativos |
 | Comunicación con el cliente | Reuniones periódicas presenciales en el SENA + canal de mensajería | Retroalimentación continua tipo "cliente en sitio" |
@@ -121,7 +141,7 @@ C4Container
 
     System_Boundary(cuyielite, "Sistema CuyiElite") {
         Container(app_mobile, "Aplicación Cliente", "Ionic + React + Capacitor - Android / Windows Desktop", "Interfaz offline-first para captura de datos en campo: galpones, pozas, cuyes, partos, pesajes, mortalidad")
-        ContainerDb(db_local, "Base de Datos Local", "PostgreSQL (instancia local)", "Persistencia local inmediata, administrada mediante DBeaver; almacena entidades con campos de control delta (created_at, updated_at, synced_at, deleted_at)")
+        ContainerDb(db_local, "Base de Datos Local", "SQLite (Android / Windows)", "Persistencia local inmediata en el dispositivo; almacena entidades con campos de control delta (created_at, updated_at, synced_at, deleted_at)")
         Container(sync_worker, "Worker de Sincronización", "Background Task (JS/Native)", "Detecta conectividad, empaqueta el delta local y resuelve conflictos mediante Last Write Wins (LWW)")
 
         Container(api, "API Central", "Python FastAPI", "Expone endpoints REST para sincronización delta, predicción ML y consultas RAG; arquitectura en capas (Controllers, Services, Repositories)")
@@ -134,8 +154,8 @@ C4Container
     System_Ext(manuales, "Manuales Zootécnicos SENA", "Corpus documental fuente para el proceso de indexación RAG")
 
     Rel(tecnico, app_mobile, "Registra datos de campo", "UI")
-    Rel(app_mobile, db_local, "Lee/Escribe inmediato", "SQL local")
-    Rel(sync_worker, db_local, "Lee delta pendiente", "SQL local")
+    Rel(app_mobile, db_local, "Lee/Escribe inmediato", "SQLite")
+    Rel(sync_worker, db_local, "Lee delta pendiente", "SQLite")
     Rel(sync_worker, api, "Envía/recibe delta", "HTTPS/JSON")
     Rel(api, db_central, "Persiste y consulta", "SQL/asyncpg")
     Rel(api, ml_module, "Solicita clasificación", "Llamada interna")
@@ -150,7 +170,7 @@ C4Container
 ### Explicación de módulos
 
 - **Aplicación Cliente (Ionic + React + Capacitor):** interfaz multiplataforma (Android móvil y Windows Desktop) empleada por el técnico de campo, construida sobre Ionic + React y empaquetada mediante Capacitor. Prioriza la disponibilidad sobre la consistencia inmediata (offline-first), permitiendo el registro ininterrumpido de datos en el Centro Agropecuario Lope, incluso en ausencia de conectividad a internet.
-- **Base de Datos Local (PostgreSQL):** capa de persistencia que garantiza lectura y escritura inmediata sin latencia de red, administrada mediante DBeaver. Cada entidad incorpora los campos de control delta necesarios para la sincronización posterior. Ver numeral 0 para las consideraciones técnicas de esta elección en el cliente móvil.
+- **Base de Datos Local (SQLite):** capa de persistencia embebida que garantiza lectura y escritura inmediata sin latencia de red ni proceso de servidor en el dispositivo (Android y Windows). Cada entidad incorpora los campos de control delta necesarios para la sincronización posterior. El DDL de SQLite y su mapeo con el esquema central quedan pendientes de diseño con Diery (ADR 0002, numeral 0).
 - **Worker de Sincronización:** proceso en segundo plano encargado de monitorear el estado de conectividad del dispositivo, calcular el delta pendiente (registros con `updated_at > synced_at`) y ejecutar el protocolo de sincronización contra la API central.
 - **API Central (FastAPI):** puerta de entrada única al ecosistema de datos centralizados, estructurada en capas de Controllers (rutas), Services (lógica de negocio) y Repositories (acceso a datos), lo cual favorece la mantenibilidad y las pruebas unitarias exigidas por la metodología XP.
 - **Módulo de Inferencia ML:** componente que ejecuta el modelo Random Forest Classifier previamente entrenado, encargado de categorizar automáticamente a las hembras reproductoras.
@@ -201,7 +221,7 @@ C4Component
 
 ## 4. Diagrama Entidad-Relación (DER)
 
-Modelo relacional aplicable tanto a la instancia central de PostgreSQL como a la instancia local de PostgreSQL (cliente), dado que ambas capas comparten el mismo motor de base de datos tras la actualización de stack descrita en el numeral 0, lo cual simplifica la consistencia estructural entre ambas capas de persistencia frente al esquema dual anterior (PostgreSQL/SQLite).
+Modelo relacional lógico compartido por la base central (PostgreSQL + pgvector) y la base local (SQLite en Android y Windows, ADR 0002). Ambas capas comparten entidades y campos de control delta, pero no el mismo motor: la implementación física en SQLite —tipos de datos, generación de UUID, marcas de tiempo, triggers y dialecto— requiere un diseño propio y su mapeo con el esquema central, pendiente de diseño con Diery. Este DER describe el modelo, no un DDL ejecutable en ambos motores.
 
 ```mermaid
 erDiagram
@@ -307,7 +327,7 @@ erDiagram
 
 ---
 
-## 5. Scripts DDL — PostgreSQL
+## 5. Scripts DDL — PostgreSQL Central
 
 ```sql
 -- Extensión requerida para soporte vectorial
@@ -416,9 +436,15 @@ CREATE INDEX idx_partos_madre ON partos(madre_id);
 CREATE INDEX idx_pesajes_cuy ON pesajes(cuy_id);
 ```
 
-## 6. Script DDL — PostgreSQL Local (Cliente, administrado con DBeaver)
+## 6. Script DDL — PostgreSQL Local (Cliente) — HISTÓRICO, SUSTITUIDO
 
-Tras la actualización de stack (numeral 0), la base de datos local del cliente utiliza **el mismo motor PostgreSQL** que la base de datos central, por lo que **el DDL es estructuralmente el mismo** presentado en el numeral 5 (PostgreSQL Central), con las siguientes diferencias operativas:
+> **Sección histórica.** Este script corresponde a la recomendación inicial de usar
+> PostgreSQL como base local. Quedó sustituido por la ADR 0002
+> (`docs/decisiones/0002-persistencia-local-sqlite.md`): la base local vigente es
+> **SQLite** en Android y Windows. Se conserva como registro y **no debe ejecutarse**.
+> El DDL de SQLite queda pendiente de diseño con Diery.
+
+Mientras esa recomendación estuvo vigente, la base de datos local del cliente utilizaba **el mismo motor PostgreSQL** que la base de datos central, por lo que **el DDL era estructuralmente el mismo** presentado en el numeral 5 (PostgreSQL Central), con las siguientes diferencias operativas:
 
 1. **No se crea la tabla `embeddings_sena` ni la extensión `pgvector`** en la instancia local: el dispositivo cliente no requiere capacidad de búsqueda vectorial, ya que el motor RAG opera exclusivamente contra la base de datos central.
 2. La extensión `uuid-ossp` sí debe habilitarse localmente, para mantener consistencia en la generación de identificadores UUID entre cliente y servidor.
@@ -440,7 +466,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- exclusivas de la instancia central.
 ```
 
-**Nota pendiente de validación con el asesor:** ejecutar una instancia completa de PostgreSQL en el dispositivo móvil de campo (Android) implica requisitos de recursos distintos a los de un motor embebido como SQLite. Se recomienda validar formalmente con el asesor si esta instancia corre en los tres tipos de cliente (móvil Android y escritorio Windows) o si, en la práctica, aplica principalmente al cliente de escritorio. Ver numeral 0 para el detalle completo de esta observación.
+**Resuelto (2026-11-02):** la validación con el asesor se realizó y la base local pasa a SQLite en Android y Windows (ADR 0002). Queda cerrada la duda sobre ejecutar PostgreSQL en el dispositivo móvil de campo; el DDL de SQLite queda pendiente de diseño con Diery.
 
 ---
 
@@ -451,7 +477,7 @@ sequenceDiagram
     autonumber
     actor Tec as Técnico de Campo
     participant App as App Cliente (Ionic + React)
-    participant Local as PostgreSQL Local
+    participant Local as SQLite Local
     participant Worker as Sync Worker
     participant API as API FastAPI (SyncController)
     participant Central as PostgreSQL Central
@@ -511,7 +537,7 @@ flowchart TD
     I -- "Élite" --> J[Actualizar categoria_ml = ELITE]
     I -- "Normal" --> K[Actualizar categoria_ml = NORMAL]
     I -- "Descarte" --> L[Actualizar categoria_ml = DESCARTE]
-    J --> M[Persistir resultado en PostgreSQL]
+    J --> M[Persistir resultado en PostgreSQL central]
     K --> M
     L --> M
     M --> N{"¿Categoría = Descarte?"}
@@ -532,7 +558,7 @@ flowchart LR
         M1[Manuales Zootécnicos SENA - PDF/DOCX] --> M2[Extracción y limpieza de texto]
         M2 --> M3["Segmentación en chunks<br/>(chunking semántico)"]
         M3 --> M4["Generación de embeddings<br/>(modelo de embeddings)"]
-        M4 --> M5[(pgvector - tabla embeddings_sena)]
+        M4 --> M5[(pgvector central - tabla embeddings_sena)]
     end
 
     subgraph Consulta["Fase de Consulta (tiempo real)"]

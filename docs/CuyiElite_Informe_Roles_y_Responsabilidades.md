@@ -25,7 +25,7 @@ Metodología de desarrollo: Extreme Programming (XP).
 ## 3. Oskar Julián Ortiz Ortiz — Ingeniero de Software, Tech Lead / Arquitecto
 
 ### 3.1 Responsabilidades principales
-1. **Arquitectura del sistema:** mantener los diagramas C4 (Nivel 2 y 3), el diagrama UML de contexto y el DER; decidir y documentar cambios de stack (Ionic + React con Capacitor, PostgreSQL local administrado con DBeaver).
+1. **Arquitectura del sistema:** mantener los diagramas C4 (Nivel 2 y 3), el diagrama UML de contexto y el DER; decidir y documentar cambios de stack (Ionic + React con Capacitor y SQLite local en Android y Windows, conforme a la ADR 0002).
 2. **Sincronización offline-first:** diseñar e implementar el `SyncWorker`, la detección de conectividad, el empaquetado del delta (`updated_at > synced_at`) y la resolución de conflictos Last Write Wins en marcas UTC.
 3. **Backend FastAPI:** capas Controllers, Services, Repositories y Schemas; endpoints de sincronización (`/sync/push`, `/sync/pull`), autenticación y esquemas Pydantic v2.
 4. **Cliente Ionic + React:** estructura de la aplicación, pantallas de registro en campo (galpones, pozas, cuyes, partos, pesajes, mortalidad) y empaquetado con Capacitor para Android y Windows.
@@ -48,7 +48,7 @@ Diseño simple, refactorización, integración continua, estándares de codifica
 ## 4. Diery Alejandro Valencia Itacual — Ingeniero de Software, Especialista en Datos e IA
 
 ### 4.1 Responsabilidades principales
-1. **Modelo de datos:** diseñar y mantener el esquema relacional (DDL de PostgreSQL central y local), los campos de control delta y los índices; validar la integridad con los datos reales del Centro Lope.
+1. **Modelo de datos:** diseñar y mantener el esquema relacional (DDL de PostgreSQL central y del esquema SQLite local, este último pendiente de diseño), los campos de control delta y los índices; validar la integridad con los datos reales del Centro Lope.
 2. **Modelo de clasificación:** construir el dataset a partir de TCN, partos acumulados, pesos y mortalidad; entrenar el Random Forest Classifier (scikit-learn); evaluarlo con matriz de confusión, precisión, recall y F1 frente al criterio experto zootécnico.
 3. **Servicio de predicción:** implementar `PredictionService` y el endpoint `/ml/predict/hembra`, con la regla de generar alerta automática para hembras en categoría Descarte.
 4. **Motor RAG:** extraer y segmentar los manuales del SENA, generar embeddings, almacenarlos en `embeddings_sena` con pgvector y construir el flujo de consulta con citación de fuente.
@@ -107,7 +107,7 @@ Testing First sobre el modelo y los servicios de datos, cliente en sitio (coordi
 1. **Propiedad colectiva del código:** cualquiera puede modificar cualquier módulo si lo necesita, con revisión del otro.
 2. **Documentar decisiones:** todo cambio de arquitectura o de modelo queda escrito (como se hizo con el cambio de stack).
 3. **Demostración cruzada:** al cierre de cada iteración, cada uno explica al otro su avance, de modo que ambos puedan sustentar el sistema completo.
-4. **Pendiente de validar con el asesor:** viabilidad de PostgreSQL como base local en el celular Android de campo. Debe resolverse antes de la Fase 3, porque condiciona el trabajo de Oskar en la sincronización.
+4. **Base local definida (ADR 0002):** la validación con el asesor se realizó y la base local es **SQLite** en Android y Windows, con **PostgreSQL + pgvector** central. Queda pendiente el diseño del DDL SQLite y su mapeo con el esquema central (Diery), que condiciona el trabajo de sincronización de Oskar.
 
 ---
 
