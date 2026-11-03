@@ -18,4 +18,19 @@ module.exports = {
     // Platform runtime + plugins, prepared by `capacitor-electron vendor`.
     { from: 'vendor/node_modules', to: 'node_modules' },
   ],
+  // Explicit Windows x64 NSIS target, per-user installation (no admin rights,
+  // no UAC elevation) so the field technician can install without IT support.
+  win: {
+    target: [
+      {
+        target: 'nsis',
+        arch: ['x64'],
+      },
+    ],
+  },
+  nsis: {
+    oneClick: true,
+    perMachine: false,
+    allowElevation: false,
+  },
 };
