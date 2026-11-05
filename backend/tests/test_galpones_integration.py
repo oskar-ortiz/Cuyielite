@@ -1,4 +1,4 @@
-"""Pruebas de integración contra PostgreSQL real."""
+"""Pruebas de integraci��n contra PostgreSQL real."""
 
 import os
 from pathlib import Path
@@ -32,7 +32,7 @@ def _validate_test_url(url: str) -> None:
 def _require_test_db():
     url = os.environ.get("TEST_DATABASE_URL")
     if not url:
-        pytest.skip("TEST_DATABASE_URL no configurada")
+        pytest.fail("TEST_DATABASE_URL no configurada; configuracion obligatoria para estas pruebas")
     _validate_test_url(url)
     return url
 
@@ -41,16 +41,23 @@ def _require_test_db():
 def test_db():
     url = _require_test_db()
     prev_url = os.environ.get("DATABASE_URL")
-    conn = psycopg.connect(url, autocommit=True)
+    conn = None
+    g1 = g2 = g_deleted = p1 = p2 = p_deleted = None
+    setup_error = None
     try:
+        conn = psycopg.connect(url, autocommit=True)
         # Aplicar DDL solo si las tablas no existen
         with conn.cursor() as cur:
             cur.execute("SELECT 1 FROM information_schema.tables WHERE table_name = 'galpones'")
             exists = cur.fetchone() is not None
         if not exists:
             for sql_file in sorted(DDL_DIR.glob("*.sql")):
-                with open(sql_file) as f:
+                with open(sql_file, encoding="utf-8") as f:
                     conn.execute(f.read())
+
+        # Aplicar migracion C1 si no esta aplicada (idempotente). Fallo propaga causa original.
+        from tools.db_migrate.runner import apply_migrations
+        apply_migrations(url)
 
         g1 = uuid4()
         g2 = uuid4()
@@ -91,27 +98,38 @@ def test_db():
             "g1": g1, "g2": g2, "g_deleted": g_deleted,
             "p1": p1, "p2": p2, "p_deleted": p_deleted,
         }
+    except Exception as exc:
+        setup_error = exc
+        raise
     finally:
         cleanup_error = None
-        try:
+        if g1 is not None:
             try:
-                with conn.cursor() as cur:
-                    cur.execute("DELETE FROM pozas WHERE id IN (%s, %s, %s)", (p1, p2, p_deleted))
-                    cur.execute("DELETE FROM galpones WHERE id IN (%s, %s, %s)", (g1, g2, g_deleted))
-                conn.commit()
+                if conn is not None:
+                    with conn.cursor() as cur:
+                        cur.execute("DELETE FROM pozas WHERE id IN (%s, %s, %s)", (p1, p2, p_deleted))
+                        cur.execute("DELETE FROM galpones WHERE id IN (%s, %s, %s)", (g1, g2, g_deleted))
+                    conn.commit()
             except Exception as exc:
-                cleanup_error = RuntimeError(f"Teardown de prueba falló: {exc}")
-        finally:
+                cleanup_error = RuntimeError(f"Teardown de prueba fallo: {exc}")
+        if conn is not None:
             try:
                 conn.close()
-            except Exception:
-                pass
-            if prev_url is None:
-                os.environ.pop("DATABASE_URL", None)
-            else:
-                os.environ["DATABASE_URL"] = prev_url
+            except Exception as exc:
+                if cleanup_error is None:
+                    cleanup_error = RuntimeError(f"Cierre de conexion fallo: {exc}")
+        if prev_url is None:
+            os.environ.pop("DATABASE_URL", None)
+        else:
+            os.environ["DATABASE_URL"] = prev_url
+        # Propagar error original de setup; si no hay, propagar error de limpieza.
         if cleanup_error is not None:
-            raise cleanup_error
+            if setup_error is not None:
+                setup_error.add_note(
+                    f"Tambien fallo la limpieza: {cleanup_error}"
+                )
+            else:
+                raise cleanup_error
 
 
 @pytest.fixture
