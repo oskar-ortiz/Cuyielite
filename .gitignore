@@ -19,6 +19,7 @@ android/app/build/
 # Modelos y datos (no subir)
 *.pkl
 *.joblib
+db/raw_Lope/
 db/seeds/real_*
 *.dump
 
