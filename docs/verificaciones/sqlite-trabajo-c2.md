@@ -101,8 +101,6 @@ Ruta resuelta en proceso principal: `path.join(app.getPath('userData'), 'cuyieli
 
 ## Fallos, limitaciones y comprobaciones pendientes
 
-- Verificación nativa Android no ejecutada.
-- Acceso de diagnóstico de laboratorio no implementado.
 - Importador y sincronización no iniciados (C3+).
 
 ## Nota sobre harness temporal
