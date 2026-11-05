@@ -49,8 +49,8 @@ jobs:
         env:
           TEST_DATABASE_URL: ${{ env.DATABASE_URL }}
       - name: Run backend tests
-        run: pytest backend
+        run: python -m pytest backend
       - name: Run migration tests
         env:
           TEST_DATABASE_URL: ${{ env.DATABASE_URL }}
-        run: pytest tools/db_migrate/tests
+        run: python -m pytest tools/db_migrate/tests

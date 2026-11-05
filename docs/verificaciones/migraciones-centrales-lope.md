@@ -76,3 +76,19 @@ conn.close()
 - Importador central (Entrega D) no iniciado.
 - Sincronización ampliada (animales/eventos) no iniciada.
 - CI no verificado en GitHub (solo local).
+
+
+## Correccion de invocacion CI (PR #22)
+
+Ejecucion remota anterior:
+- Backend: paso (25 passed).
+- Pruebas de migraciones: fallaron con `ModuleNotFoundError: No module named 'tools'`.
+
+Correccion: `python -m pytest backend` y `python -m pytest tools/db_migrate/tests`,
+ejecutados desde la raiz del repositorio.
+
+Resultado local verificado:
+- `python -m pytest backend`: 25 passed.
+- `python -m pytest tools/db_migrate/tests`: 20 passed.
+
+Nuevo resultado de CI queda pendiente despues del push.
