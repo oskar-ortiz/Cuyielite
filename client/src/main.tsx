@@ -1,4 +1,5 @@
 import '@capacitor/core';
+import './data/sqlitePocPlugin';
 
 import React from 'react';
 import { createRoot } from 'react-dom/client';

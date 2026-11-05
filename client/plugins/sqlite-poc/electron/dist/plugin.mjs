@@ -4,6 +4,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 
 import { migrateAndSeed } from './galpones.migration.js';
+import { initializeWorkDatabase } from './work.migration.js';
 import { normalizeGalpon, normalizePoza, validateGalpon, validatePoza } from './galpones.validation.js';
 
 // Base de prueba del paso 1 (poc.db) — no se modifica aquí.
@@ -13,6 +14,10 @@ const POC_DB_PATH = path.join(POC_DB_DIR, 'poc.db');
 // Base de galpones/pozas de esta entrega (separada de poc.db).
 const GALPONES_DB_DIR = path.join(app.getPath('userData'), 'cuyielite');
 const GALPONES_DB_PATH = path.join(GALPONES_DB_DIR, 'cuyielite.db');
+
+// Base de trabajo (separada de demo y galpones).
+const WORK_DB_DIR = path.join(app.getPath('userData'), 'cuyielite-work');
+const WORK_DB_PATH = path.join(WORK_DB_DIR, 'trabajo.db');
 
 function openDb(dbPath) {
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -39,7 +44,7 @@ function makeAdapter(db) {
 class SqlitePoc {
   static __capacitorElectronPlugin = {
     name: 'SqlitePoc',
-    methods: ['saveValue', 'readValue', 'initializeDatabase', 'listGalpones', 'listPozasByGalpon', 'createGalpon', 'createPoza', 'updateGalpon', 'updatePoza'],
+    methods: ['saveValue', 'readValue', 'initializeDatabase', 'listGalpones', 'listPozasByGalpon', 'createGalpon', 'createPoza', 'updateGalpon', 'updatePoza', 'initializeWorkDatabase', 'getWorkDatabaseStatus', 'closeWorkDatabase'],
   };
 
   async load() {}
@@ -179,6 +184,52 @@ class SqlitePoc {
     } finally {
       db.close();
     }
+  }
+  // --- Base de trabajo (trabajo.db) ---
+  async initializeWorkDatabase() {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      const identity = await initializeWorkDatabase(makeAdapter(db));
+      // contar filas
+      const counts = {};
+      for (const t of ['galpones', 'pozas', 'cuyes', 'partos', 'pesajes', 'eventos', 'parto_crias']) {
+        counts[t] = db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get().n;
+      }
+      return { ok: true, status: { schemaFamily: identity.schemaFamily, schemaVersion: identity.schemaVersion, datasetId: identity.datasetId, checksum: identity.checksum, counts } };
+    } finally {
+      db.close();
+    }
+  }
+
+  async getWorkDatabaseStatus() {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      // leer meta
+      const metaRows = db.prepare('SELECT key, value FROM meta').all();
+      const meta = Object.fromEntries(metaRows.map((r) => [r.key, r.value]));
+      const counts = {};
+      for (const t of ['galpones', 'pozas', 'cuyes', 'partos', 'pesajes', 'eventos', 'parto_crias']) {
+        try {
+          counts[t] = db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get().n;
+        } catch {
+          counts[t] = -1;
+        }
+      }
+      return {
+        schemaFamily: meta.schema_family ?? '',
+        schemaVersion: Number(meta.schema_version ?? 0),
+        datasetId: meta.dataset_id ?? '',
+        checksum: meta.schema_checksum ?? '',
+        counts,
+      };
+    } finally {
+      db.close();
+    }
+  }
+
+  async closeWorkDatabase() {
+    // No hay conexion persistente en este plugin; cada operacion abre/cierra.
+    return { ok: true };
   }
 }
 
