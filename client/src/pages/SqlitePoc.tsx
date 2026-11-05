@@ -1,14 +1,9 @@
-import { Capacitor, registerPlugin } from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
 import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite';
 import { IonBackButton, IonButtons, IonContent, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/react';
 import React, { useState } from 'react';
 
-interface WindowsPlugin {
-  saveValue(options: { value: string }): Promise<{ ok: boolean }>;
-  readValue(): Promise<{ value: string | null }>;
-}
-
-const WindowsPlugin = registerPlugin<WindowsPlugin>('SqlitePoc');
+import { SqlitePoc } from '../data/sqlitePocPlugin';
 
 const sqlite = new SQLiteConnection(CapacitorSQLite);
 
@@ -38,7 +33,7 @@ async function androidRead(): Promise<string | null> {
 
 const isAndroid = Capacitor.getPlatform() === 'android';
 
-const SqlitePoc: React.FC = () => {
+const SqlitePocPage: React.FC = () => {
   const [saved, setSaved] = useState<string | null>(null);
   const [read, setRead] = useState<string | null>(null);
   const [status, setStatus] = useState<string>('sin probar');
@@ -52,7 +47,7 @@ const SqlitePoc: React.FC = () => {
       if (isAndroid) {
         ok = await androidSave(value);
       } else {
-        const r = await WindowsPlugin.saveValue({ value });
+        const r = await SqlitePoc.saveValue({ value });
         ok = r.ok;
       }
       if (ok) {
@@ -72,7 +67,7 @@ const SqlitePoc: React.FC = () => {
       if (isAndroid) {
         value = await androidRead();
       } else {
-        const r = await WindowsPlugin.readValue();
+        const r = await SqlitePoc.readValue();
         value = r.value;
       }
       setRead(value);
@@ -105,4 +100,4 @@ const SqlitePoc: React.FC = () => {
   );
 };
 
-export default SqlitePoc;
+export default SqlitePocPage;
