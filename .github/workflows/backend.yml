@@ -2,10 +2,10 @@ name: backend
 on:
   pull_request:
     branches: [dev, main]
-    paths: ["backend/**", "db/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "db/**", "tools/db_migrate/**", ".github/workflows/backend.yml"]
   push:
     branches: [dev]
-    paths: ["backend/**", "db/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "db/**", "tools/db_migrate/**", ".github/workflows/backend.yml"]
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -41,4 +41,16 @@ jobs:
           done
         env:
           PGPASSWORD: cuyielite
-      - run: pytest backend
+      - name: Apply migration
+        shell: bash
+        run: |
+          set -euo pipefail
+          TEST_DATABASE_URL="$DATABASE_URL" python -m tools.db_migrate --env-var TEST_DATABASE_URL
+        env:
+          TEST_DATABASE_URL: ${{ env.DATABASE_URL }}
+      - name: Run backend tests
+        run: python -m pytest backend
+      - name: Run migration tests
+        env:
+          TEST_DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: python -m pytest tools/db_migrate/tests

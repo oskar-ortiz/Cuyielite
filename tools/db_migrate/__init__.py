@@ -1,0 +1,1 @@
+"""Migrador transaccional de bases centrales PostgreSQL."""
