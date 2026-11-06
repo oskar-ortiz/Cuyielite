@@ -7,12 +7,14 @@ const state = vi.hoisted(() => ({
   http: vi.fn(),
   context: vi.fn(),
   push: vi.fn(),
+  pull: vi.fn(),
+  sync: vi.fn(),
 }));
 
 vi.mock('@capacitor/core', () => ({
   Capacitor: { getPlatform: () => state.platform },
   CapacitorHttp: { request: (...args: unknown[]) => state.http(...args) },
-  registerPlugin: () => ({ context: state.context, push: state.push }),
+  registerPlugin: () => ({ context: state.context, push: state.push, pull: state.pull, sync: state.sync }),
 }));
 
 const TOKEN = 'lab-e2e-token-abcdefghijklmnopqrstuvwxyz012345';
@@ -23,6 +25,8 @@ describe('transporte S3 nativo (T6)', () => {
     state.http.mockReset();
     state.context.mockReset();
     state.push.mockReset();
+    state.pull.mockReset();
+    state.sync.mockReset();
   });
 
   it('Electron delega context/push en el plugin acotado, sin URL ni metodo', async () => {
@@ -35,6 +39,9 @@ describe('transporte S3 nativo (T6)', () => {
     const req = { protocol_version: 1, device_id: 'd', operations: [] };
     await t.push(TOKEN, req);
     expect(state.push).toHaveBeenCalledWith({ token: TOKEN, body: req });
+    state.pull.mockResolvedValue({ items: [] });
+    await t.pull(TOKEN, 'opaque.cursor', 20);
+    expect(state.pull).toHaveBeenCalledWith({ token: TOKEN, cursor: 'opaque.cursor', limit: 20 });
   });
 
   it('Android usa CapacitorHttp con loopback fijo, disableRedirects y data JSON', async () => {
@@ -66,6 +73,22 @@ describe('transporte S3 nativo (T6)', () => {
     state.http.mockResolvedValue({ status: 302, data: {} });
     const t = createFetchTransport();
     await expect(t.context(TOKEN)).rejects.toThrow('Redireccion rechazada');
+  });
+
+  it('Android envía el cursor opaco en una ruta pull fija con timeout y sin redirects', async () => {
+    state.platform = 'android';
+    state.http.mockResolvedValue({ status: 200, data: { items: [] } });
+    const t = createFetchTransport();
+    await t.pull(TOKEN, 'opaque.cursor_token', 20);
+    expect(state.http).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: 'http://127.0.0.1:8000/sync/pull?limit=20&cursor=opaque.cursor_token',
+        method: 'GET',
+        disableRedirects: true,
+        connectTimeout: 10_000,
+        readTimeout: 10_000,
+      }),
+    );
   });
 
   it('Android propaga error HTTP no exitoso', async () => {
