@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { getConflictRepository } from './work.sync.conflict.repository';
+
 const mocks = vi.hoisted(() => ({
   platform: 'android',
   connection: { marker: 'connection' },
@@ -26,8 +28,6 @@ vi.mock('./work.sync.conflicts', () => ({
 vi.mock('./work.sync.transport', () => ({
   SyncLab: { listConflicts: mocks.syncList, keepCentral: mocks.syncKeep, retryConflict: mocks.syncRetry },
 }));
-
-import { getConflictRepository } from './work.sync.conflict.repository';
 
 describe('repositorio de conflictos por plataforma', () => {
   beforeEach(() => {

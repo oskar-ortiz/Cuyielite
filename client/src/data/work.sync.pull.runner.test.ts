@@ -2,14 +2,12 @@ import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 
 import type { MigrationDb } from './work.migration';
-import { createWorkGalpon } from './work.outbox';
 import { initializeWorkSyncDatabase } from './work.sync.migration';
 import { pullUntilCheckpoint } from './work.sync.pull.runner';
 import type { SyncPullPage } from './work.sync.pull.validation';
 
 const SCOPE = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
 const GALPON = '11111111-1111-4111-8111-111111111111';
-const POZA = '22222222-2222-4222-8222-222222222222';
 const CREATED = '2026-11-06T10:00:00.000Z';
 
 function adapterFor(db: DatabaseSync): MigrationDb {

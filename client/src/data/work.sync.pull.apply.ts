@@ -1,6 +1,12 @@
 import type { MigrationDb } from './work.migration.js';
 import { initializeWorkSyncDatabase } from './work.sync.migration.js';
-import { stableJson, validatePullPage, type Entity, SyncPullError, type PullRecord } from './work.sync.pull.validation.js';
+import {
+  stableJson,
+  validatePullPage,
+  type Entity,
+  SyncPullError,
+  type PullRecord,
+} from './work.sync.pull.validation.js';
 
 type Row = Record<string, unknown>;
 
@@ -138,4 +144,3 @@ export async function applyPullPage(
     return { applied, preservedLocal, ignoredOlder, cursor: page.next_cursor };
   });
 }
-

@@ -1,10 +1,11 @@
 import { normalizeGalpon, normalizePoza, validateGalpon, validatePoza } from './galpones.validation.js';
 import type { MigrationDb } from './work.migration.js';
-import { initializeWorkSyncDatabase } from './work.sync.migration.js';
-import { applyCentralBusinessRecord, type PullRecord } from './work.sync.pull.js';
 import { readConflictReview, type ConflictReview } from './work.sync.conflicts.review.js';
+import { initializeWorkSyncDatabase } from './work.sync.migration.js';
+import { applyCentralBusinessRecord } from './work.sync.pull.js';
 
 type Row = Record<string, unknown>;
+export type ConflictResolutionResult = { operationId: string | null; discarded: number };
 
 function exactKeys(value: Record<string, unknown>, keys: string[]): boolean {
   return Object.keys(value).sort().join(',') === [...keys].sort().join(',');

@@ -4,12 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { MigrationDb } from './work.migration';
 import { updateWorkGalpon } from './work.outbox';
 import { prepareEligible, sendPrepared } from './work.sync.client';
-import {
-  listConflictCases,
-  resolveConflictKeepCentral,
-  resolveConflictRetry,
-  type ConflictReview,
-} from './work.sync.conflicts';
+import { listConflictCases, type ConflictReview } from './work.sync.conflicts.review';
 import { initializeWorkSyncDatabase } from './work.sync.migration';
 import { bindContext } from './work.sync.scope';
 
@@ -93,7 +88,6 @@ function review(a: string, b: string, version = '2'): ConflictReview {
   };
 }
 
-
 describe('conflict review', () => {
   it('presenta ambas versiones y la revisión exacta de la cadena pendiente', async () => {
     const { db, adapter, a, b } = await setup();
@@ -104,5 +98,4 @@ describe('conflict review', () => {
     expect(cases[0].central.data).toMatchObject({ nombre: 'Central v2', ubicacion: 'Lote C' });
     db.close();
   });
-
 });
