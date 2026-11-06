@@ -23,6 +23,7 @@ const WORK_DB_PATH = path.join(WORK_DB_DIR, 'trabajo.db');
 function openDb(dbPath) {
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   const db = new DatabaseSync(dbPath);
+  db.exec('PRAGMA busy_timeout = 5000');
   db.exec('PRAGMA foreign_keys = ON');
   return db;
 }
