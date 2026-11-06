@@ -1,0 +1,12 @@
+{
+  "name": "capacitor-sync-lab",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Transporte de sincronizacion acotado para el laboratorio S3 (Electron).",
+  "main": "electron/dist/plugin.mjs",
+  "capacitor": {
+    "electron": {
+      "src": "electron"
+    }
+  }
+}
