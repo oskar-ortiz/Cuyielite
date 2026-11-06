@@ -15,9 +15,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import type { Galpon } from '../data/galpones.repository';
 import { getGalponesRepository } from '../data/galpones.repository.factory';
+import { getWorkGalponesReader } from '../data/work.galpones.repository';
 import './galpones.css';
 
-const Galpones: React.FC = () => {
+interface GalponesProps {
+  mode?: 'demo' | 'trabajo';
+}
+
+const Galpones: React.FC<GalponesProps> = ({ mode = 'demo' }) => {
+  const workMode = mode === 'trabajo';
+  const basePath = workMode ? '/trabajo/galpones' : '/galpones';
   const [galpones, setGalpones] = useState<Galpon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,8 +34,9 @@ const Galpones: React.FC = () => {
     const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
-    getGalponesRepository()
-      .listGalpones()
+    Promise.resolve()
+      .then(() => (workMode ? getWorkGalponesReader() : getGalponesRepository()))
+      .then((repo) => repo.listGalpones())
       .then((data) => {
         if (requestId !== requestIdRef.current) return;
         setGalpones(data);
@@ -40,7 +48,7 @@ const Galpones: React.FC = () => {
       .finally(() => {
         if (requestId === requestIdRef.current) setLoading(false);
       });
-  }, []);
+  }, [workMode]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -58,26 +66,35 @@ const Galpones: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>Galpones</IonTitle>
-          <IonButton slot="end" routerLink="/galpones/nuevo">
-            Nuevo
-          </IonButton>
+          <IonTitle>{workMode ? 'Galpones · Trabajo' : 'Galpones'}</IonTitle>
+          {!workMode && (
+            <IonButton slot="end" routerLink="/galpones/nuevo">
+              Nuevo
+            </IonButton>
+          )}
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen>
         <div className="marcado-demo">
-          <IonChip color="warning">Datos de demostración</IonChip>
+          <IonChip color={workMode ? 'primary' : 'warning'}>
+            {workMode ? 'Base de trabajo · solo consulta' : 'Datos de demostración'}
+          </IonChip>
+          <IonButton size="small" fill="clear" routerLink="/">
+            Cambiar modo
+          </IonButton>
         </div>
         {loading ? (
           <p className="estado-vacio">Cargando galpones…</p>
         ) : error ? (
           <p className="estado-vacio">Error al cargar galpones: {error}</p>
         ) : galpones.length === 0 ? (
-          <p className="estado-vacio">No hay galpones registrados.</p>
+          <p className="estado-vacio">
+            {workMode ? 'La base de trabajo todavía no tiene galpones.' : 'No hay galpones registrados.'}
+          </p>
         ) : (
           <IonList>
             {galpones.map((galpon) => (
-              <IonItem key={galpon.id} routerLink={`/galpones/${galpon.id}`} detail={true}>
+              <IonItem key={galpon.id} routerLink={`${basePath}/${galpon.id}`} detail={true}>
                 <IonLabel>
                   <h2>{galpon.nombre}</h2>
                   <p>{galpon.ubicacion ?? 'Sin ubicación registrada'}</p>

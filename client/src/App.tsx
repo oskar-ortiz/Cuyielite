@@ -1,6 +1,6 @@
 import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
-import { Navigate, Route } from 'react-router-dom';
+import { Route } from 'react-router-dom';
 
 import CrearGalpon from './pages/CrearGalpon';
 import CrearPoza from './pages/CrearPoza';
@@ -8,6 +8,7 @@ import EditarGalpon from './pages/EditarGalpon';
 import EditarPoza from './pages/EditarPoza';
 import GalponDetalle from './pages/GalponDetalle';
 import Galpones from './pages/Galpones';
+import ModoInicio from './pages/ModoInicio';
 import SqlitePoc from './pages/SqlitePoc';
 
 /* Core CSS required for Ionic components to work properly */
@@ -46,10 +47,12 @@ const App: React.FC = () => (
   <IonApp>
     <IonReactRouter>
       <IonRouterOutlet>
-        <Route path="/" element={<Navigate to="/galpones" replace />} />
+        <Route path="/" element={<ModoInicio />} />
         <Route path="/galpones" element={<Galpones />} />
+        <Route path="/trabajo/galpones" element={<Galpones mode="trabajo" />} />
         <Route path="/galpones/nuevo" element={<CrearGalpon />} />
         <Route path="/galpones/:id" element={<GalponDetalle />} />
+        <Route path="/trabajo/galpones/:id" element={<GalponDetalle mode="trabajo" />} />
         <Route path="/galpones/:id/editar" element={<EditarGalpon />} />
         <Route path="/galpones/:id/pozas/nueva" element={<CrearPoza />} />
         <Route path="/galpones/:id/pozas/:pozaId/editar" element={<EditarPoza />} />
