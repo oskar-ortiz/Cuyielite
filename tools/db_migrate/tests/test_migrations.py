@@ -14,6 +14,7 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DDL_DIR = REPO_ROOT / "db" / "ddl" / "central"
 MIGRATIONS_DIR = REPO_ROOT / "db" / "migrations" / "central"
+EXPECTED_MIGRATION_IDS = sorted(path.name for path in MIGRATIONS_DIR.glob("*.sql"))
 
 
 def _validate_test_url(url: str) -> None:
@@ -380,7 +381,7 @@ def test_origen_roles_multiples_y_identidad_estable(fresh_db):
 
 def test_segundo_apply_noop(fresh_db):
     first = _apply_migration(fresh_db)
-    assert first == ["0001_lope_domain.sql"]
+    assert first == EXPECTED_MIGRATION_IDS
     second = _apply_migration(fresh_db)
     assert second == []
 
@@ -519,15 +520,15 @@ def test_concurrencia_coordinada(fresh_db):
     assert not t1.is_alive() and not t2.is_alive(), "timeout en concurrencia"
     assert errors == [], f"errores: {errors}"
     # exactly one applied + one no-op
-    applied_count = sum(1 for r in results if r == ["0001_lope_domain.sql"])
+    applied_count = sum(1 for r in results if r == EXPECTED_MIGRATION_IDS)
     noop_count = sum(1 for r in results if r == [])
     assert applied_count == 1, f"applied={applied_count}"
     assert noop_count == 1, f"noop={noop_count}"
     conn = psycopg.connect(fresh_db)
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT count(*) FROM schema_migrations WHERE id='0001_lope_domain.sql'")
-            assert cur.fetchone()[0] == 1
+            cur.execute("SELECT id FROM schema_migrations ORDER BY id")
+            assert [row[0] for row in cur.fetchall()] == EXPECTED_MIGRATION_IDS
             # schema final correcto
             cur.execute("SELECT 1 FROM information_schema.tables WHERE table_name='parto_crias'")
             assert cur.fetchone() is not None
