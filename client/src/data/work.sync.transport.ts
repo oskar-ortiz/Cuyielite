@@ -1,3 +1,5 @@
+import { CapacitorHttp } from '@capacitor/core';
+
 // Transporte nativo acotado para sincronizacion de laboratorio (T6).
 // El token vive solo en memoria; la URL base es loopback fija.
 
@@ -18,25 +20,40 @@ export interface SyncTransport {
 }
 
 export function createFetchTransport(): SyncTransport {
-  async function request(path: string, token: string, init?: RequestInit): Promise<unknown> {
-    const url = LAB_BASE_URL + path;
-    if (!isLoopbackUrl(url)) throw new Error('Destino fuera de loopback');
-    const res = await fetch(url, {
-      ...init,
-      headers: {
-        ...(init?.headers ?? {}),
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token,
-      },
-      redirect: 'error',
-    });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.json();
+  const w = (typeof window !== 'undefined' ? (window as any) : null);
+  const native = w && w.electronSync;
+  if (native) {
+    return {
+      context: (token) => native.context(token),
+      push: (token, req) => native.push(token, req),
+    };
   }
-  return {
-    context: (token) => request('/sync/context', token) as Promise<any>,
-    push: (token, req) => request('/sync/push', token, { method: 'POST', body: JSON.stringify(req) }),
-  };
+  const cap = w && w.Capacitor;
+  if (cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform()) {
+    const http: any = CapacitorHttp;
+    if (http) {
+      async function capRequest(path: string, token: string, init?: RequestInit): Promise<unknown> {
+        const url = LAB_BASE_URL + path;
+        if (!isLoopbackUrl(url)) throw new Error('Destino fuera de loopback');
+        const opts: any = {
+          url,
+          method: (init?.method ?? 'GET'),
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          disableRedirects: true,
+        };
+        if (init?.body) opts.data = JSON.parse(init.body as string);
+        const res = await http.request(opts);
+        if (res.status >= 300 && res.status < 400) throw new Error('Redirect not followed');
+        if (res.status < 200 || res.status >= 300) throw new Error('HTTP ' + res.status);
+        return res.data;
+      }
+      return {
+        context: (token) => capRequest('/sync/context', token) as Promise<any>,
+        push: (token, req) => capRequest('/sync/push', token, { method: 'POST', body: JSON.stringify(req) }),
+      };
+    }
+  }
+  throw new Error('Transporte nativo no disponible: sincronizacion web deshabilitada (T6)');
 }
 
 export function assertScopeUnchanged(previousScopeId: string | null, newScopeId: string): void {
