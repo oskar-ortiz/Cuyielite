@@ -2,6 +2,7 @@ import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { Route } from 'react-router-dom';
 
+import ConflictosTrabajo from './pages/ConflictosTrabajo';
 import CrearGalpon from './pages/CrearGalpon';
 import CrearPoza from './pages/CrearPoza';
 import EditarGalpon from './pages/EditarGalpon';
@@ -50,6 +51,7 @@ const App: React.FC = () => (
         <Route path="/" element={<ModoInicio />} />
         <Route path="/galpones" element={<Galpones />} />
         <Route path="/trabajo/galpones" element={<Galpones mode="trabajo" />} />
+        <Route path="/trabajo/conflictos" element={<ConflictosTrabajo />} />
         <Route path="/galpones/nuevo" element={<CrearGalpon />} />
         <Route path="/galpones/:id" element={<GalponDetalle />} />
         <Route path="/trabajo/galpones/:id" element={<GalponDetalle mode="trabajo" />} />
