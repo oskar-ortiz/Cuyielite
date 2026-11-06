@@ -19,9 +19,16 @@ import { useParams } from 'react-router-dom';
 
 import type { Galpon, Poza } from '../data/galpones.repository';
 import { getGalponesRepository } from '../data/galpones.repository.factory';
+import { getWorkGalponesReader } from '../data/work.galpones.repository';
 import './galpones.css';
 
-const GalponDetalle: React.FC = () => {
+interface GalponDetalleProps {
+  mode?: 'demo' | 'trabajo';
+}
+
+const GalponDetalle: React.FC<GalponDetalleProps> = ({ mode = 'demo' }) => {
+  const workMode = mode === 'trabajo';
+  const basePath = workMode ? '/trabajo/galpones' : '/galpones';
   const { id } = useParams<{ id: string }>();
   const [galpon, setGalpon] = useState<Galpon | null>(null);
   const [pozas, setPozas] = useState<Poza[]>([]);
@@ -43,8 +50,9 @@ const GalponDetalle: React.FC = () => {
     setNotFound(false);
     setGalpon(null);
     setPozas([]);
-    const repo = getGalponesRepository();
-    Promise.all([repo.listGalpones(), repo.listPozasByGalpon(currentId)])
+    Promise.resolve()
+      .then(() => (workMode ? getWorkGalponesReader() : getGalponesRepository()))
+      .then((repo) => Promise.all([repo.listGalpones(), repo.listPozasByGalpon(currentId)]))
       .then(([galpones, pozasData]) => {
         if (requestId !== requestIdRef.current) return;
         const found = galpones.find((g) => g.id === currentId) ?? null;
@@ -63,7 +71,7 @@ const GalponDetalle: React.FC = () => {
       .finally(() => {
         if (requestId === requestIdRef.current) setLoading(false);
       });
-  }, [id]);
+  }, [id, workMode]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -83,7 +91,7 @@ const GalponDetalle: React.FC = () => {
         <IonHeader>
           <IonToolbar>
             <IonButtons slot="start">
-              <IonBackButton defaultHref="/galpones" text="Galpones" />
+              <IonBackButton defaultHref={basePath} text="Galpones" />
             </IonButtons>
             <IonTitle>Cargando…</IonTitle>
           </IonToolbar>
@@ -101,7 +109,7 @@ const GalponDetalle: React.FC = () => {
         <IonHeader>
           <IonToolbar>
             <IonButtons slot="start">
-              <IonBackButton defaultHref="/galpones" text="Galpones" />
+              <IonBackButton defaultHref={basePath} text="Galpones" />
             </IonButtons>
             <IonTitle>Error</IonTitle>
           </IonToolbar>
@@ -119,14 +127,14 @@ const GalponDetalle: React.FC = () => {
         <IonHeader>
           <IonToolbar>
             <IonButtons slot="start">
-              <IonBackButton defaultHref="/galpones" text="Galpones" />
+              <IonBackButton defaultHref={basePath} text="Galpones" />
             </IonButtons>
             <IonTitle>Galpón no encontrado</IonTitle>
           </IonToolbar>
         </IonHeader>
         <IonContent fullscreen>
           <p className="estado-vacio">
-            No existe un galpón con ese identificador. <IonRouterLink href="/galpones">Volver al listado</IonRouterLink>
+            No existe un galpón con ese identificador. <IonRouterLink href={basePath}>Volver al listado</IonRouterLink>
           </p>
         </IonContent>
       </IonPage>
@@ -138,18 +146,24 @@ const GalponDetalle: React.FC = () => {
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref="/galpones" text="Galpones" />
+            <IonBackButton defaultHref={basePath} text="Galpones" />
           </IonButtons>
           <IonTitle>{galpon.nombre}</IonTitle>
           <IonButtons slot="end">
-            <IonButton routerLink={`/galpones/${id}/editar`}>Editar galpón</IonButton>
-            <IonButton routerLink={`/galpones/${id}/pozas/nueva`}>Nueva poza</IonButton>
+            {!workMode && (
+              <>
+                <IonButton routerLink={`/galpones/${id}/editar`}>Editar galpón</IonButton>
+                <IonButton routerLink={`/galpones/${id}/pozas/nueva`}>Nueva poza</IonButton>
+              </>
+            )}
           </IonButtons>
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen>
         <div className="marcado-demo">
-          <IonChip color="warning">Datos de demostración</IonChip>
+          <IonChip color={workMode ? 'primary' : 'warning'}>
+            {workMode ? 'Base de trabajo · solo consulta' : 'Datos de demostración'}
+          </IonChip>
         </div>
         {pozas.length === 0 ? (
           <p className="estado-vacio">Este galpón todavía no tiene pozas registradas.</p>
@@ -161,9 +175,11 @@ const GalponDetalle: React.FC = () => {
                   <h2>{poza.codigo}</h2>
                   <p>{poza.tipo}</p>
                 </IonLabel>
-                <IonButton slot="end" routerLink={`/galpones/${id}/pozas/${poza.id}/editar`}>
-                  Editar
-                </IonButton>
+                {!workMode && (
+                  <IonButton slot="end" routerLink={`/galpones/${id}/pozas/${poza.id}/editar`}>
+                    Editar
+                  </IonButton>
+                )}
               </IonItem>
             ))}
           </IonList>

@@ -160,7 +160,7 @@ const REQUIRED_FKS: Record<string, [string, string][]> = {
   ],
 };
 
-async function validatePhysicalSchema(db: MigrationDb): Promise<void> {
+export async function validatePhysicalSchema(db: MigrationDb): Promise<void> {
   // 1. Tablas requeridas.
   for (const t of REQUIRED_TABLES) {
     if (!(await tableExists(db, t))) {

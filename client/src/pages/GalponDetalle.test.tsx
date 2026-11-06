@@ -4,13 +4,19 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import GalponDetalle from './GalponDetalle';
 
-const { listGalpones, listPozasByGalpon } = vi.hoisted(() => ({
+const { listGalpones, listPozasByGalpon, listWorkGalpones, listWorkPozas } = vi.hoisted(() => ({
   listGalpones: vi.fn(),
   listPozasByGalpon: vi.fn(),
+  listWorkGalpones: vi.fn(),
+  listWorkPozas: vi.fn(),
 }));
 
 vi.mock('../data/galpones.repository.factory', () => ({
   getGalponesRepository: () => ({ listGalpones, listPozasByGalpon }),
+}));
+
+vi.mock('../data/work.galpones.repository', () => ({
+  getWorkGalponesReader: () => ({ listGalpones: listWorkGalpones, listPozasByGalpon: listWorkPozas }),
 }));
 
 const renderDetalle = (ruta: string) =>
@@ -22,10 +28,21 @@ const renderDetalle = (ruta: string) =>
     </MemoryRouter>,
   );
 
+const renderDetalleTrabajo = (ruta: string) =>
+  render(
+    <MemoryRouter initialEntries={[ruta]}>
+      <Routes>
+        <Route path="/trabajo/galpones/:id" element={<GalponDetalle mode="trabajo" />} />
+      </Routes>
+    </MemoryRouter>,
+  );
+
 describe('GalponDetalle', () => {
   beforeEach(() => {
     listGalpones.mockReset();
     listPozasByGalpon.mockReset();
+    listWorkGalpones.mockReset();
+    listWorkPozas.mockReset();
   });
 
   it('muestra solo las pozas del galpón seleccionado', async () => {
@@ -83,5 +100,17 @@ describe('GalponDetalle', () => {
     listPozasByGalpon.mockRejectedValue(new Error('boom'));
     renderDetalle('/galpones/00000000-0000-4000-8000-000000000001');
     expect(await screen.findByText(/Error al cargar el galpón/)).toBeInTheDocument();
+  });
+
+  it('muestra el detalle de trabajo sin permitir ediciones de la base sin outbox', async () => {
+    listWorkGalpones.mockResolvedValue([{ id: 'g1', nombre: 'Trabajo Norte', ubicacion: null }]);
+    listWorkPozas.mockResolvedValue([{ id: 'p1', galponId: 'g1', codigo: 'T-1', tipo: 'cría', capacidadMaxima: 20 }]);
+    renderDetalleTrabajo('/trabajo/galpones/g1');
+    expect(await screen.findByText('T-1')).toBeInTheDocument();
+    expect(screen.getByText('Base de trabajo · solo consulta')).toBeInTheDocument();
+    expect(screen.queryByText('Editar galpón')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nueva poza')).not.toBeInTheDocument();
+    expect(screen.queryByText('Editar')).not.toBeInTheDocument();
+    expect(listGalpones).not.toHaveBeenCalled();
   });
 });
