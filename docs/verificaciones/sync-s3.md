@@ -23,6 +23,19 @@ Fecha: 2026-11-05
 - Backend: 41 passed (25 regresion + 16 sync).
 - Cliente: 84 passed (76 previas + 8 S3 nuevas).
 
-## Criterios pendientes
-- Verificacion de interrupcion/reintento/reapertura nativa (Android/Electron) con transporte loopback aun no ejecutada en dispositivo; modulo de transporte creado pero no integrado en adaptadores nativos.
-- S3 se declara parcialmente cerrada: push y recibos verificados; transporte nativo y vinculacion explicita de base al scope pendientes de verificacion en dispositivo.
+## Criterios pendientes (bloqueo real)
+- Integracion nativa del transporte:
+  - Comando requerido: `npm run build:electron` + empaquetado Electron, y `npx cap sync android && ./gradlew assembleDebug`.
+  - Bloqueo: el main de Electron delega en `@capawesome/capacitor-electron` sin preload IPC propio; anadir metodos acotados context/push exige modificar `client/electron/main.ts` y un preload, mas pruebas en runtime empaquetado. No se pudo verificar en este entorno sin ejecutar el empaquetado.
+  - Criterio exacto no cumplido: "metodos acotados en proceso principal, fetch de Node, sin URL/ruta/metodo desde renderer, rechazo de redirecciones y destinos fuera de loopback, token solo en memoria".
+- Vinculacion explicita de base al scope:
+  - Implementada y probada en `work.sync.scope.ts` (bindContext) con 5 pruebas unitarias (primera vinculacion, no-op, scope distinto, dispositivo distinto, reapertura).
+  - Pendiente de integracion en el flujo de sync del cliente (llamada a bindContext antes de enviar).
+- Verificacion E2E en dispositivos/emulador:
+  - Bloqueo: no hay emulador Android ni build empaquetado de Electron ejecutandose en este entorno.
+  - Criterio exacto no cumplido: "flujo completo en Windows empaquetado y Android emulado".
+
+## Lo que SI esta verificado
+- Backend push/recibos/auth: 41 pruebas backend en verde.
+- Cliente S3 (prepare/freeze/send/receipt validation/scope binding): 89 pruebas unitarias en verde.
+- E2E backend con PostgreSQL cuyielite_test: contexto, alta, reintento, FK poza, conflicto (ver resultados anteriores).

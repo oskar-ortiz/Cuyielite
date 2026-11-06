@@ -11,17 +11,38 @@ from backend.app.repositories import sync as repo
 from backend.app.schemas.sync import SyncOperationResult
 
 
+import hashlib as _hl
+
+
 def _lab_scope_id() -> UUID:
     return repo.get_or_create_lab_scope()
 
 
-def _lab_device_id(scope_id: UUID) -> UUID:
-    return repo.get_or_create_lab_device(scope_id)
-
-
-def get_context() -> dict:
+def register_device_token(token: str) -> UUID:
     scope_id = _lab_scope_id()
-    device_id = _lab_device_id(scope_id)
+    token_hash = _hl.sha256(token.encode()).hexdigest()
+    existing = repo.get_device(scope_id, token_hash)
+    if existing is not None:
+        return existing
+    return repo.register_device(scope_id, token_hash)
+
+
+def authenticate(token: str):
+    if not token or len(token) < 32:
+        return None
+    scope_id = _lab_scope_id()
+    token_hash = _hl.sha256(token.encode()).hexdigest()
+    dev_id = repo.get_device(scope_id, token_hash)
+    if dev_id is None:
+        return None
+    return scope_id, dev_id
+
+
+def get_context(token: str) -> dict:
+    auth = authenticate(token)
+    if auth is None:
+        raise ValueError("unauthorized")
+    scope_id, device_id = auth
     return {
         "protocol_version": 1,
         "scope_id": str(scope_id),
@@ -30,10 +51,18 @@ def get_context() -> dict:
     }
 
 
-def process_push(device_id, operations: list[dict]) -> list[dict]:
-    scope_id = _lab_scope_id()
-    # Device identity resolved from lab identity, never from request body.
-    dev_id = _lab_device_id(scope_id)
+def process_push(token: str, device_id_body, operations: list[dict]) -> list[dict]:
+    auth = authenticate(token)
+    if auth is None:
+        raise HTTPException(status_code=401, detail="UNAUTHORIZED")
+    scope_id, dev_id = auth
+    # body device_id must match authenticated device
+    try:
+        body_dev = device_id_body if isinstance(device_id_body, UUID) else UUID(str(device_id_body))
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=422, detail="invalid device_id")
+    if body_dev != dev_id:
+        raise HTTPException(status_code=403, detail="DEVICE_NOT_AUTHORIZED")
 
     # Batch-level validation
     op_ids = []

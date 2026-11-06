@@ -2,17 +2,15 @@
 
 from uuid import UUID
 
-import psycopg
+from fastapi import APIRouter, HTTPException, Header
 
-from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 from backend.app.schemas.sync import SyncPushRequest, SyncPushResponse
 from backend.app.services import sync as service
 
+
 router = APIRouter(tags=["sync"])
-
-
-from pydantic import BaseModel
 
 
 class SyncContextResponse(BaseModel):
@@ -22,9 +20,24 @@ class SyncContextResponse(BaseModel):
     limits: dict
 
 
+def _extract_token(authorization: str | None) -> str:
+    if not authorization:
+        return ""
+    parts = authorization.split()
+    if len(parts) == 2 and parts[0].lower() == "bearer":
+        return parts[1]
+    return ""
+
+
 @router.get("/sync/context")
-def get_context() -> SyncContextResponse:
-    ctx = service.get_context()
+def get_context(authorization: str | None = Header(default=None)) -> SyncContextResponse:
+    token = _extract_token(authorization)
+    try:
+        ctx = service.get_context(token)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="UNAUTHORIZED")
+    except Exception:
+        raise HTTPException(status_code=503, detail="Servicio no disponible")
     return SyncContextResponse(
         protocol_version=ctx["protocol_version"],
         scope_id=ctx["scope_id"],
@@ -34,7 +47,7 @@ def get_context() -> SyncContextResponse:
 
 
 @router.post("/sync/push", response_model=SyncPushResponse)
-def push(request: SyncPushRequest) -> SyncPushResponse:
+def push(request: SyncPushRequest, authorization: str | None = Header(default=None)) -> SyncPushResponse:
     if request.protocol_version != 1:
         raise HTTPException(status_code=400, detail="PROTOCOL_UNSUPPORTED")
     if len(request.operations) > 100:
@@ -46,14 +59,16 @@ def push(request: SyncPushRequest) -> SyncPushResponse:
     if len(set(keys)) != len(keys):
         raise HTTPException(status_code=422, detail="duplicate record in batch")
 
+    token = _extract_token(authorization)
     operations = [op.model_dump() for op in request.operations]
     try:
         results = service.process_push(
-            device_id=request.device_id,
+            token=token,
+            device_id_body=request.device_id,
             operations=operations,
         )
     except HTTPException:
         raise
-    except Exception as exc:
+    except Exception:
         raise HTTPException(status_code=503, detail="Servicio no disponible")
     return SyncPushResponse(protocol_version=request.protocol_version, results=results)
