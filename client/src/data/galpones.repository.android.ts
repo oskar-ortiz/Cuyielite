@@ -24,10 +24,10 @@ async function getConnection(): Promise<SQLiteDBConnection> {
 
       const adapter: MigrationDb = {
         exec: async (sql: string) => {
-          await c.execute(sql);
+          await c.execute(sql, false);
         },
         run: async (sql: string, params?: unknown[]) => {
-          await c.run(sql, params ?? []);
+          await c.run(sql, params ?? [], false);
         },
         query: async (sql: string, params?: unknown[]) => {
           const res = await c.query(sql, params ?? []);

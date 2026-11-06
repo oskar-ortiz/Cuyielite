@@ -29,6 +29,10 @@ export interface SqlitePocPlugin {
   initializeWorkDatabase(): Promise<{ ok: boolean; status: WorkDbStatus }>;
   getWorkDatabaseStatus(): Promise<WorkDbStatus>;
   closeWorkDatabase(): Promise<{ ok: boolean }>;
+  listWorkGalpones(): Promise<{ galpones: { id: string; nombre: string; ubicacion: string | null }[] }>;
+  listWorkPozasByGalpon(options: { galponId: string }): Promise<{
+    pozas: { id: string; galpon_id: string; codigo: string; tipo: string; capacidad_maxima: number }[];
+  }>;
 }
 
 export interface WorkDbStatus {

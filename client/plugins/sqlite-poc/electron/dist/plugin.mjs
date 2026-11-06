@@ -44,7 +44,7 @@ function makeAdapter(db) {
 class SqlitePoc {
   static __capacitorElectronPlugin = {
     name: 'SqlitePoc',
-    methods: ['saveValue', 'readValue', 'initializeDatabase', 'listGalpones', 'listPozasByGalpon', 'createGalpon', 'createPoza', 'updateGalpon', 'updatePoza', 'initializeWorkDatabase', 'getWorkDatabaseStatus', 'closeWorkDatabase'],
+    methods: ['saveValue', 'readValue', 'initializeDatabase', 'listGalpones', 'listPozasByGalpon', 'createGalpon', 'createPoza', 'updateGalpon', 'updatePoza', 'initializeWorkDatabase', 'getWorkDatabaseStatus', 'closeWorkDatabase', 'listWorkGalpones', 'listWorkPozasByGalpon'],
   };
 
   async load() {}
@@ -230,6 +230,35 @@ class SqlitePoc {
   async closeWorkDatabase() {
     // No hay conexion persistente en este plugin; cada operacion abre/cierra.
     return { ok: true };
+  }
+
+  async listWorkGalpones() {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      await initializeWorkDatabase(makeAdapter(db));
+      const galpones = db
+        .prepare('SELECT id, nombre, ubicacion FROM galpones WHERE deleted_at IS NULL ORDER BY nombre, id')
+        .all();
+      return { galpones };
+    } finally {
+      db.close();
+    }
+  }
+
+  async listWorkPozasByGalpon({ galponId }) {
+    if (typeof galponId !== 'string' || !/^[0-9a-f-]{36}$/i.test(galponId)) {
+      throw new Error('Identificador de galpón inválido');
+    }
+    const db = openDb(WORK_DB_PATH);
+    try {
+      await initializeWorkDatabase(makeAdapter(db));
+      const pozas = db
+        .prepare('SELECT id, galpon_id, codigo, tipo, capacidad_maxima FROM pozas WHERE galpon_id = ? AND deleted_at IS NULL ORDER BY codigo, id')
+        .all(galponId);
+      return { pozas };
+    } finally {
+      db.close();
+    }
   }
 }
 
