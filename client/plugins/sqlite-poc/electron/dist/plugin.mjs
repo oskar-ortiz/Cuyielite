@@ -4,7 +4,8 @@ import path from 'node:path';
 import fs from 'node:fs';
 
 import { migrateAndSeed } from './galpones.migration.js';
-import { initializeWorkDatabase } from './work.migration.js';
+import { initializeWorkSyncDatabase } from './work.sync.migration.js';
+import { createWorkGalpon, createWorkPoza, updateWorkGalpon, updateWorkPoza } from './work.outbox.js';
 import { normalizeGalpon, normalizePoza, validateGalpon, validatePoza } from './galpones.validation.js';
 
 // Base de prueba del paso 1 (poc.db) — no se modifica aquí.
@@ -44,7 +45,7 @@ function makeAdapter(db) {
 class SqlitePoc {
   static __capacitorElectronPlugin = {
     name: 'SqlitePoc',
-    methods: ['saveValue', 'readValue', 'initializeDatabase', 'listGalpones', 'listPozasByGalpon', 'createGalpon', 'createPoza', 'updateGalpon', 'updatePoza', 'initializeWorkDatabase', 'getWorkDatabaseStatus', 'closeWorkDatabase', 'listWorkGalpones', 'listWorkPozasByGalpon'],
+    methods: ['saveValue', 'readValue', 'initializeDatabase', 'listGalpones', 'listPozasByGalpon', 'createGalpon', 'createPoza', 'updateGalpon', 'updatePoza', 'initializeWorkDatabase', 'getWorkDatabaseStatus', 'closeWorkDatabase', 'listWorkGalpones', 'listWorkPozasByGalpon', 'createWorkGalpon', 'createWorkPoza', 'updateWorkGalpon', 'updateWorkPoza'],
   };
 
   async load() {}
@@ -189,13 +190,13 @@ class SqlitePoc {
   async initializeWorkDatabase() {
     const db = openDb(WORK_DB_PATH);
     try {
-      const identity = await initializeWorkDatabase(makeAdapter(db));
+      const identity = await initializeWorkSyncDatabase(makeAdapter(db));
       // contar filas
       const counts = {};
       for (const t of ['galpones', 'pozas', 'cuyes', 'partos', 'pesajes', 'eventos', 'parto_crias']) {
         counts[t] = db.prepare(`SELECT COUNT(*) AS n FROM ${t}`).get().n;
       }
-      return { ok: true, status: { schemaFamily: identity.schemaFamily, schemaVersion: identity.schemaVersion, datasetId: identity.datasetId, checksum: identity.checksum, counts } };
+      return { ok: true, status: { schemaFamily: identity.schemaFamily, schemaVersion: identity.schemaVersion, datasetId: identity.datasetId, checksum: identity.checksum, syncChecksum: identity.syncChecksum, deviceId: identity.deviceId, scopeId: identity.scopeId, cursor: identity.cursor, counts } };
     } finally {
       db.close();
     }
@@ -204,6 +205,7 @@ class SqlitePoc {
   async getWorkDatabaseStatus() {
     const db = openDb(WORK_DB_PATH);
     try {
+      const identity = await initializeWorkSyncDatabase(makeAdapter(db));
       // leer meta
       const metaRows = db.prepare('SELECT key, value FROM meta').all();
       const meta = Object.fromEntries(metaRows.map((r) => [r.key, r.value]));
@@ -220,6 +222,10 @@ class SqlitePoc {
         schemaVersion: Number(meta.schema_version ?? 0),
         datasetId: meta.dataset_id ?? '',
         checksum: meta.schema_checksum ?? '',
+        syncChecksum: identity.syncChecksum,
+        deviceId: identity.deviceId,
+        scopeId: identity.scopeId,
+        cursor: identity.cursor,
         counts,
       };
     } finally {
@@ -235,7 +241,7 @@ class SqlitePoc {
   async listWorkGalpones() {
     const db = openDb(WORK_DB_PATH);
     try {
-      await initializeWorkDatabase(makeAdapter(db));
+      await initializeWorkSyncDatabase(makeAdapter(db));
       const galpones = db
         .prepare('SELECT id, nombre, ubicacion FROM galpones WHERE deleted_at IS NULL ORDER BY nombre, id')
         .all();
@@ -251,11 +257,47 @@ class SqlitePoc {
     }
     const db = openDb(WORK_DB_PATH);
     try {
-      await initializeWorkDatabase(makeAdapter(db));
+      await initializeWorkSyncDatabase(makeAdapter(db));
       const pozas = db
         .prepare('SELECT id, galpon_id, codigo, tipo, capacidad_maxima FROM pozas WHERE galpon_id = ? AND deleted_at IS NULL ORDER BY codigo, id')
         .all(galponId);
       return { pozas };
+    } finally {
+      db.close();
+    }
+  }
+
+  async createWorkGalpon({ nombre, ubicacion }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return await createWorkGalpon(makeAdapter(db), { nombre, ubicacion });
+    } finally {
+      db.close();
+    }
+  }
+
+  async createWorkPoza({ galponId, codigo, tipo, capacidadMaxima }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return await createWorkPoza(makeAdapter(db), galponId, { codigo, tipo, capacidadMaxima });
+    } finally {
+      db.close();
+    }
+  }
+
+  async updateWorkGalpon({ id, nombre, ubicacion }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return await updateWorkGalpon(makeAdapter(db), id, { nombre, ubicacion });
+    } finally {
+      db.close();
+    }
+  }
+
+  async updateWorkPoza({ galponId, id, codigo, tipo, capacidadMaxima }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return await updateWorkPoza(makeAdapter(db), galponId, id, { codigo, tipo, capacidadMaxima });
     } finally {
       db.close();
     }
