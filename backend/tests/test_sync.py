@@ -2,24 +2,30 @@
 import os
 import uuid
 import json
+import urllib.parse
 
 import pytest
 
 LAB_TOKEN = "lab-token-device-1-abcdefghijklmnopqrstuvwxyz012345"
 
 
-def _database_url() -> str:
-    url = os.environ.get("TEST_DATABASE_URL") or os.environ.get("DATABASE_URL")
+def _test_database_url():
+    url = os.environ.get("TEST_DATABASE_URL")
     if not url:
-        raise RuntimeError("Define TEST_DATABASE_URL con una base PostgreSQL aislada para estas pruebas")
+        pytest.fail("TEST_DATABASE_URL no configurada; pruebas sync requieren base aislada")
+    parsed = urllib.parse.urlparse(url)
+    database_name = parsed.path.lstrip("/")
+    if parsed.hostname not in ("localhost", "127.0.0.1") or not database_name.startswith("cuyielite_s5_"):
+        raise ValueError("Las pruebas sync requieren una base aislada cuyielite_s5_* en localhost")
     return url
 
 
 @pytest.fixture
 def client(monkeypatch):
-    url = _database_url()
-    monkeypatch.setenv("DATABASE_URL", url)
-    monkeypatch.setenv("TEST_DATABASE_URL", url)
+    test_url = _test_database_url()
+    monkeypatch.setenv("DATABASE_URL", test_url)
+    monkeypatch.setenv("TEST_DATABASE_URL", test_url)
+    monkeypatch.setenv("SYNC_CURSOR_SIGNING_KEY", "synthetic-test-key-never-for-production-0123456789")
     from fastapi.testclient import TestClient
     from backend.app.main import app
     return TestClient(app)
@@ -35,7 +41,7 @@ def _ctx(client):
 
 def _clean():
     import psycopg
-    conn = psycopg.connect(_database_url(), autocommit=True)
+    conn = psycopg.connect(_test_database_url(), autocommit=True)
     conn.execute("DELETE FROM sync_changes")
     conn.execute("DELETE FROM sync_receipts")
     conn.execute("DELETE FROM sync_devices")
@@ -47,8 +53,9 @@ def _clean():
 
 @pytest.fixture(autouse=True)
 def clean_db():
+    test_url = _test_database_url()
     _clean()
-    os.environ["DATABASE_URL"] = _database_url()
+    os.environ["DATABASE_URL"] = test_url
     from backend.app.services import sync as svc
     svc.register_device_token(LAB_TOKEN)
     yield
@@ -57,6 +64,24 @@ def clean_db():
 
 def _push(client, payload):
     return client.post("/sync/push", json=payload, headers=_headers())
+
+
+def _create_galpon_request(ctx, name):
+    gid = str(uuid.uuid4())
+    return {
+        "protocol_version": 1,
+        "device_id": ctx["device_id"],
+        "operations": [{
+            "operation_id": str(uuid.uuid4()),
+            "entity": "galpon",
+            "record_id": gid,
+            "action": "create",
+            "base_version": None,
+            "client_created_at": "2026-11-06T10:00:00.000Z",
+            "client_edited_at": "2026-11-06T10:00:00.000Z",
+            "data": {"nombre": name, "ubicacion": None},
+        }],
+    }
 
 
 def test_context_requires_token(client):
@@ -385,3 +410,81 @@ def test_poza_galpon_change_rejected(client):
     assert r.status_code == 200
     assert r.json()["results"][0]["status"] == "rejected"
     assert r.json()["results"][0]["code"] == "RELATION_INACTIVE"
+
+
+def test_pull_requires_token(client):
+    assert client.get("/sync/pull").status_code == 401
+
+
+def test_pull_requires_persistent_signing_key(client, monkeypatch):
+    monkeypatch.delenv("SYNC_CURSOR_SIGNING_KEY")
+    assert client.get("/sync/pull", headers=_headers()).status_code == 503
+
+
+def test_pull_empty_returns_signed_checkpoint(client):
+    response = client.get("/sync/pull", headers=_headers())
+    assert response.status_code == 200
+    body = response.json()
+    assert body["items"] == []
+    assert body["has_more"] is False
+    assert body["next_cursor"]
+
+
+def test_pull_pages_pin_high_watermark_and_resume_next_cycle(client):
+    ctx = _ctx(client)
+    for index in range(3):
+        response = _push(client, _create_galpon_request(ctx, f"G{index}"))
+        assert response.status_code == 200
+
+    first = client.get("/sync/pull?limit=2", headers=_headers())
+    assert first.status_code == 200
+    page_one = first.json()
+    assert [item["seq"] for item in page_one["items"]] == ["1", "2"]
+    assert page_one["has_more"] is True
+    assert page_one["items"][0]["record"]["data"]["nombre"] == "G0"
+    assert page_one["items"][0]["record"]["version"] == "1"
+
+    # A new commit after page one must not enter the pinned H=3 cycle.
+    assert _push(client, _create_galpon_request(ctx, "G3")).status_code == 200
+    second = client.get(
+        "/sync/pull?limit=2&cursor=" + page_one["next_cursor"],
+        headers=_headers(),
+    )
+    assert second.status_code == 200
+    page_two = second.json()
+    assert [item["seq"] for item in page_two["items"]] == ["3"]
+    assert page_two["has_more"] is False
+
+    next_cycle = client.get(
+        "/sync/pull?limit=2&cursor=" + page_two["next_cursor"],
+        headers=_headers(),
+    )
+    assert next_cycle.status_code == 200
+    assert [item["seq"] for item in next_cycle.json()["items"]] == ["4"]
+
+
+def test_pull_rejects_tampered_and_foreign_scope_cursors(client):
+    from backend.app.services import sync as service
+    from backend.app.sync_cursor import encode_cursor
+    from uuid import UUID
+
+    ctx = _ctx(client)
+    current = client.get("/sync/pull", headers=_headers()).json()["next_cursor"]
+    parts = current.split(".")
+    tampered = parts[0] + "." + ("A" if parts[1][0] != "A" else "B") + parts[1][1:]
+    assert client.get("/sync/pull?cursor=" + tampered, headers=_headers()).status_code == 400
+
+    foreign = encode_cursor(UUID("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"), 0, None,
+                            b"synthetic-test-key-never-for-production-0123456789")
+    assert client.get("/sync/pull?cursor=" + foreign, headers=_headers()).status_code == 400
+
+
+def test_pull_rejects_future_checkpoint_and_invalid_limit(client):
+    from uuid import UUID
+    from backend.app.sync_cursor import encode_cursor
+
+    ctx = _ctx(client)
+    future = encode_cursor(UUID(ctx["scope_id"]), 1, None,
+                           b"synthetic-test-key-never-for-production-0123456789")
+    assert client.get("/sync/pull?cursor=" + future, headers=_headers()).status_code == 400
+    assert client.get("/sync/pull?limit=101", headers=_headers()).status_code == 422
