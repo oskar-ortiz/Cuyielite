@@ -1,10 +1,26 @@
 import { CapacitorSQLite, SQLiteConnection, type SQLiteDBConnection } from '@capacitor-community/sqlite';
 
-import { initializeWorkDatabase, type MigrationDb } from './work.migration';
+import type { MigrationDb } from './work.migration';
+import { initializeWorkSyncDatabase } from './work.sync.migration';
 
 const sqlite = new SQLiteConnection(CapacitorSQLite);
 
 let connectionPromise: Promise<SQLiteDBConnection> | null = null;
+
+export function adaptWorkConnection(c: SQLiteDBConnection): MigrationDb {
+  return {
+    exec: async (sql: string) => {
+      await c.execute(sql, false);
+    },
+    run: async (sql: string, params?: unknown[]) => {
+      await c.run(sql, params ?? [], false);
+    },
+    query: async (sql: string, params?: unknown[]) => {
+      const res = await c.query(sql, params ?? []);
+      return { values: res.values ?? [] };
+    },
+  };
+}
 
 export async function getWorkConnection(): Promise<SQLiteDBConnection> {
   if (!connectionPromise) {
@@ -12,23 +28,10 @@ export async function getWorkConnection(): Promise<SQLiteDBConnection> {
       let c: SQLiteDBConnection | null = null;
       try {
         // disable auto transactions for controlled migration
-        c = await sqlite.createConnection('trabajo', false, 'no-encryption', 2, false);
+        c = await sqlite.createConnection('trabajo', false, 'no-encryption', 3, false);
         await c.open();
 
-        const adapter: MigrationDb = {
-          exec: async (sql: string) => {
-            await c!.execute(sql, false); // no auto transaction
-          },
-          run: async (sql: string, params?: unknown[]) => {
-            await c!.run(sql, params ?? [], false);
-          },
-          query: async (sql: string, params?: unknown[]) => {
-            const res = await c!.query(sql, params ?? []);
-            return { values: res.values ?? [] };
-          },
-        };
-
-        await initializeWorkDatabase(adapter);
+        await initializeWorkSyncDatabase(adaptWorkConnection(c));
         return c;
       } catch (err) {
         // release connection and registration before allowing retry
