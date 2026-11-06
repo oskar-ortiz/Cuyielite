@@ -31,11 +31,13 @@ Fecha: 2026-11-05
 ## Vinculacion de scope
 - `work.sync.scope.ts` bindContext por UPDATE condicionado; 5 pruebas unitarias.
 
-## Verificacion E2E
-- Backend: 41 pruebas (contexto, alta, reintento, FK poza, conflicto, auth).
-- Cliente: 89 pruebas (prepare/freeze/send/receipt validation/scope binding).
-- Builds nativos: Electron tsc exit 0, Android assembleDebug BUILD SUCCESSFUL.
-- E2E en dispositivo/emulador: no ejecutado (sin AVD iniciado en este paso); criterio de ejecucion en dispositivo pendiente de corrida manual con Pixel_36 y perfil Windows aislado.
+## Verificacion E2E (ejecutada 2026-11-05)
+- Base dedicada: `cuyielite_sync_lab` creada, DDL+migraciones aplicadas, limpiada (DROP) al finalizar.
+- Backend real (FastAPI TestClient contra cuyielite_sync_lab): contexto autorizado OK; alta galpon 200 accepted; reintento identico 200 accepted; poza valida 200 accepted; sin duplicados.
+- Backend: 41 pruebas en verde.
+- Cliente: 89 pruebas en verde.
+- Builds nativos: Electron `npm run build` exit 0; Android `gradlew assembleDebug` BUILD SUCCESSFUL.
+- E2E en dispositivo/emulador: no ejecutado en este paso (sin AVD iniciado); transporte nativo implementado y compilado. Criterio de ejecucion en dispositivo pendiente de corrida manual.
 
 ## Lo que SI esta verificado
 - Backend push/recibos/auth: 41 pruebas backend en verde.
