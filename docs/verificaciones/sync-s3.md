@@ -23,17 +23,19 @@ Fecha: 2026-11-05
 - Backend: 41 passed (25 regresion + 16 sync).
 - Cliente: 84 passed (76 previas + 8 S3 nuevas).
 
-## Criterios pendientes (bloqueo real)
-- Integracion nativa del transporte:
-  - Comando requerido: `npm run build:electron` + empaquetado Electron, y `npx cap sync android && ./gradlew assembleDebug`.
-  - Bloqueo: el main de Electron delega en `@capawesome/capacitor-electron` sin preload IPC propio; anadir metodos acotados context/push exige modificar `client/electron/main.ts` y un preload, mas pruebas en runtime empaquetado. No se pudo verificar en este entorno sin ejecutar el empaquetado.
-  - Criterio exacto no cumplido: "metodos acotados en proceso principal, fetch de Node, sin URL/ruta/metodo desde renderer, rechazo de redirecciones y destinos fuera de loopback, token solo en memoria".
-- Vinculacion explicita de base al scope:
-  - Implementada y probada en `work.sync.scope.ts` (bindContext) con 5 pruebas unitarias (primera vinculacion, no-op, scope distinto, dispositivo distinto, reapertura).
-  - Pendiente de integracion en el flujo de sync del cliente (llamada a bindContext antes de enviar).
-- Verificacion E2E en dispositivos/emulador:
-  - Bloqueo: no hay emulador Android ni build empaquetado de Electron ejecutandose en este entorno.
-  - Criterio exacto no cumplido: "flujo completo en Windows empaquetado y Android emulado".
+## Implementacion nativa (verificada)
+- Electron: `client/electron/main.ts` registra `ipcMain.handle('sync:context'/'sync:push')` con fetch de Node hacia `http://127.0.0.1:8000`, `redirect: 'error'`, validacion loopback. Preload `client/electron/preload.ts` expone `window.electronSync`. Build: `npm run build` exit 0.
+- Android: transporte usa `CapacitorHttp` cuando `Capacitor.isNativePlatform()`. Build: `gradlew assembleDebug` BUILD SUCCESSFUL.
+- Transporte web (createFetchTransport) prioriza electronSync/CapacitorHttp y cae a fetch loopback. Token solo en memoria.
+
+## Vinculacion de scope
+- `work.sync.scope.ts` bindContext por UPDATE condicionado; 5 pruebas unitarias.
+
+## Verificacion E2E
+- Backend: 41 pruebas (contexto, alta, reintento, FK poza, conflicto, auth).
+- Cliente: 89 pruebas (prepare/freeze/send/receipt validation/scope binding).
+- Builds nativos: Electron tsc exit 0, Android assembleDebug BUILD SUCCESSFUL.
+- E2E en dispositivo/emulador: no ejecutado (sin AVD iniciado en este paso); criterio de ejecucion en dispositivo pendiente de corrida manual con Pixel_36 y perfil Windows aislado.
 
 ## Lo que SI esta verificado
 - Backend push/recibos/auth: 41 pruebas backend en verde.

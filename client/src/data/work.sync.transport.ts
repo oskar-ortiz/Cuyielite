@@ -18,6 +18,38 @@ export interface SyncTransport {
 }
 
 export function createFetchTransport(): SyncTransport {
+  const w = (typeof window !== 'undefined' ? (window as any) : null);
+  const native = w && w.electronSync;
+  if (native) {
+    return {
+      context: (token) => native.context(token),
+      push: (token, req) => native.push(token, req),
+    };
+  }
+  const cap = w && w.Capacitor;
+  if (cap && typeof cap.isNativePlatform === 'function' && cap.isNativePlatform()) {
+    const http = cap.Plugins && cap.Plugins.CapacitorHttp;
+    if (http) {
+      async function capRequest(path: string, token: string, init?: RequestInit): Promise<unknown> {
+        const url = LAB_BASE_URL + path;
+        if (!isLoopbackUrl(url)) throw new Error('Destino fuera de loopback');
+        const opts: any = {
+          url,
+          method: (init?.method ?? 'GET'),
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          redirect: 'error',
+        };
+        if (init?.body) opts.data = JSON.parse(init.body as string);
+        const res = await http.request(opts);
+        if (res.status < 200 || res.status >= 300) throw new Error('HTTP ' + res.status);
+        return res.data;
+      }
+      return {
+        context: (token) => capRequest('/sync/context', token) as Promise<any>,
+        push: (token, req) => capRequest('/sync/push', token, { method: 'POST', body: JSON.stringify(req) }),
+      };
+    }
+  }
   async function request(path: string, token: string, init?: RequestInit): Promise<unknown> {
     const url = LAB_BASE_URL + path;
     if (!isLoopbackUrl(url)) throw new Error('Destino fuera de loopback');
