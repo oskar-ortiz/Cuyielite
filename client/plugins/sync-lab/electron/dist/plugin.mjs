@@ -9,6 +9,8 @@ import fs from 'node:fs';
 
 import { bindContext } from './work.sync.scope.js';
 import { prepareEligible, sendPrepared } from './work.sync.client.js';
+import { runSyncCycle } from './work.sync.coordinator.js';
+import { listConflictCases, resolveConflictKeepCentral, resolveConflictRetry } from './work.sync.conflicts.js';
 import { initializeWorkSyncDatabase } from './work.sync.migration.js';
 
 const LAB_BASE_URL = 'http://127.0.0.1:8000';
@@ -16,6 +18,7 @@ const LAB_BASE_URL = 'http://127.0.0.1:8000';
 const ROUTES = Object.freeze({
   context: '/sync/context',
   push: '/sync/push',
+  pull: '/sync/pull',
 });
 
 const WORK_DB_DIR = path.join(app.getPath('userData'), 'cuyielite-work');
@@ -24,6 +27,7 @@ const WORK_DB_PATH = path.join(WORK_DB_DIR, 'trabajo.db');
 function openWorkDb() {
   fs.mkdirSync(WORK_DB_DIR, { recursive: true });
   const db = new DatabaseSync(WORK_DB_PATH);
+  db.exec('PRAGMA busy_timeout = 5000');
   db.exec('PRAGMA foreign_keys = ON');
   return db;
 }
@@ -71,6 +75,7 @@ async function request(route, token, init) {
       Authorization: `Bearer ${token}`,
     },
     redirect: 'error',
+    signal: AbortSignal.timeout(10_000),
   });
   assertLoopback(res.url);
   if (!res.ok) {
@@ -82,7 +87,7 @@ async function request(route, token, init) {
 class SyncLab {
   static __capacitorElectronPlugin = {
     name: 'SyncLab',
-    methods: ['context', 'push', 'bind', 'prepare', 'send'],
+    methods: ['context', 'push', 'pull', 'bind', 'prepare', 'send', 'sync', 'listConflicts', 'keepCentral', 'retryConflict'],
   };
 
   async load() {}
@@ -96,6 +101,18 @@ class SyncLab {
       throw new Error('Solicitud de sincronizacion invalida');
     }
     return request(ROUTES.push, token, { method: 'POST', body: JSON.stringify(body) });
+  }
+
+  async pull({ token, cursor, limit }) {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      throw new Error('Limite pull invalido');
+    }
+    if (cursor !== null && (typeof cursor !== 'string' || cursor.length > 4096)) {
+      throw new Error('Cursor pull invalido');
+    }
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor !== null) params.set('cursor', cursor);
+    return request(`${ROUTES.pull}?${params.toString()}`, token, { method: 'GET' });
   }
 
   async bind({ token }) {
@@ -131,6 +148,47 @@ class SyncLab {
       const adapter = makeAdapter(db);
       await initializeWorkSyncDatabase(adapter);
       return await sendPrepared(adapter, (frozen) => this.push({ token, body: frozen }));
+    } finally {
+      db.close();
+    }
+  }
+
+  async sync({ token }) {
+    const db = openWorkDb();
+    try {
+      const adapter = makeAdapter(db);
+      return await runSyncCycle(adapter, {
+        context: (value) => this.context({ token: value }),
+        push: (value, body) => this.push({ token: value, body }),
+        pull: (value, cursor, limit) => this.pull({ token: value, cursor, limit }),
+      }, token);
+    } finally {
+      db.close();
+    }
+  }
+
+  async listConflicts() {
+    const db = openWorkDb();
+    try {
+      return { cases: await listConflictCases(makeAdapter(db)) };
+    } finally {
+      db.close();
+    }
+  }
+
+  async keepCentral({ review }) {
+    const db = openWorkDb();
+    try {
+      return await resolveConflictKeepCentral(makeAdapter(db), review);
+    } finally {
+      db.close();
+    }
+  }
+
+  async retryConflict({ review, input }) {
+    const db = openWorkDb();
+    try {
+      return await resolveConflictRetry(makeAdapter(db), review, input);
     } finally {
       db.close();
     }
