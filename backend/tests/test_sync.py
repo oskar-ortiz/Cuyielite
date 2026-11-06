@@ -16,6 +16,7 @@ def client(monkeypatch):
 
     monkeypatch.setenv("DATABASE_URL", database_url)
     monkeypatch.setenv("CUYIELITE_SYNC_LAB_ENABLED", "1")
+    monkeypatch.setenv("SYNC_CURSOR_SIGNING_KEY", "synthetic-test-key-never-for-production-0123456789")
 
     import psycopg
     from fastapi.testclient import TestClient
@@ -231,6 +232,89 @@ def test_poza_nonexistent_galpon_rejected(client):
     assert r.status_code == 200
     assert r.json()["results"][0]["status"] == "rejected"
     assert r.json()["results"][0]["code"] == "RELATION_INACTIVE"
+
+
+def _push_pull_galpon(client, name: str) -> None:
+    ctx = _ctx(client)
+    response = client.post("/sync/push", json={
+        "protocol_version": 1,
+        "device_id": ctx["device_id"],
+        "operations": [{
+            "operation_id": str(uuid.uuid4()),
+            "entity": "galpon",
+            "record_id": str(uuid.uuid4()),
+            "action": "create",
+            "base_version": None,
+            "client_created_at": "2026-11-06T10:00:00.000Z",
+            "client_edited_at": "2026-11-06T10:00:00.000Z",
+            "data": {"nombre": name, "ubicacion": None},
+        }],
+    })
+    assert response.status_code == 200
+    assert response.json()["results"][0]["status"] == "accepted"
+
+
+def test_pull_requires_token_and_lab_flag(client, monkeypatch):
+    assert client.get("/sync/pull", headers={"Authorization": ""}).status_code == 401
+    monkeypatch.delenv("CUYIELITE_SYNC_LAB_ENABLED")
+    assert client.get("/sync/pull").status_code == 404
+
+
+def test_pull_requires_persistent_signing_key(client, monkeypatch):
+    monkeypatch.delenv("SYNC_CURSOR_SIGNING_KEY")
+    assert client.get("/sync/pull").status_code == 503
+
+
+def test_pull_empty_returns_signed_checkpoint(client):
+    response = client.get("/sync/pull")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["items"] == []
+    assert body["has_more"] is False
+    assert body["next_cursor"]
+    assert body["scope_id"] == _ctx(client)["scope_id"]
+
+
+def test_pull_pins_high_watermark_and_resumes_next_cycle(client):
+    for index in range(3):
+        _push_pull_galpon(client, f"G{index}")
+
+    first = client.get("/sync/pull", params={"limit": 2})
+    assert first.status_code == 200
+    page_one = first.json()
+    assert [item["seq"] for item in page_one["items"]] == ["1", "2"]
+    assert page_one["has_more"] is True
+    assert page_one["items"][0]["record"]["data"]["nombre"] == "G0"
+    assert page_one["items"][0]["record"]["version"] == "1"
+
+    _push_pull_galpon(client, "G3")
+    second = client.get("/sync/pull", params={"limit": 2, "cursor": page_one["next_cursor"]})
+    assert second.status_code == 200
+    page_two = second.json()
+    assert [item["seq"] for item in page_two["items"]] == ["3"]
+    assert page_two["has_more"] is False
+
+    next_cycle = client.get("/sync/pull", params={"limit": 2, "cursor": page_two["next_cursor"]})
+    assert next_cycle.status_code == 200
+    assert [item["seq"] for item in next_cycle.json()["items"]] == ["4"]
+
+
+def test_pull_rejects_tampered_foreign_and_future_cursors(client):
+    from backend.app.sync_cursor import encode_cursor
+
+    ctx = _ctx(client)
+    current = client.get("/sync/pull").json()["next_cursor"]
+    payload, signature = current.split(".")
+    tampered = payload + "." + ("A" if signature[0] != "A" else "B") + signature[1:]
+    assert client.get("/sync/pull", params={"cursor": tampered}).status_code == 400
+
+    key = os.environ["SYNC_CURSOR_SIGNING_KEY"].encode("utf-8")
+    foreign = encode_cursor(uuid.uuid4(), 0, None, key)
+    assert client.get("/sync/pull", params={"cursor": foreign}).status_code == 400
+
+    future = encode_cursor(uuid.UUID(ctx["scope_id"]), 1, None, key)
+    assert client.get("/sync/pull", params={"cursor": future}).status_code == 400
+    assert client.get("/sync/pull", params={"limit": 101}).status_code == 422
 
 
 def test_update_requires_base_version(client):

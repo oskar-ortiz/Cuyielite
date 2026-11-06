@@ -9,6 +9,12 @@ from fastapi import HTTPException
 from backend.app.database import get_connection
 from backend.app.repositories import sync as repo
 from backend.app.schemas.sync import SyncOperationResult
+from backend.app.sync_cursor import (
+    InvalidSyncCursor,
+    cursor_key,
+    decode_cursor,
+    encode_cursor,
+)
 
 
 def authenticate(token: str) -> dict | None:
@@ -268,7 +274,10 @@ def _process_one(scope_id, device_id, op) -> dict:
             # Atomic: increment sequence + change + receipt (only if changed)
             if result.get("changed"):
                 seq = repo.increment_scope(conn, scope_id)
-                snapshot = data if data else {}
+                # Pull reads immutable record snapshots, not the current entity row.
+                snapshot = result.get("record")
+                if not isinstance(snapshot, dict):
+                    raise RuntimeError("No se pudo construir snapshot central para pull")
                 repo.insert_change(conn, scope_id, seq, entity, record_id, int(result["record"]["version"]), snapshot)
             repo.save_receipt_conn(conn, scope_id, device_id, op_id, req_hash, result)
             conn.commit()
@@ -276,6 +285,83 @@ def _process_one(scope_id, device_id, op) -> dict:
         except Exception:
             conn.rollback()
             raise
+
+
+def pull_changes(token: str, cursor: str | None, limit: int) -> dict:
+    """Return one bounded, scope-authorized page from immutable history."""
+    auth = authenticate(token)
+    if auth is None:
+        raise HTTPException(status_code=401, detail="UNAUTHORIZED")
+    scope_id = auth["scope_id"]
+    signing_key = cursor_key()
+    scope = repo.get_scope(scope_id)
+    if scope is None:
+        raise HTTPException(status_code=403, detail="DEVICE_NOT_AUTHORIZED")
+    high_watermark = int(scope["last_sequence"])
+
+    if cursor is None:
+        after = 0
+        through = None
+    else:
+        position = decode_cursor(cursor, scope_id, signing_key)
+        after = position.after
+        through = position.through
+
+    # A page cursor pins the original H. A checkpoint starts a new pull cycle.
+    if through is None:
+        if after > high_watermark:
+            raise InvalidSyncCursor("CURSOR_INVALID")
+        through = high_watermark
+    elif through > high_watermark or after > through:
+        raise InvalidSyncCursor("CURSOR_INVALID")
+
+    rows = repo.list_changes(scope_id, after, through, limit + 1)
+    has_more = len(rows) > limit
+    page = rows[:limit]
+    items = []
+    for row in page:
+        snapshot = row["snapshot"]
+        if not isinstance(snapshot, dict):
+            raise RuntimeError("Snapshot histórico inválido")
+        if {"id", "version", "created_at", "updated_at", "deleted_at", "last_client_edited_at", "data"}.issubset(snapshot):
+            record = snapshot
+        else:
+            # Backward compatibility for S3 lab rows written before pull snapshots
+            # were introduced. committed_at is the only immutable timestamp there.
+            data = snapshot
+            if not {"id", "version", "created_at", "updated_at", "deleted_at", "last_client_edited_at", "data"}.issubset(data):
+                record = {
+                    "id": str(row["record_id"]),
+                    "version": str(row["record_version"]),
+                    "created_at": _fmt(row["committed_at"]),
+                    "updated_at": _fmt(row["committed_at"]),
+                    "deleted_at": None,
+                    "last_client_edited_at": None,
+                    "data": data,
+                }
+            else:
+                record = data
+        if str(record.get("id")) != str(row["record_id"]) or str(record.get("version")) != str(row["record_version"]):
+            raise RuntimeError("Snapshot histórico no coincide con su secuencia")
+        items.append({
+            "seq": str(row["sequence"]),
+            "entity": row["entity"],
+            "record": record,
+        })
+
+    if has_more:
+        next_after = int(page[-1]["sequence"])
+        next_through: int | None = through
+    else:
+        next_after = through
+        next_through = None
+    return {
+        "protocol_version": 1,
+        "scope_id": str(scope_id),
+        "items": items,
+        "next_cursor": encode_cursor(scope_id, next_after, next_through, signing_key),
+        "has_more": has_more,
+    }
 
 
 def _extract_data(row, entity):

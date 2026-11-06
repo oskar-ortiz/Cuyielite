@@ -197,6 +197,30 @@ def insert_change(conn, scope_id: UUID, sequence: int, entity: str, record_id: U
         )
 
 
+def list_changes(scope_id: UUID, after: int, through: int, limit: int) -> list[dict]:
+    """Read immutable scope history in sequence order."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT sequence, entity, record_id, record_version, snapshot, committed_at "
+                "FROM sync_changes WHERE scope_id = %s AND sequence > %s AND sequence <= %s "
+                "ORDER BY sequence ASC LIMIT %s",
+                (scope_id, after, through, limit),
+            )
+            rows = cur.fetchall()
+    return [
+        {
+            "sequence": row[0],
+            "entity": row[1],
+            "record_id": row[2],
+            "record_version": row[3],
+            "snapshot": row[4],
+            "committed_at": row[5],
+        }
+        for row in rows
+    ]
+
+
 def get_receipt_conn(conn, scope_id, device_id, operation_id):
     with conn.cursor() as cur:
         cur.execute(

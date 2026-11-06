@@ -64,3 +64,21 @@ class SyncOperationResult(BaseModel):
 class SyncPushResponse(BaseModel):
     protocol_version: int = 1
     results: list[SyncOperationResult]
+
+
+class SyncPullItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    seq: str = Field(pattern=r"^(0|[1-9][0-9]*)$")
+    entity: str = Field(pattern=r"^(galpon|poza)$")
+    record: SyncRecord
+
+
+class SyncPullResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    protocol_version: int = 1
+    scope_id: UUID
+    items: list[SyncPullItem]
+    next_cursor: str = Field(min_length=1, max_length=4096)
+    has_more: bool
