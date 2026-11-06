@@ -6,14 +6,8 @@ import { describe, expect, it } from 'vitest';
 
 import type { MigrationDb } from './work.migration';
 import { createWorkGalpon, createWorkPoza } from './work.outbox';
+import { prepareEligible, sendPrepared, validateReceipt, SyncReceiptError, type SendFn } from './work.sync.client';
 import { initializeWorkSyncDatabase } from './work.sync.migration';
-import {
-  prepareEligible,
-  sendPrepared,
-  validateReceipt,
-  SyncReceiptError,
-  type SendFn,
-} from './work.sync.client';
 
 function adapterFor(db: DatabaseSync): MigrationDb {
   return {
@@ -27,11 +21,9 @@ function adapterFor(db: DatabaseSync): MigrationDb {
 
 describe('cliente S3: preparacion, envio y recibos', () => {
   it('prepara y congela una operacion queued', async () => {
-    const { db, adapter } = { db: new DatabaseSync(':memory:'), adapter: null as any };
+    const db = new DatabaseSync(':memory:');
     const a = adapterFor(db);
-    const { adapter: ad } = { adapter: a };
-    void ad;
-    const galpon = await createWorkGalpon(a, { nombre: 'G1', ubicacion: null });
+    await createWorkGalpon(a, { nombre: 'G1', ubicacion: null });
     const ctx = await initializeWorkSyncDatabase(a);
     const n = await prepareEligible(a, ctx.deviceId);
     expect(n).toBe(1);
@@ -49,6 +41,7 @@ describe('cliente S3: preparacion, envio y recibos', () => {
     // update galpon creates successor
     const { updateWorkGalpon } = await import('./work.outbox');
     const upd = await updateWorkGalpon(a, galpon.id, { nombre: 'G1b', ubicacion: null });
+    expect(upd.changed).toBe(true);
     const ctx = await initializeWorkSyncDatabase(a);
     // first prepare should prepare the create (galpon), not the update successor
     const n1 = await prepareEligible(a, ctx.deviceId);
@@ -59,28 +52,30 @@ describe('cliente S3: preparacion, envio y recibos', () => {
   it('sendPrepared aplica recibo valido y marca accepted', async () => {
     const db = new DatabaseSync(':memory:');
     const a = adapterFor(db);
-    const galpon = await createWorkGalpon(a, { nombre: 'G1', ubicacion: null });
+    await createWorkGalpon(a, { nombre: 'G1', ubicacion: null });
     const ctx = await initializeWorkSyncDatabase(a);
     await prepareEligible(a, ctx.deviceId);
     const send: SendFn = async (req) => ({
       protocol_version: 1,
-      results: [{
-        operation_id: req.operations[0].operation_id,
-        entity: req.operations[0].entity,
-        record_id: req.operations[0].record_id,
-        status: 'accepted',
-        changed: true,
-        code: null,
-        record: {
-          id: req.operations[0].record_id,
-          version: '1',
-          created_at: '2026-11-05T00:00:00.000000Z',
-          updated_at: '2026-11-05T00:00:00.000000Z',
-          deleted_at: null,
-          last_client_edited_at: '2026-11-05T00:00:00.000000Z',
-          data: req.operations[0].data,
+      results: [
+        {
+          operation_id: req.operations[0].operation_id,
+          entity: req.operations[0].entity,
+          record_id: req.operations[0].record_id,
+          status: 'accepted',
+          changed: true,
+          code: null,
+          record: {
+            id: req.operations[0].record_id,
+            version: '1',
+            created_at: '2026-11-05T00:00:00.000000Z',
+            updated_at: '2026-11-05T00:00:00.000000Z',
+            deleted_at: null,
+            last_client_edited_at: '2026-11-05T00:00:00.000000Z',
+            data: req.operations[0].data,
+          },
         },
-      }],
+      ],
     });
     const res = await sendPrepared(a, send);
     expect(res.sent).toBe(1);
@@ -96,7 +91,9 @@ describe('cliente S3: preparacion, envio y recibos', () => {
     await createWorkGalpon(a, { nombre: 'G1', ubicacion: null });
     const ctx = await initializeWorkSyncDatabase(a);
     await prepareEligible(a, ctx.deviceId);
-    const send: SendFn = async () => { throw new Error('network down'); };
+    const send: SendFn = async () => {
+      throw new Error('network down');
+    };
     const res = await sendPrepared(a, send);
     expect(res.sent).toBe(0);
     expect(res.failed).toBe(1);
@@ -113,15 +110,17 @@ describe('cliente S3: preparacion, envio y recibos', () => {
     await prepareEligible(a, ctx.deviceId);
     const send: SendFn = async (req) => ({
       protocol_version: 1,
-      results: [{
-        operation_id: 'wrong-id',
-        entity: req.operations[0].entity,
-        record_id: req.operations[0].record_id,
-        status: 'accepted',
-        changed: true,
-        code: null,
-        record: null,
-      }],
+      results: [
+        {
+          operation_id: 'wrong-id',
+          entity: req.operations[0].entity,
+          record_id: req.operations[0].record_id,
+          status: 'accepted',
+          changed: true,
+          code: null,
+          record: null,
+        },
+      ],
     });
     const res = await sendPrepared(a, send);
     expect(res.sent).toBe(0);
@@ -135,11 +134,30 @@ describe('cliente S3: preparacion, envio y recibos', () => {
     const req = {
       protocol_version: 1,
       device_id: 'd',
-      operations: [{ operation_id: 'op1', entity: 'galpon' as const, record_id: 'r1', action: 'create', base_version: null, data: {} }],
+      operations: [
+        {
+          operation_id: 'op1',
+          entity: 'galpon' as const,
+          record_id: 'r1',
+          action: 'create',
+          base_version: null,
+          data: {},
+        },
+      ],
     };
     const resp = {
       protocol_version: 1,
-      results: [{ operation_id: 'op2', entity: 'galpon', record_id: 'r1', status: 'accepted' as const, changed: true, code: null, record: null }],
+      results: [
+        {
+          operation_id: 'op2',
+          entity: 'galpon',
+          record_id: 'r1',
+          status: 'accepted' as const,
+          changed: true,
+          code: null,
+          record: null,
+        },
+      ],
     };
     expect(() => validateReceipt(req as any, resp as any)).toThrow(SyncReceiptError);
   });
@@ -170,7 +188,7 @@ describe('cliente S3: preparacion, envio y recibos', () => {
     const db = new DatabaseSync(':memory:');
     const a = adapterFor(db);
     const galpon = await createWorkGalpon(a, { nombre: 'G1', ubicacion: null });
-    const poza = await createWorkPoza(a, galpon.id, { codigo: 'P1', tipo: 'cria', capacidadMaxima: 10 });
+    await createWorkPoza(a, galpon.id, { codigo: 'P1', tipo: 'cria', capacidadMaxima: 10 });
     const ctx = await initializeWorkSyncDatabase(a);
     // prepare galpon first
     const n1 = await prepareEligible(a, ctx.deviceId);
