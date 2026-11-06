@@ -22,10 +22,10 @@ def _validate_test_url(url: str) -> None:
             f"Host no permitido para base de pruebas: {host}. "
             "Solo se permite localhost o 127.0.0.1."
         )
-    if db_name != "cuyielite_test":
+    if not (db_name == "cuyielite_test" or db_name.startswith("cuyielite_s5_")):
         raise ValueError(
             f"Base no permitida para pruebas: {db_name}. "
-            "Solo se permite cuyielite_test."
+            "Solo se permite cuyielite_test o una base aislada cuyielite_s5_*."
         )
 
 
@@ -206,3 +206,9 @@ def test_validate_test_url_rechaza_host_remoto():
     from backend.tests.test_galpones_integration import _validate_test_url
     with pytest.raises(ValueError, match="Host no permitido"):
         _validate_test_url("postgresql://u:p@192.168.1.10:5432/cuyielite_test")
+
+
+def test_validate_test_url_acepta_base_s5_aislada():
+    from backend.tests.test_galpones_integration import _validate_test_url
+
+    _validate_test_url("postgresql://u:p@localhost:5433/cuyielite_s5_backend_20261106")
