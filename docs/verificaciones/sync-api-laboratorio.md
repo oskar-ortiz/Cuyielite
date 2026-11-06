@@ -16,8 +16,20 @@ un error genérico `503` si falla el servicio. Las pruebas de contrato HTTP usan
 `TestClient` y sustituyen el servicio por mocks; no abren conexiones ni modifican
 bases de datos.
 
-Verificación enfocada:
+Las pruebas de integración del servicio requieren `TEST_DATABASE_URL` explícita y
+una base de pruebas con las migraciones aplicadas. Cada prueba crea un ámbito y
+dispositivo UUID propios y elimina solo las filas de ese ámbito; no usa una URL
+local fija ni limpia datos de otros ámbitos.
+
+Verificación local sobre PostgreSQL temporal aislado (bootstrap central y
+migraciones `0001_lope_domain.sql` y `0002_sync_lab.sql` aplicados):
 
 ```powershell
 python -m pytest backend/tests/test_sync_controller.py -q
+python -m pytest backend/tests/test_sync.py -q
+python -m pytest backend -q
 ```
+
+Resultados registrados: 8 pruebas de contrato HTTP, 12 pruebas de integración del
+servicio y 45 pruebas del backend completo aprobadas. El contenedor temporal se
+eliminó después de las pruebas; no se usaron datos reales.
