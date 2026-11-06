@@ -68,6 +68,29 @@ export interface SyncPushResponse {
 
 export type SendFn = (req: FrozenRequest) => Promise<SyncPushResponse>;
 
+export class SyncReceiptError extends Error {}
+
+export function validateReceipt(req: FrozenRequest, resp: SyncPushResponse): void {
+  if (resp.protocol_version !== req.protocol_version) {
+    throw new SyncReceiptError('protocol_version mismatch');
+  }
+  if (!Array.isArray(resp.results) || resp.results.length !== req.operations.length) {
+    throw new SyncReceiptError('result count mismatch');
+  }
+  const seen = new Set<string>();
+  for (let i = 0; i < req.operations.length; i++) {
+    const op = req.operations[i];
+    const res = resp.results[i];
+    if (!res) throw new SyncReceiptError('missing result');
+    if (seen.has(res.operation_id)) throw new SyncReceiptError('duplicate result operation_id');
+    seen.add(res.operation_id);
+    if (res.operation_id !== op.operation_id) throw new SyncReceiptError('operation_id mismatch');
+    if (res.entity !== op.entity) throw new SyncReceiptError('entity mismatch');
+    if (res.record_id !== op.record_id) throw new SyncReceiptError('record_id mismatch');
+  }
+  if (seen.size !== req.operations.length) throw new SyncReceiptError('result uniqueness violation');
+}
+
 function uuidV4(): string {
   if (typeof crypto === 'undefined' || !crypto.randomUUID) throw new Error('UUID v4 no disponible');
   return crypto.randomUUID();
@@ -85,8 +108,10 @@ export async function prepareOperation(
     const predId = op.predecessor_id as string | null;
     if (predId) {
       const pred = await one(db, 'SELECT state FROM sync_outbox WHERE operation_id=?', [predId]);
-      if (!pred || pred.state === 'prepared') return false;
+      if (!pred) return false;
+      if (pred.state === 'prepared') return false;
       if (pred.state !== 'accepted' && pred.state !== 'queued') return false;
+      if (pred.state !== 'accepted') return false;
     }
     const parentCreateId = op.parent_create_id as string | null;
     if (parentCreateId) {
@@ -107,7 +132,7 @@ export async function prepareOperation(
       }
     }
     const snapshot = JSON.parse(op.business_snapshot as string);
-    const frozen: FrozenRequest = {
+    const frozen = {
       protocol_version: 1,
       device_id: deviceId,
       operations: [{
@@ -141,15 +166,18 @@ export async function prepareEligible(db: MigrationDb, deviceId: string): Promis
   return prepared;
 }
 
-export async function sendPrepared(db: MigrationDb, send: SendFn): Promise<number> {
+export async function sendPrepared(db: MigrationDb, send: SendFn): Promise<{ sent: number; failed: number; errors: string[] }> {
   await initializeWorkSyncDatabase(db);
   const prepared = await all(db, "SELECT local_seq, frozen_request FROM sync_outbox WHERE state='prepared' ORDER BY local_seq");
   let sent = 0;
+  let failed = 0;
+  const errors: string[] = [];
   for (const row of prepared) {
     const seq = row.local_seq as number;
     const frozen = JSON.parse(row.frozen_request as string) as FrozenRequest;
     try {
       const resp = await send(frozen);
+      validateReceipt(frozen, resp);
       const result = resp.results[0];
       await tx(db, async () => {
         const newState = result.status === 'accepted' ? 'accepted' : result.status === 'conflict' ? 'conflict' : 'rejected';
@@ -168,8 +196,11 @@ export async function sendPrepared(db: MigrationDb, send: SendFn): Promise<numbe
       });
       sent++;
     } catch (e) {
-      // leave prepared for retry
+      failed++;
+      const msg = e instanceof Error ? e.message : String(e);
+      errors.push(msg);
+      // keep prepared for retry; do not change state
     }
   }
-  return sent;
+  return { sent, failed, errors };
 }
