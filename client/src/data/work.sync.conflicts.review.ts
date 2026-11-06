@@ -1,7 +1,6 @@
-import { normalizeGalpon, normalizePoza, validateGalpon, validatePoza } from './galpones.validation.js';
 import type { MigrationDb } from './work.migration.js';
 import { initializeWorkSyncDatabase } from './work.sync.migration.js';
-import { applyCentralBusinessRecord, validatePullPage, type PullRecord } from './work.sync.pull.js';
+import { validatePullPage, type PullRecord } from './work.sync.pull.js';
 
 type Entity = 'galpon' | 'poza';
 type Row = Record<string, unknown>;
@@ -21,8 +20,6 @@ export interface ConflictCase {
   local: Record<string, unknown>;
 }
 
-export type ConflictResolutionResult = { operationId: string | null; discarded: number };
-
 function validateReview(review: ConflictReview): void {
   if (
     (review.entity !== 'galpon' && review.entity !== 'poza') ||
@@ -35,31 +32,8 @@ function validateReview(review: ConflictReview): void {
   }
 }
 
-function exactKeys(value: Record<string, unknown>, keys: string[]): boolean {
-  return Object.keys(value).sort().join(',') === [...keys].sort().join(',');
-}
-
 async function one(db: MigrationDb, sql: string, params: unknown[] = []): Promise<Row | null> {
   return ((await db.query(sql, params)).values?.[0] as Row | undefined) ?? null;
-}
-
-async function transaction<T>(db: MigrationDb, work: () => Promise<T>): Promise<T> {
-  await initializeWorkSyncDatabase(db);
-  await db.exec('BEGIN IMMEDIATE');
-  try {
-    await initializeWorkSyncDatabase(db);
-    const result = await work();
-    await db.exec('COMMIT');
-    return result;
-  } catch (error) {
-    await db.exec('ROLLBACK');
-    throw error;
-  }
-}
-
-function operationId(): string {
-  if (!crypto?.randomUUID) throw new Error('crypto.randomUUID no disponible');
-  return crypto.randomUUID();
 }
 
 export async function readConflictReview(
@@ -163,4 +137,3 @@ export async function listConflictCases(db: MigrationDb): Promise<ConflictCase[]
   }
   return cases;
 }
-

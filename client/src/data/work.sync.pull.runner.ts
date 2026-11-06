@@ -1,7 +1,7 @@
 import type { MigrationDb } from './work.migration.js';
 import { initializeWorkSyncDatabase } from './work.sync.migration.js';
 import { applyPullPage } from './work.sync.pull.apply.js';
-import { validatePullPage, type SyncPullPage, SyncPullError } from './work.sync.pull.validation.js';
+import { validatePullPage, SyncPullError } from './work.sync.pull.validation.js';
 
 type Row = Record<string, unknown>;
 

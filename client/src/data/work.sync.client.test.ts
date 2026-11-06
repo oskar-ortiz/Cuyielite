@@ -213,23 +213,25 @@ describe('cliente S3: preparacion, envio y recibos', () => {
     const request = JSON.parse(first.frozen_request);
     const result = await sendPrepared(a, async () => ({
       protocol_version: 1,
-      results: [{
-        operation_id: request.operations[0].operation_id,
-        entity: 'galpon',
-        record_id: galpon.id,
-        status: 'accepted',
-        changed: true,
-        code: null,
-        record: {
-          id: galpon.id,
-          version: '12',
-          created_at: '2026-11-05T00:00:00.000000Z',
-          updated_at: '2026-11-05T00:00:00.000000Z',
-          deleted_at: null,
-          last_client_edited_at: '2026-11-05T00:00:00.000000Z',
-          data: request.operations[0].data,
+      results: [
+        {
+          operation_id: request.operations[0].operation_id,
+          entity: 'galpon',
+          record_id: galpon.id,
+          status: 'accepted',
+          changed: true,
+          code: null,
+          record: {
+            id: galpon.id,
+            version: '12',
+            created_at: '2026-11-05T00:00:00.000000Z',
+            updated_at: '2026-11-05T00:00:00.000000Z',
+            deleted_at: null,
+            last_client_edited_at: '2026-11-05T00:00:00.000000Z',
+            data: request.operations[0].data,
+          },
         },
-      }],
+      ],
     }));
     expect(result.sent).toBe(1);
     expect(await prepareEligible(a, ctx.deviceId)).toBe(1);

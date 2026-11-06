@@ -71,7 +71,6 @@ describe('pull-v1 transactional apply', () => {
     db.close();
   });
 
-
   it('guarda snapshot central pero conserva campos locales con outbox pendiente', async () => {
     const { db, adapter } = await makeDb();
     const local = await createWorkGalpon(adapter, { nombre: 'Local pendiente', ubicacion: null });
@@ -92,7 +91,6 @@ describe('pull-v1 transactional apply', () => {
     expect(db.prepare('SELECT COUNT(*) AS count FROM sync_outbox').get()).toMatchObject({ count: 1 });
     db.close();
   });
-
 
   it('no retrocede una versión de servidor aunque llegue una página antigua', async () => {
     const { db, adapter } = await makeDb();
@@ -136,7 +134,6 @@ describe('pull-v1 transactional apply', () => {
     db.close();
   });
 
-
   it('rollback revierte entidad y cursor si la poza no tiene padre', async () => {
     const { db, adapter } = await makeDb();
     await expect(
@@ -164,5 +161,4 @@ describe('pull-v1 transactional apply', () => {
     expect(db.prepare('SELECT cursor FROM sync_context WHERE singleton=1').get()).toMatchObject({ cursor: null });
     db.close();
   });
-
 });

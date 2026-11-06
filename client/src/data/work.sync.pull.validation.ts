@@ -1,6 +1,5 @@
 /* Strict pull-v1 contract validation. */
 export type Entity = 'galpon' | 'poza';
-type Row = Record<string, unknown>;
 
 export interface PullRecord {
   id: string;
@@ -135,4 +134,3 @@ export function validatePullPage(value: unknown, expectedScopeId: string, limit:
   if (page.has_more && page.items.length === 0) throw new SyncPullError('pull sin avance de cursor');
   return page as unknown as SyncPullPage;
 }
-

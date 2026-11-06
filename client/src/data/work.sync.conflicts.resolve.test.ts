@@ -93,7 +93,6 @@ function review(a: string, b: string, version = '2'): ConflictReview {
   };
 }
 
-
 describe('conflict resolution', () => {
   it('permite conservar una eliminación central y prohíbe reintentar contra ella', async () => {
     const { db, adapter, remote } = await setup();
@@ -114,7 +113,6 @@ describe('conflict resolution', () => {
     });
     db.close();
   });
-
 
   it('reintenta con operation_id nuevo y versión central revisada; descarta cadena previa', async () => {
     const { db, adapter, deviceId, a, b } = await setup();
@@ -145,7 +143,6 @@ describe('conflict resolution', () => {
     db.close();
   });
 
-
   it('conservar central descarta solo la cadena revisada y limpia local_head', async () => {
     const { db, adapter, a, b, remote } = await setup();
     const resolution = await resolveConflictKeepCentral(adapter, review(a.operationId!, b.operationId!));
@@ -162,7 +159,6 @@ describe('conflict resolution', () => {
     db.close();
   });
 
-
   it('rechaza una resolución si la versión central cambió tras la revisión', async () => {
     const { db, adapter, a, b } = await setup();
     db.prepare('UPDATE sync_record_state SET server_version=? WHERE entity=? AND record_id=?').run('3', 'galpon', ID);
@@ -173,7 +169,6 @@ describe('conflict resolution', () => {
     expect(db.prepare('SELECT nombre FROM galpones WHERE id=?').get(ID)).toMatchObject({ nombre: 'Local B' });
     db.close();
   });
-
 
   it('rejects additional fields when retrying a conflict', async () => {
     const { db, adapter, a, b } = await setup();
