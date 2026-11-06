@@ -24,5 +24,6 @@ Fecha: 2026-11-05
 - Cliente: 84 passed (76 previas + 8 S3 nuevas).
 
 ## Criterios pendientes
-- Verificacion de interrupcion/reintento/reapertura nativa (Android/Electron) con transporte loopback aun no ejecutada en dispositivo; modulo de transporte creado pero no integrado en adaptadores nativos.
-- S3 se declara parcialmente cerrada: push y recibos verificados; transporte nativo y vinculacion explicita de base al scope pendientes de verificacion en dispositivo.
+- Integracion nativa del transporte (Electron main acotado + Android CapacitorHttp) NO implementada en este turno; solo existe el modulo `work.sync.transport.ts` y `work.sync.scope.ts` en cliente web. Pendiente de adaptadores nativos y verificacion en dispositivo/emulador.
+- Vinculacion explicita de base al scope implementada en `work.sync.scope.ts` (bindContext) pero no integrada en el flujo de sync del cliente.
+- S3 NO se declara cerrada: push y recibos verificados en laboratorio; transporte nativo y vinculacion de base al scope pendientes.
