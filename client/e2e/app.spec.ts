@@ -1,12 +1,18 @@
 import { expect, test } from '@playwright/test';
 
-test('la raíz redirige al listado de galpones', async ({ page }) => {
+test('la raíz permite elegir el modo de demostración', async ({ page }) => {
   await page.goto('/');
+  await expect(page.getByText('Elegir modo')).toBeVisible();
+  await page.getByText('Entrar a demostración').click();
   await expect(page).toHaveURL(/\/galpones$/);
-  await expect(page.getByText('Galpón Norte')).toBeVisible();
+  await expect(page.getByText('Datos de demostración')).toBeVisible();
 });
 
-test('un galpón sin pozas muestra el mensaje de estado vacío', async ({ page }) => {
-  await page.goto('/galpones/00000000-0000-4000-8000-000000000004');
-  await expect(page.getByText('todavía no tiene pozas')).toBeVisible();
+test('el modo trabajo muestra que requiere una aplicación nativa', async ({ page }) => {
+  await page.goto('/');
+  await page.getByText('Entrar a trabajo').click();
+  await expect(page).toHaveURL(/\/trabajo\/galpones$/);
+  await expect(page.getByText('Base de trabajo · solo consulta')).toBeVisible();
+  await expect(page.getByText(/requiere Android o Windows instalado/)).toBeVisible();
+  await expect(page.getByText('Nuevo')).toHaveCount(0);
 });
