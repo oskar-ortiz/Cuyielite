@@ -11,7 +11,9 @@ import { bindContext, getBoundScope } from './work.sync.scope';
 function adapterFor(db: DatabaseSync): MigrationDb {
   return {
     exec: (sql) => db.exec(sql),
-    run: (sql, params) => { db.prepare(sql).run(...((params ?? []) as any[])); },
+    run: (sql, params) => {
+      db.prepare(sql).run(...((params ?? []) as any[]));
+    },
     query: (sql, params) => ({ values: db.prepare(sql).all(...((params ?? []) as any[])) }),
   };
 }
@@ -41,7 +43,9 @@ describe('vinculacion de scope S3', () => {
     const a = adapterFor(db);
     const ctx = await initializeWorkSyncDatabase(a);
     await bindContext(a, { scope_id: 'scope-1', device_id: ctx.deviceId, protocol_version: 1 }, ctx.deviceId);
-    await expect(bindContext(a, { scope_id: 'scope-2', device_id: ctx.deviceId, protocol_version: 1 }, ctx.deviceId)).rejects.toThrow();
+    await expect(
+      bindContext(a, { scope_id: 'scope-2', device_id: ctx.deviceId, protocol_version: 1 }, ctx.deviceId),
+    ).rejects.toThrow();
     expect(await getBoundScope(a)).toBe('scope-1');
     db.close();
   });
@@ -50,7 +54,9 @@ describe('vinculacion de scope S3', () => {
     const db = new DatabaseSync(':memory:');
     const a = adapterFor(db);
     const ctx = await initializeWorkSyncDatabase(a);
-    await expect(bindContext(a, { scope_id: 'scope-1', device_id: 'other-device', protocol_version: 1 }, ctx.deviceId)).rejects.toThrow();
+    await expect(
+      bindContext(a, { scope_id: 'scope-1', device_id: 'other-device', protocol_version: 1 }, ctx.deviceId),
+    ).rejects.toThrow();
     db.close();
   });
 

@@ -31,7 +31,7 @@ async function tx<T>(db: MigrationDb, work: () => Promise<T>): Promise<T> {
 export interface FrozenRequest {
   protocol_version: number;
   device_id: string;
-  operations: Array<{
+  operations: {
     operation_id: string;
     entity: Entity;
     record_id: string;
@@ -40,7 +40,7 @@ export interface FrozenRequest {
     client_created_at?: string | null;
     client_edited_at?: string | null;
     data: unknown;
-  }>;
+  }[];
 }
 
 export interface SyncResultRecord {
@@ -91,16 +91,7 @@ export function validateReceipt(req: FrozenRequest, resp: SyncPushResponse): voi
   if (seen.size !== req.operations.length) throw new SyncReceiptError('result uniqueness violation');
 }
 
-function uuidV4(): string {
-  if (typeof crypto === 'undefined' || !crypto.randomUUID) throw new Error('UUID v4 no disponible');
-  return crypto.randomUUID();
-}
-
-export async function prepareOperation(
-  db: MigrationDb,
-  localSeq: number,
-  deviceId: string,
-): Promise<boolean> {
+export async function prepareOperation(db: MigrationDb, localSeq: number, deviceId: string): Promise<boolean> {
   return tx(db, async () => {
     const op = await one(db, 'SELECT * FROM sync_outbox WHERE local_seq=?', [localSeq]);
     if (!op) return false;
@@ -122,10 +113,11 @@ export async function prepareOperation(
     const recordId = op.record_id as string;
     const action = op.action as string;
     let baseVersion: string | null = null;
-    if (action === 'create') {
-      baseVersion = null;
-    } else {
-      const state = await one(db, 'SELECT server_version FROM sync_record_state WHERE entity=? AND record_id=?', [entity, recordId]);
+    if (action !== 'create') {
+      const state = await one(db, 'SELECT server_version FROM sync_record_state WHERE entity=? AND record_id=?', [
+        entity,
+        recordId,
+      ]);
       baseVersion = (state?.server_version as string | null) ?? (op.base_anchor as string | null) ?? null;
       if (action === 'update' && (!baseVersion || !/^[1-9][0-9]*$/.test(baseVersion))) {
         return false;
@@ -135,21 +127,23 @@ export async function prepareOperation(
     const frozen = {
       protocol_version: 1,
       device_id: deviceId,
-      operations: [{
-        operation_id: op.operation_id as string,
-        entity,
-        record_id: recordId,
-        action,
-        base_version: baseVersion,
-        client_created_at: action === 'create' ? (op.created_at as string) : null,
-        client_edited_at: op.created_at as string,
-        data: snapshot,
-      }],
+      operations: [
+        {
+          operation_id: op.operation_id as string,
+          entity,
+          record_id: recordId,
+          action,
+          base_version: baseVersion,
+          client_created_at: action === 'create' ? (op.created_at as string) : null,
+          client_edited_at: op.created_at as string,
+          data: snapshot,
+        },
+      ],
     };
-    await db.run(
-      "UPDATE sync_outbox SET state='prepared', frozen_request=? WHERE local_seq=? AND state='queued'",
-      [JSON.stringify(frozen), localSeq],
-    );
+    await db.run("UPDATE sync_outbox SET state='prepared', frozen_request=? WHERE local_seq=? AND state='queued'", [
+      JSON.stringify(frozen),
+      localSeq,
+    ]);
     return true;
   });
 }
@@ -166,9 +160,15 @@ export async function prepareEligible(db: MigrationDb, deviceId: string): Promis
   return prepared;
 }
 
-export async function sendPrepared(db: MigrationDb, send: SendFn): Promise<{ sent: number; failed: number; errors: string[] }> {
+export async function sendPrepared(
+  db: MigrationDb,
+  send: SendFn,
+): Promise<{ sent: number; failed: number; errors: string[] }> {
   await initializeWorkSyncDatabase(db);
-  const prepared = await all(db, "SELECT local_seq, frozen_request FROM sync_outbox WHERE state='prepared' ORDER BY local_seq");
+  const prepared = await all(
+    db,
+    "SELECT local_seq, frozen_request FROM sync_outbox WHERE state='prepared' ORDER BY local_seq",
+  );
   let sent = 0;
   let failed = 0;
   const errors: string[] = [];
@@ -180,16 +180,18 @@ export async function sendPrepared(db: MigrationDb, send: SendFn): Promise<{ sen
       validateReceipt(frozen, resp);
       const result = resp.results[0];
       await tx(db, async () => {
-        const newState = result.status === 'accepted' ? 'accepted' : result.status === 'conflict' ? 'conflict' : 'rejected';
-        await db.run(
-          "UPDATE sync_outbox SET state=?, result_json=? WHERE local_seq=?",
-          [newState, JSON.stringify(result), seq],
-        );
+        const newState =
+          result.status === 'accepted' ? 'accepted' : result.status === 'conflict' ? 'conflict' : 'rejected';
+        await db.run('UPDATE sync_outbox SET state=?, result_json=? WHERE local_seq=?', [
+          newState,
+          JSON.stringify(result),
+          seq,
+        ]);
         if (result.status === 'accepted' && result.record) {
           const rec = result.record;
           await db.run(
-            "INSERT INTO sync_record_state(entity, record_id, server_version, server_snapshot, local_head_operation_id) VALUES(?,?,?,?,?) "
-            + "ON CONFLICT(entity, record_id) DO UPDATE SET server_version=excluded.server_version, server_snapshot=excluded.server_snapshot",
+            'INSERT INTO sync_record_state(entity, record_id, server_version, server_snapshot, local_head_operation_id) VALUES(?,?,?,?,?) ' +
+              'ON CONFLICT(entity, record_id) DO UPDATE SET server_version=excluded.server_version, server_snapshot=excluded.server_snapshot',
             [result.entity, result.record_id, rec.version, JSON.stringify(rec), null],
           );
         }
