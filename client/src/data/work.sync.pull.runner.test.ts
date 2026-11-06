@@ -1,0 +1,75 @@
+import { DatabaseSync } from 'node:sqlite';
+import { describe, expect, it } from 'vitest';
+
+import type { MigrationDb } from './work.migration';
+import { createWorkGalpon } from './work.outbox';
+import { initializeWorkSyncDatabase } from './work.sync.migration';
+import { pullUntilCheckpoint } from './work.sync.pull.runner';
+import type { SyncPullPage } from './work.sync.pull.validation';
+
+const SCOPE = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+const GALPON = '11111111-1111-4111-8111-111111111111';
+const POZA = '22222222-2222-4222-8222-222222222222';
+const CREATED = '2026-11-06T10:00:00.000Z';
+
+function adapterFor(db: DatabaseSync): MigrationDb {
+  return {
+    exec: (sql) => db.exec(sql),
+    run: (sql, params) => {
+      db.prepare(sql).run(...((params ?? []) as any[]));
+    },
+    query: (sql, params) => ({ values: db.prepare(sql).all(...((params ?? []) as any[])) }),
+  };
+}
+
+function record(id: string, version: string, data: Record<string, unknown>) {
+  return {
+    id,
+    version,
+    created_at: CREATED,
+    updated_at: CREATED,
+    deleted_at: null,
+    last_client_edited_at: CREATED,
+    data,
+  };
+}
+
+function page(items: SyncPullPage['items'], nextCursor = 'opaque-next', hasMore = false): SyncPullPage {
+  return { protocol_version: 1, scope_id: SCOPE, items, next_cursor: nextCursor, has_more: hasMore };
+}
+
+async function makeDb() {
+  const db = new DatabaseSync(':memory:');
+  const adapter = adapterFor(db);
+  const identity = await initializeWorkSyncDatabase(adapter);
+  db.prepare('UPDATE sync_context SET scope_id=? WHERE singleton=1').run(SCOPE);
+  return { db, adapter, identity };
+}
+
+describe('pull-v1 checkpoint runner', () => {
+  it('descarga todas las páginas y trata el cursor como valor opaco', async () => {
+    const { db, adapter } = await makeDb();
+    const received: (string | null)[] = [];
+    const result = await pullUntilCheckpoint(
+      adapter,
+      SCOPE,
+      async (cursor) => {
+        received.push(cursor);
+        if (cursor === null)
+          return page(
+            [{ seq: '1', entity: 'galpon', record: record(GALPON, '1', { nombre: 'A', ubicacion: null }) }],
+            'opaque/page/one',
+            true,
+          );
+        return page([], 'opaque/checkpoint', false);
+      },
+      1,
+    );
+    expect(received).toEqual([null, 'opaque/page/one']);
+    expect(result).toMatchObject({ pages: 2, applied: 1, preservedLocal: 0 });
+    expect(db.prepare('SELECT cursor FROM sync_context WHERE singleton=1').get()).toMatchObject({
+      cursor: 'opaque/checkpoint',
+    });
+    db.close();
+  });
+});
