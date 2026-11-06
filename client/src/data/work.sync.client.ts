@@ -96,13 +96,27 @@ export async function prepareOperation(db: MigrationDb, localSeq: number, device
     const op = await one(db, 'SELECT * FROM sync_outbox WHERE local_seq=?', [localSeq]);
     if (!op) return false;
     if (op.state !== 'queued') return false;
+    let baseVersion: string | null = null;
     const predId = op.predecessor_id as string | null;
     if (predId) {
-      const pred = await one(db, 'SELECT state FROM sync_outbox WHERE operation_id=?', [predId]);
+      const pred = await one(db, 'SELECT state,result_json FROM sync_outbox WHERE operation_id=?', [predId]);
       if (!pred) return false;
       if (pred.state === 'prepared') return false;
       if (pred.state !== 'accepted' && pred.state !== 'queued') return false;
       if (pred.state !== 'accepted') return false;
+      const receipt = JSON.parse(String(pred.result_json ?? 'null')) as SyncResultRecord | null;
+      const acceptedVersion = receipt?.record?.version;
+      if (
+        receipt?.status !== 'accepted' ||
+        receipt.operation_id !== predId ||
+        receipt.entity !== op.entity ||
+        receipt.record_id !== op.record_id ||
+        !acceptedVersion ||
+        !/^[1-9][0-9]*$/.test(acceptedVersion)
+      ) {
+        throw new Error('Recibo aceptado de predecesora incoherente');
+      }
+      baseVersion = acceptedVersion;
     }
     const parentCreateId = op.parent_create_id as string | null;
     if (parentCreateId) {
@@ -112,13 +126,10 @@ export async function prepareOperation(db: MigrationDb, localSeq: number, device
     const entity = op.entity as Entity;
     const recordId = op.record_id as string;
     const action = op.action as string;
-    let baseVersion: string | null = null;
     if (action !== 'create') {
-      const state = await one(db, 'SELECT server_version FROM sync_record_state WHERE entity=? AND record_id=?', [
-        entity,
-        recordId,
-      ]);
-      baseVersion = (state?.server_version as string | null) ?? (op.base_anchor as string | null) ?? null;
+      // A local edit is anchored when it is created. A later pull must not silently
+      // rebase it; successors use only the accepted version of their predecessor.
+      if (!predId) baseVersion = (op.base_anchor as string | null) ?? null;
       if (action === 'update' && (!baseVersion || !/^[1-9][0-9]*$/.test(baseVersion))) {
         return false;
       }
@@ -148,10 +159,18 @@ export async function prepareOperation(db: MigrationDb, localSeq: number, device
   });
 }
 
-export async function prepareEligible(db: MigrationDb, deviceId: string): Promise<number> {
+export async function prepareEligible(
+  db: MigrationDb,
+  deviceId: string,
+  maxLocalSeq = Number.MAX_SAFE_INTEGER,
+): Promise<number> {
   await initializeWorkSyncDatabase(db);
   let prepared = 0;
-  const queued = await all(db, "SELECT local_seq FROM sync_outbox WHERE state='queued' ORDER BY local_seq");
+  const queued = await all(
+    db,
+    "SELECT local_seq FROM sync_outbox WHERE state='queued' AND local_seq<=? ORDER BY local_seq",
+    [maxLocalSeq],
+  );
   for (const row of queued) {
     const seq = row.local_seq as number;
     const ok = await prepareOperation(db, seq, deviceId);
@@ -187,13 +206,28 @@ export async function sendPrepared(
           JSON.stringify(result),
           seq,
         ]);
-        if (result.status === 'accepted' && result.record) {
+        if (result.record) {
           const rec = result.record;
-          await db.run(
-            'INSERT INTO sync_record_state(entity, record_id, server_version, server_snapshot, local_head_operation_id) VALUES(?,?,?,?,?) ' +
-              'ON CONFLICT(entity, record_id) DO UPDATE SET server_version=excluded.server_version, server_snapshot=excluded.server_snapshot',
-            [result.entity, result.record_id, rec.version, JSON.stringify(rec), null],
+          if (!/^[1-9][0-9]*$/.test(rec.version)) throw new SyncReceiptError('invalid server record version');
+          const current = await one(
+            db,
+            'SELECT server_version,local_head_operation_id FROM sync_record_state WHERE entity=? AND record_id=?',
+            [result.entity, result.record_id],
           );
+          const currentVersion = current?.server_version as string | null;
+          if (!currentVersion || BigInt(rec.version) >= BigInt(currentVersion)) {
+            await db.run(
+              'INSERT INTO sync_record_state(entity, record_id, server_version, server_snapshot, local_head_operation_id) VALUES(?,?,?,?,?) ' +
+                'ON CONFLICT(entity, record_id) DO UPDATE SET server_version=excluded.server_version, server_snapshot=excluded.server_snapshot',
+              [
+                result.entity,
+                result.record_id,
+                rec.version,
+                JSON.stringify(rec),
+                current?.local_head_operation_id ?? null,
+              ],
+            );
+          }
         }
       });
       sent++;
@@ -202,6 +236,7 @@ export async function sendPrepared(
       const msg = e instanceof Error ? e.message : String(e);
       errors.push(msg);
       // keep prepared for retry; do not change state
+      break;
     }
   }
   return { sent, failed, errors };

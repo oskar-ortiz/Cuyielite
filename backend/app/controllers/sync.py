@@ -2,11 +2,12 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, Query
 
 from pydantic import BaseModel
 
-from backend.app.schemas.sync import SyncPushRequest, SyncPushResponse
+from backend.app.schemas.sync import SyncPullResponse, SyncPushRequest, SyncPushResponse
+from backend.app.sync_cursor import InvalidSyncCursor
 from backend.app.services import sync as service
 
 
@@ -72,3 +73,21 @@ def push(request: SyncPushRequest, authorization: str | None = Header(default=No
     except Exception:
         raise HTTPException(status_code=503, detail="Servicio no disponible")
     return SyncPushResponse(protocol_version=request.protocol_version, results=results)
+
+
+@router.get("/sync/pull", response_model=SyncPullResponse)
+def pull(
+    limit: int = Query(default=50, ge=1, le=100),
+    cursor: str | None = Query(default=None, max_length=4096),
+    authorization: str | None = Header(default=None),
+) -> SyncPullResponse:
+    token = _extract_token(authorization)
+    try:
+        response = service.pull_changes(token=token, cursor=cursor, limit=limit)
+    except HTTPException:
+        raise
+    except InvalidSyncCursor:
+        raise HTTPException(status_code=400, detail="CURSOR_INVALID") from None
+    except Exception:
+        raise HTTPException(status_code=503, detail="Servicio no disponible") from None
+    return SyncPullResponse(**response)

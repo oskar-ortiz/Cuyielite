@@ -199,4 +199,56 @@ describe('cliente S3: preparacion, envio y recibos', () => {
     expect(pozaRow.state).toBe('queued');
     db.close();
   });
+
+  it('ancla la operacion sucesora a la version aceptada de su predecesora', async () => {
+    const db = new DatabaseSync(':memory:');
+    const a = adapterFor(db);
+    const galpon = await createWorkGalpon(a, { nombre: 'G1', ubicacion: null });
+    const { updateWorkGalpon } = await import('./work.outbox');
+    await updateWorkGalpon(a, galpon.id, { nombre: 'G1 editado', ubicacion: null });
+    const ctx = await initializeWorkSyncDatabase(a);
+
+    expect(await prepareEligible(a, ctx.deviceId)).toBe(1);
+    const first = db.prepare('SELECT frozen_request FROM sync_outbox WHERE state=?').get('prepared') as any;
+    const request = JSON.parse(first.frozen_request);
+    const result = await sendPrepared(a, async () => ({
+      protocol_version: 1,
+      results: [{
+        operation_id: request.operations[0].operation_id,
+        entity: 'galpon',
+        record_id: galpon.id,
+        status: 'accepted',
+        changed: true,
+        code: null,
+        record: {
+          id: galpon.id,
+          version: '12',
+          created_at: '2026-11-05T00:00:00.000000Z',
+          updated_at: '2026-11-05T00:00:00.000000Z',
+          deleted_at: null,
+          last_client_edited_at: '2026-11-05T00:00:00.000000Z',
+          data: request.operations[0].data,
+        },
+      }],
+    }));
+    expect(result.sent).toBe(1);
+    expect(await prepareEligible(a, ctx.deviceId)).toBe(1);
+    const successor = db.prepare('SELECT frozen_request FROM sync_outbox WHERE state=?').get('prepared') as any;
+    expect(JSON.parse(successor.frozen_request).operations[0].base_version).toBe('12');
+    db.close();
+  });
+
+  it('limita la preparación al corte local capturado por el coordinador', async () => {
+    const db = new DatabaseSync(':memory:');
+    const a = adapterFor(db);
+    await createWorkGalpon(a, { nombre: 'G1', ubicacion: null });
+    await createWorkGalpon(a, { nombre: 'G2', ubicacion: null });
+    const ctx = await initializeWorkSyncDatabase(a);
+    const firstSeq = (db.prepare('SELECT MIN(local_seq) AS seq FROM sync_outbox').get() as any).seq as number;
+
+    expect(await prepareEligible(a, ctx.deviceId, firstSeq)).toBe(1);
+    const rows = db.prepare('SELECT state FROM sync_outbox ORDER BY local_seq').all() as any[];
+    expect(rows.map((row) => row.state)).toEqual(['prepared', 'queued']);
+    db.close();
+  });
 });
