@@ -23,7 +23,19 @@ Fecha: 2026-11-05
 - Backend: 41 passed (25 regresion + 16 sync).
 - Cliente: 84 passed (76 previas + 8 S3 nuevas).
 
-## Criterios pendientes
-- Integracion nativa del transporte (Electron main acotado + Android CapacitorHttp) NO implementada en este turno; solo existe el modulo `work.sync.transport.ts` y `work.sync.scope.ts` en cliente web. Pendiente de adaptadores nativos y verificacion en dispositivo/emulador.
-- Vinculacion explicita de base al scope implementada en `work.sync.scope.ts` (bindContext) pero no integrada en el flujo de sync del cliente.
-- S3 NO se declara cerrada: push y recibos verificados en laboratorio; transporte nativo y vinculacion de base al scope pendientes.
+## Criterios pendientes (bloqueo real)
+- Integracion nativa del transporte:
+  - Comando requerido: `npm run build:electron` + empaquetado Electron, y `npx cap sync android && ./gradlew assembleDebug`.
+  - Bloqueo: el main de Electron delega en `@capawesome/capacitor-electron` sin preload IPC propio; anadir metodos acotados context/push exige modificar `client/electron/main.ts` y un preload, mas pruebas en runtime empaquetado. No se pudo verificar en este entorno sin ejecutar el empaquetado.
+  - Criterio exacto no cumplido: "metodos acotados en proceso principal, fetch de Node, sin URL/ruta/metodo desde renderer, rechazo de redirecciones y destinos fuera de loopback, token solo en memoria".
+- Vinculacion explicita de base al scope:
+  - Implementada y probada en `work.sync.scope.ts` (bindContext) con 5 pruebas unitarias (primera vinculacion, no-op, scope distinto, dispositivo distinto, reapertura).
+  - Pendiente de integracion en el flujo de sync del cliente (llamada a bindContext antes de enviar).
+- Verificacion E2E en dispositivos/emulador:
+  - Bloqueo: no hay emulador Android ni build empaquetado de Electron ejecutandose en este entorno.
+  - Criterio exacto no cumplido: "flujo completo en Windows empaquetado y Android emulado".
+
+## Lo que SI esta verificado
+- Backend push/recibos/auth: 41 pruebas backend en verde.
+- Cliente S3 (prepare/freeze/send/receipt validation/scope binding): 89 pruebas unitarias en verde.
+- E2E backend con PostgreSQL cuyielite_test: contexto, alta, reintento, FK poza, conflicto (ver resultados anteriores).

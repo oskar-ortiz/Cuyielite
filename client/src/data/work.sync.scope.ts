@@ -13,24 +13,31 @@ export async function bindContext(
   expectedDeviceId: string,
 ): Promise<void> {
   await initializeWorkSyncDatabase(db);
+  // S2 already created the singleton row with dataset_id and device_id.
+  // Bind scope_id conditionally: only if NULL and device matches.
   const row = await db.query('SELECT scope_id, device_id FROM sync_context WHERE singleton=1', []);
-  const existing = (row.values ?? [])[0] as { scope_id?: string; device_id?: string } | undefined;
-  if (existing && existing.scope_id) {
-    if (existing.scope_id !== ctx.scope_id) throw new Error('Cambio de scope no permitido');
-    if (existing.device_id !== ctx.device_id) throw new Error('Dispositivo no autorizado');
-    if (existing.device_id !== expectedDeviceId) throw new Error('Dispositivo local no coincide');
-  } else {
-    if (ctx.device_id !== expectedDeviceId) throw new Error('Dispositivo local no coincide');
-    await db.run(
-      'INSERT INTO sync_context(singleton, dataset_id, device_id, scope_id, protocol_version, cursor) VALUES (1, ?, ?, ?, ?, NULL)',
-      ['lab', ctx.device_id, ctx.scope_id, ctx.protocol_version],
-    );
+  const existing = (row.values ?? [])[0] as { scope_id?: string | null; device_id?: string } | undefined;
+  if (!existing) throw new Error('sync_context no inicializado');
+  if (existing.device_id !== expectedDeviceId) throw new Error('Dispositivo local no coincide');
+  if (existing.device_id !== ctx.device_id) throw new Error('Dispositivo autorizado no coincide');
+  if (existing.scope_id && existing.scope_id !== ctx.scope_id) throw new Error('Cambio de scope no permitido');
+  if (existing.scope_id === ctx.scope_id) {
+    // already bound, no-op
+    return;
   }
+  // scope_id is NULL -> assign
+  await db.run(
+    'UPDATE sync_context SET scope_id=? WHERE singleton=1 AND scope_id IS NULL AND device_id=?',
+    [ctx.scope_id, expectedDeviceId],
+  );
+  const check = await db.query('SELECT scope_id FROM sync_context WHERE singleton=1', []);
+  const sc = (check.values ?? [])[0] as { scope_id?: string | null } | undefined;
+  if (sc?.scope_id !== ctx.scope_id) throw new Error('No se pudo vincular el scope');
 }
 
 export async function getBoundScope(db: MigrationDb): Promise<string | null> {
   await initializeWorkSyncDatabase(db);
   const row = await db.query('SELECT scope_id FROM sync_context WHERE singleton=1', []);
-  const r = (row.values ?? [])[0] as { scope_id?: string } | undefined;
+  const r = (row.values ?? [])[0] as { scope_id?: string | null } | undefined;
   return r?.scope_id ?? null;
 }
