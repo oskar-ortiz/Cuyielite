@@ -3,7 +3,14 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import type { MigrationDb } from './work.migration.js';
 import { createWorkGalpon, createWorkPoza, updateWorkGalpon } from './work.outbox.js';
-import { prepareEligible } from './work.sync.client.js';
+import {
+  prepareEligible,
+  sendPrepared,
+  validateReceipt,
+  SyncReceiptError,
+  type FrozenRequest,
+  type SyncPushResponse,
+} from './work.sync.client.js';
 import { initializeWorkSyncDatabase } from './work.sync.migration.js';
 
 const databases: DatabaseSync[] = [];
@@ -84,4 +91,138 @@ describe('preparación local de operaciones de sincronización', () => {
     expect(await prepareEligible(db, identity.deviceId)).toBe(0);
     expect(getOutbox(sqlite, galpon.operationId!)).toEqual({ state: 'queued', frozen_request: null });
   });
+
+  it('valida y aplica un recibo accepted actualizando la versión central', async () => {
+    const { sqlite, db } = makeDb();
+    const galpon = await createWorkGalpon(db, { nombre: 'Norte', ubicacion: null });
+    const identity = await initializeWorkSyncDatabase(db);
+    expect(await prepareEligible(db, identity.deviceId)).toBe(1);
+
+    const result = await sendPrepared(db, async (request) => acceptedResponse(request));
+
+    expect(result).toEqual({ sent: 1, failed: 0, errors: [] });
+    expect(getOutbox(sqlite, galpon.operationId!)?.state).toBe('accepted');
+    expect(
+      sqlite
+        .prepare("SELECT server_version FROM sync_record_state WHERE entity='galpon' AND record_id=?")
+        .get(galpon.id),
+    ).toEqual({ server_version: '1' });
+  });
+
+  it('conserva el cuerpo frozen y prepared si falla el transporte', async () => {
+    const { sqlite, db } = makeDb();
+    const galpon = await createWorkGalpon(db, { nombre: 'Norte', ubicacion: null });
+    const identity = await initializeWorkSyncDatabase(db);
+    await prepareEligible(db, identity.deviceId);
+    const before = getOutbox(sqlite, galpon.operationId!)?.frozen_request;
+
+    const result = await sendPrepared(db, async () => {
+      throw new Error('transporte no disponible');
+    });
+
+    expect(result).toEqual({ sent: 0, failed: 1, errors: ['transporte no disponible'] });
+    expect(getOutbox(sqlite, galpon.operationId!)).toEqual({ state: 'prepared', frozen_request: before });
+  });
+
+  it('conserva prepared si el recibo no corresponde a la operación enviada', async () => {
+    const { sqlite, db } = makeDb();
+    const galpon = await createWorkGalpon(db, { nombre: 'Norte', ubicacion: null });
+    const identity = await initializeWorkSyncDatabase(db);
+    await prepareEligible(db, identity.deviceId);
+    const before = getOutbox(sqlite, galpon.operationId!)?.frozen_request;
+
+    const result = await sendPrepared(db, async (request) => ({
+      protocol_version: request.protocol_version,
+      results: [
+        {
+          operation_id: 'unexpected-operation',
+          entity: 'galpon',
+          record_id: galpon.id,
+          status: 'accepted',
+          changed: true,
+          code: null,
+          record: null,
+        },
+      ],
+    }));
+
+    expect(result.sent).toBe(0);
+    expect(result.failed).toBe(1);
+    expect(getOutbox(sqlite, galpon.operationId!)).toEqual({ state: 'prepared', frozen_request: before });
+    expect(() =>
+      validateReceipt(
+        JSON.parse(before!) as FrozenRequest,
+        {
+          protocol_version: 1,
+          results: [
+            {
+              operation_id: 'unexpected-operation',
+              entity: 'galpon',
+              record_id: galpon.id,
+              status: 'accepted',
+              changed: true,
+              code: null,
+              record: null,
+            },
+          ],
+        } as SyncPushResponse,
+      ),
+    ).toThrow(SyncReceiptError);
+  });
+
+  it('aplica conflictos sin sobreescribir la versión local aceptada', async () => {
+    const { sqlite, db } = makeDb();
+    const galpon = await createWorkGalpon(db, { nombre: 'Norte', ubicacion: null });
+    const identity = await initializeWorkSyncDatabase(db);
+    await prepareEligible(db, identity.deviceId);
+
+    const result = await sendPrepared(db, async (request) => ({
+      protocol_version: request.protocol_version,
+      results: [
+        {
+          operation_id: request.operations[0].operation_id,
+          entity: 'galpon',
+          record_id: galpon.id,
+          status: 'conflict',
+          changed: false,
+          code: 'VERSION_CONFLICT',
+          record: null,
+        },
+      ],
+    }));
+
+    expect(result).toEqual({ sent: 1, failed: 0, errors: [] });
+    expect(getOutbox(sqlite, galpon.operationId!)?.state).toBe('conflict');
+    expect(
+      sqlite
+        .prepare("SELECT server_version FROM sync_record_state WHERE entity='galpon' AND record_id=?")
+        .get(galpon.id),
+    ).toEqual({ server_version: null });
+  });
 });
+
+function acceptedResponse(request: FrozenRequest): SyncPushResponse {
+  const operation = request.operations[0];
+  return {
+    protocol_version: request.protocol_version,
+    results: [
+      {
+        operation_id: operation.operation_id,
+        entity: operation.entity,
+        record_id: operation.record_id,
+        status: 'accepted',
+        changed: true,
+        code: null,
+        record: {
+          id: operation.record_id,
+          version: '1',
+          created_at: '2026-11-06T00:00:00Z',
+          updated_at: '2026-11-06T00:00:00Z',
+          deleted_at: null,
+          last_client_edited_at: '2026-11-06T00:00:00Z',
+          data: operation.data,
+        },
+      },
+    ],
+  };
+}

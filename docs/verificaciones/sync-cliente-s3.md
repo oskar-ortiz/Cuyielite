@@ -21,5 +21,16 @@ Resultados: 3 pruebas enfocadas aprobadas; lint, typecheck E2E, Prettier y build
 web/Electron correctos. Vite muestra su advertencia existente de bundles mayores a
 500 kB.
 
-El transporte HTTP, la aplicación de recibos, pull, cursor y la UI de conflictos
-quedan fuera de esta unidad y requieren verificaciones posteriores.
+El envío del cuerpo congelado y la aplicación transaccional de recibos se
+incorporan en un corte posterior: `sendPrepared` valida correspondencia y
+protocolo, conserva la operación `prepared` ante fallo de transporte/recibo y
+solo actualiza versión central cuando el servidor acepta. Esta capa recibe una
+función de envío inyectada; no abre HTTP desde el renderer.
+
+La integración nativa del transporte, pull, cursor y la UI de conflictos siguen
+en cortes posteriores y requieren verificaciones específicas.
+
+En el corte de envío/recibo se ejecutaron 7 pruebas enfocadas y 83 pruebas
+unitarias del cliente; lint, typecheck E2E, Prettier y build web/Electron quedaron
+verificados en su respectiva rama de trabajo. La E2E nativa de toda la cadena se
+mantiene como criterio separado hasta completar transporte e integración.
