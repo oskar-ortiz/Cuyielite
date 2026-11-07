@@ -8,10 +8,12 @@ from fastapi.testclient import TestClient
 from backend.app.main import app
 from backend.app.services import sync as service
 
+LAB_TOKEN = "controller-test-token-abcdefghijklmnopqrstuvwxyz0123456789"
+
 
 @pytest.fixture
 def client():
-    return TestClient(app)
+    return TestClient(app, headers={"Authorization": f"Bearer {LAB_TOKEN}"})
 
 
 @pytest.fixture(autouse=True)
@@ -67,7 +69,7 @@ def test_context_returns_service_identity(client, monkeypatch):
         "device_id": str(uuid4()),
         "limits": {"push_operations": 100},
     }
-    monkeypatch.setattr(service, "get_context", lambda: expected)
+    monkeypatch.setattr(service, "get_context", lambda token: expected)
 
     response = client.get("/sync/context")
 
@@ -75,12 +77,26 @@ def test_context_returns_service_identity(client, monkeypatch):
     assert response.json() == expected
 
 
+def test_context_hides_unexpected_service_errors(client, monkeypatch):
+    def fail(_token):
+        raise RuntimeError("private database detail")
+
+    monkeypatch.setattr(service, "get_context", fail)
+
+    response = client.get("/sync/context")
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "Servicio no disponible"
+    assert "private database detail" not in response.text
+
+
 def test_push_passes_validated_operations_to_service(client, monkeypatch):
     operation = _operation()
     received = {}
 
-    def process_push(*, device_id, operations):
-        received["device_id"] = device_id
+    def process_push(*, token, device_id_body, operations):
+        received["token"] = token
+        received["device_id"] = device_id_body
         received["operations"] = operations
         return [{
             "operation_id": operation["operation_id"],
@@ -100,6 +116,7 @@ def test_push_passes_validated_operations_to_service(client, monkeypatch):
     assert response.status_code == 200
     assert response.json()["protocol_version"] == 1
     assert response.json()["results"][0]["status"] == "accepted"
+    assert received["token"] == LAB_TOKEN
     assert str(received["device_id"]) == request["device_id"]
     assert str(received["operations"][0]["operation_id"]) == operation["operation_id"]
 

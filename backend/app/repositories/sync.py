@@ -33,19 +33,6 @@ def create_scope(name: str) -> UUID:
     return scope_id
 
 
-def get_or_create_lab_scope() -> UUID:
-    with get_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT id FROM sync_scopes WHERE name = 'lab' LIMIT 1")
-            row = cur.fetchone()
-            if row:
-                return row[0]
-            cur.execute("INSERT INTO sync_scopes (name) VALUES ('lab') RETURNING id")
-            scope_id = cur.fetchone()[0]
-        conn.commit()
-    return scope_id
-
-
 def get_device(scope_id: UUID, token_hash: str) -> UUID | None:
     with get_connection() as conn:
         with conn.cursor() as cur:
@@ -55,6 +42,24 @@ def get_device(scope_id: UUID, token_hash: str) -> UUID | None:
             )
             row = cur.fetchone()
     return row[0] if row else None
+
+
+def get_device_identity_by_token_hash(token_hash: str) -> dict | None:
+    """Resolve a provisioned bearer token to exactly one scope and device.
+
+    Tokens are expected to be unique across scopes. The schema currently only
+    enforces uniqueness within a scope, so ambiguous matches fail closed.
+    """
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT scope_id, id FROM sync_devices WHERE token_hash = %s LIMIT 2",
+                (token_hash,),
+            )
+            rows = cur.fetchall()
+    if len(rows) != 1:
+        return None
+    return {"scope_id": rows[0][0], "device_id": rows[0][1]}
 
 
 def register_device(scope_id: UUID, token_hash: str) -> UUID:
@@ -74,14 +79,6 @@ def register_device(scope_id: UUID, token_hash: str) -> UUID:
                 row = cur.fetchone()
         conn.commit()
     return row[0]
-
-
-def get_or_create_lab_device(scope_id: UUID) -> UUID:
-    token_hash = hashlib.sha256(b"lab-token").hexdigest() if False else "labtokenhash0000000000000000000000000000000000000000000000000000"
-    existing = get_device(scope_id, token_hash)
-    if existing is not None:
-        return existing
-    return register_device(scope_id, token_hash)
 
 
 def get_receipt(scope_id: UUID, device_id: UUID, operation_id: UUID) -> dict | None:
