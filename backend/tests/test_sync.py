@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import secrets
 import uuid
 
 import pytest
@@ -20,11 +21,10 @@ def client(monkeypatch):
     from fastapi.testclient import TestClient
     from backend.app.main import app
 
-    from backend.app.services import sync as service
-
     scope_id = uuid.uuid4()
     device_id = uuid.uuid4()
-    token_hash = hashlib.sha256(uuid.uuid4().bytes).hexdigest()
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
     with psycopg.connect(database_url) as conn:
         conn.execute(
             "INSERT INTO sync_scopes (id, name) VALUES (%s, %s)",
@@ -35,11 +35,8 @@ def client(monkeypatch):
             (device_id, scope_id, token_hash),
         )
 
-    monkeypatch.setattr(service, "_lab_scope_id", lambda: scope_id)
-    monkeypatch.setattr(service, "_lab_device_id", lambda _scope_id: device_id)
-
     try:
-        with TestClient(app) as test_client:
+        with TestClient(app, headers={"Authorization": f"Bearer {token}"}) as test_client:
             yield test_client
     finally:
         with psycopg.connect(database_url) as conn:
@@ -53,6 +50,79 @@ def client(monkeypatch):
 
 def _ctx(client):
     return client.get("/sync/context").json()
+
+
+def test_context_rejects_missing_token(client):
+    response = client.get("/sync/context", headers={"Authorization": ""})
+    assert response.status_code == 401
+
+
+def test_context_rejects_unknown_token(client):
+    import psycopg
+
+    database_url = os.environ["TEST_DATABASE_URL"]
+    with psycopg.connect(database_url) as conn:
+        before = (
+            conn.execute("SELECT count(*) FROM sync_scopes").fetchone()[0],
+            conn.execute("SELECT count(*) FROM sync_devices").fetchone()[0],
+        )
+
+    response = client.get(
+        "/sync/context",
+        headers={"Authorization": "Bearer " + secrets.token_urlsafe(32)},
+    )
+    assert response.status_code == 401
+
+    with psycopg.connect(database_url) as conn:
+        after = (
+            conn.execute("SELECT count(*) FROM sync_scopes").fetchone()[0],
+            conn.execute("SELECT count(*) FROM sync_devices").fetchone()[0],
+        )
+    assert after == before
+
+
+def test_push_rejects_missing_token(client):
+    response = client.post(
+        "/sync/push",
+        headers={"Authorization": ""},
+        json={"protocol_version": 1, "device_id": str(uuid.uuid4()), "operations": []},
+    )
+    assert response.status_code == 401
+
+
+def test_context_rejects_token_ambiguous_across_scopes(client):
+    import psycopg
+
+    token = client.headers["Authorization"].removeprefix("Bearer ")
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    scope_id = uuid.uuid4()
+    device_id = uuid.uuid4()
+    database_url = os.environ["TEST_DATABASE_URL"]
+    with psycopg.connect(database_url) as conn:
+        conn.execute(
+            "INSERT INTO sync_scopes (id, name) VALUES (%s, %s)",
+            (scope_id, f"ambiguous-{scope_id}"),
+        )
+        conn.execute(
+            "INSERT INTO sync_devices (id, scope_id, token_hash) VALUES (%s, %s, %s)",
+            (device_id, scope_id, token_hash),
+        )
+
+    try:
+        response = client.get("/sync/context")
+        assert response.status_code == 401
+    finally:
+        with psycopg.connect(database_url) as conn:
+            conn.execute("DELETE FROM sync_devices WHERE id = %s", (device_id,))
+            conn.execute("DELETE FROM sync_scopes WHERE id = %s", (scope_id,))
+
+
+def test_push_rejects_device_id_not_bound_to_token(client):
+    response = client.post(
+        "/sync/push",
+        json={"protocol_version": 1, "device_id": str(uuid.uuid4()), "operations": []},
+    )
+    assert response.status_code == 403
 
 
 def test_context_returns_real_ids(client):

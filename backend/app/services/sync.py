@@ -11,17 +11,20 @@ from backend.app.repositories import sync as repo
 from backend.app.schemas.sync import SyncOperationResult
 
 
-def _lab_scope_id() -> UUID:
-    return repo.get_or_create_lab_scope()
+def authenticate(token: str) -> dict | None:
+    """Resolve a provisioned bearer token without creating identity rows."""
+    if not isinstance(token, str) or len(token) < 32:
+        return None
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    return repo.get_device_identity_by_token_hash(token_hash)
 
 
-def _lab_device_id(scope_id: UUID) -> UUID:
-    return repo.get_or_create_lab_device(scope_id)
-
-
-def get_context() -> dict:
-    scope_id = _lab_scope_id()
-    device_id = _lab_device_id(scope_id)
+def get_context(token: str) -> dict:
+    identity = authenticate(token)
+    if identity is None:
+        raise HTTPException(status_code=401, detail="UNAUTHORIZED")
+    scope_id = identity["scope_id"]
+    device_id = identity["device_id"]
     return {
         "protocol_version": 1,
         "scope_id": str(scope_id),
@@ -30,10 +33,22 @@ def get_context() -> dict:
     }
 
 
-def process_push(device_id, operations: list[dict]) -> list[dict]:
-    scope_id = _lab_scope_id()
-    # Device identity resolved from lab identity, never from request body.
-    dev_id = _lab_device_id(scope_id)
+def process_push(token: str, device_id_body, operations: list[dict]) -> list[dict]:
+    identity = authenticate(token)
+    if identity is None:
+        raise HTTPException(status_code=401, detail="UNAUTHORIZED")
+    scope_id = identity["scope_id"]
+    dev_id = identity["device_id"]
+    try:
+        requested_device_id = (
+            device_id_body
+            if isinstance(device_id_body, UUID)
+            else UUID(str(device_id_body))
+        )
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=422, detail="INVALID_DEVICE_ID")
+    if requested_device_id != dev_id:
+        raise HTTPException(status_code=403, detail="DEVICE_NOT_AUTHORIZED")
 
     # Batch-level validation
     op_ids = []
