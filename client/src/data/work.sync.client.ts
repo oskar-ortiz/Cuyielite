@@ -43,6 +43,94 @@ export interface FrozenRequest {
   }[];
 }
 
+export interface SyncRecord {
+  id: string;
+  version: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  last_client_edited_at: string | null;
+  data: unknown;
+}
+
+export interface SyncOperationResult {
+  operation_id: string;
+  entity: Entity;
+  record_id: string;
+  status: 'accepted' | 'conflict' | 'rejected';
+  changed: boolean;
+  code: string | null;
+  record: SyncRecord | null;
+}
+
+export interface SyncPushResponse {
+  protocol_version: number;
+  results: SyncOperationResult[];
+}
+
+export type SendFn = (request: FrozenRequest) => Promise<SyncPushResponse>;
+
+export class SyncReceiptError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'SyncReceiptError';
+  }
+}
+
+function isSyncRecord(value: unknown, recordId: string): value is SyncRecord {
+  if (!value || typeof value !== 'object') return false;
+  const record = value as Partial<SyncRecord>;
+  return (
+    record.id === recordId &&
+    typeof record.version === 'string' &&
+    /^[1-9][0-9]*$/.test(record.version) &&
+    typeof record.created_at === 'string' &&
+    typeof record.updated_at === 'string' &&
+    (record.deleted_at === null || typeof record.deleted_at === 'string') &&
+    (record.last_client_edited_at === null || typeof record.last_client_edited_at === 'string') &&
+    record.data !== null &&
+    typeof record.data === 'object'
+  );
+}
+
+export function validateReceipt(request: FrozenRequest, response: SyncPushResponse): void {
+  if (response.protocol_version !== request.protocol_version) {
+    throw new SyncReceiptError('protocol_version mismatch');
+  }
+  if (!Array.isArray(response.results) || response.results.length !== request.operations.length) {
+    throw new SyncReceiptError('result count mismatch');
+  }
+
+  const expected = new Map(request.operations.map((operation) => [operation.operation_id, operation]));
+  if (expected.size !== request.operations.length) {
+    throw new SyncReceiptError('duplicate request operation_id');
+  }
+  const received = new Set<string>();
+  for (const result of response.results) {
+    if (!result || typeof result !== 'object') throw new SyncReceiptError('invalid result');
+    if (received.has(result.operation_id)) throw new SyncReceiptError('duplicate result operation_id');
+    received.add(result.operation_id);
+    const operation = expected.get(result.operation_id);
+    if (!operation) throw new SyncReceiptError('unknown result operation_id');
+    if (result.entity !== operation.entity || result.record_id !== operation.record_id) {
+      throw new SyncReceiptError('result record mismatch');
+    }
+    if (!['accepted', 'conflict', 'rejected'].includes(result.status)) {
+      throw new SyncReceiptError('invalid result status');
+    }
+    if (typeof result.changed !== 'boolean' || (result.code !== null && typeof result.code !== 'string')) {
+      throw new SyncReceiptError('invalid result fields');
+    }
+    if (result.status === 'accepted' && !isSyncRecord(result.record, operation.record_id)) {
+      throw new SyncReceiptError('accepted result has invalid record');
+    }
+    if (result.record !== null && !isSyncRecord(result.record, operation.record_id)) {
+      throw new SyncReceiptError('invalid result record');
+    }
+  }
+  if (received.size !== expected.size) throw new SyncReceiptError('missing result operation_id');
+}
+
 export async function prepareOperation(db: MigrationDb, localSeq: number, deviceId: string): Promise<boolean> {
   return tx(db, async () => {
     const op = await one(db, 'SELECT * FROM sync_outbox WHERE local_seq=?', [localSeq]);
@@ -111,4 +199,54 @@ export async function prepareEligible(db: MigrationDb, deviceId: string): Promis
     if (await prepareOperation(db, row.local_seq as number, deviceId)) prepared++;
   }
   return prepared;
+}
+
+export async function sendPrepared(
+  db: MigrationDb,
+  send: SendFn,
+): Promise<{ sent: number; failed: number; errors: string[] }> {
+  await initializeWorkSyncDatabase(db);
+  const prepared = await all(
+    db,
+    "SELECT local_seq, frozen_request FROM sync_outbox WHERE state='prepared' ORDER BY local_seq",
+  );
+  let sent = 0;
+  let failed = 0;
+  const errors: string[] = [];
+
+  for (const row of prepared) {
+    try {
+      const frozen = JSON.parse(String(row.frozen_request)) as FrozenRequest;
+      const response = await send(frozen);
+      validateReceipt(frozen, response);
+
+      await tx(db, async () => {
+        for (const result of response.results) {
+          const outbox = await one(db, 'SELECT state FROM sync_outbox WHERE operation_id=?', [result.operation_id]);
+          if (!outbox || outbox.state !== 'prepared') {
+            throw new Error('La operaciÃ³n preparada cambiÃ³ antes de aplicar el recibo');
+          }
+          const newState = result.status;
+          await db.run("UPDATE sync_outbox SET state=?, result_json=? WHERE operation_id=? AND state='prepared'", [
+            newState,
+            JSON.stringify(result),
+            result.operation_id,
+          ]);
+          if (result.status === 'accepted' && result.record) {
+            await db.run(
+              'INSERT INTO sync_record_state(entity,record_id,server_version,server_snapshot,local_head_operation_id) VALUES(?,?,?,?,?) ' +
+                'ON CONFLICT(entity,record_id) DO UPDATE SET server_version=excluded.server_version, server_snapshot=excluded.server_snapshot',
+              [result.entity, result.record_id, result.record.version, JSON.stringify(result.record), null],
+            );
+          }
+        }
+      });
+      sent++;
+    } catch (error) {
+      failed++;
+      errors.push(error instanceof Error ? error.message : String(error));
+      // No se alteran frozen_request ni state; el mismo cuerpo queda disponible para reintento.
+    }
+  }
+  return { sent, failed, errors };
 }
