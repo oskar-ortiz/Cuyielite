@@ -20,6 +20,7 @@ android/app/build/
 *.pkl
 *.joblib
 db/raw_Lope/
+ml/data/
 db/seeds/real_*
 *.dump
 
