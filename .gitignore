@@ -21,6 +21,7 @@ android/app/build/
 *.joblib
 db/seeds/real_*
 *.dump
+db/raw_Lope*
 
 # Editor / SO / logs
 .vscode/
