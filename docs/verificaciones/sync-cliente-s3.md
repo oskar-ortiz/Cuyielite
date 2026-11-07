@@ -27,6 +27,15 @@ protocolo, conserva la operación `prepared` ante fallo de transporte/recibo y
 solo actualiza versión central cuando el servidor acepta. Esta capa recibe una
 función de envío inyectada; no abre HTTP desde el renderer.
 
+La identidad local se vincula al `scope_id` devuelto por el contexto autenticado.
+`bindContext` comprueba versión del protocolo y coincidencia del dispositivo;
+solo asigna el ámbito si todavía está vacío, deja como no-op una vinculación
+idéntica y rechaza cambios de scope/dispositivo. `dataset_id` y `device_id` se
+conservan y la vinculación sobrevive al cierre/reapertura.
+
+La vinculación se cubre con 6 pruebas enfocadas; la suite unitaria del cliente
+quedó en 89 pruebas aprobadas en esta rama.
+
 La integración nativa del transporte, pull, cursor y la UI de conflictos siguen
 en cortes posteriores y requieren verificaciones específicas.
 
