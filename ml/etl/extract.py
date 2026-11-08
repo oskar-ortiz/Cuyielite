@@ -47,12 +47,37 @@ def _find_individual_header(rows: list[tuple[Any, ...]]) -> tuple[int, dict[str,
     return None
 
 
-def _find_reproductive_header(rows: list[tuple[Any, ...]]) -> int | None:
-    required = {_header_key(value) for value in config.REPRODUCTIVE_HEADER_ALIASES.values()}
+def _find_reproductive_header(
+    rows: list[tuple[Any, ...]],
+) -> tuple[int, dict[str, int]] | None:
+    required = {
+        field: _header_key(value)
+        for field, value in config.REPRODUCTIVE_HEADER_ALIASES.items()
+    }
     for row_index, row in enumerate(rows[: config.HEADER_SCAN_ROWS]):
-        values = {_header_key(value) for value in row if _is_present(value)}
-        if required.issubset(values):
-            return row_index
+        columns = {
+            field: index
+            for field, alias in required.items()
+            for index, value in enumerate(row)
+            if _header_key(value) == alias
+        }
+        if set(required).issubset(columns):
+            optional_aliases = {
+                field: {_header_key(alias) for alias in aliases}
+                for field, aliases in config.REPRODUCTIVE_OPTIONAL_HEADER_ALIASES.items()
+            }
+            for field, aliases in optional_aliases.items():
+                match = next(
+                    (
+                        index
+                        for index, value in enumerate(row)
+                        if _header_key(value) in aliases
+                    ),
+                    None,
+                )
+                if match is not None:
+                    columns[field] = match
+            return row_index, columns
     return None
 
 
@@ -134,9 +159,11 @@ def extract_reproductive_workbook(path: Path) -> tuple[list[dict[str, Any]], dic
                     values_only=True,
                 )
             )
-            if _find_reproductive_header(rows) is None:
+            header = _find_reproductive_header(rows)
+            if header is None:
                 continue
 
+            _, header_columns = header
             stats["sheets_processed"] += 1
             in_poza_block = False
             for row_index, row in enumerate(rows):
@@ -186,6 +213,12 @@ def extract_reproductive_workbook(path: Path) -> tuple[list[dict[str, Any]], dic
                         "ojos": (
                             row[config.REPRODUCTIVE_COLUMNS["ojos"]]
                             if len(row) > config.REPRODUCTIVE_COLUMNS["ojos"]
+                            else None
+                        ),
+                        "observations": (
+                            row[header_columns["observations"]]
+                            if "observations" in header_columns
+                            and len(row) > header_columns["observations"]
                             else None
                         ),
                         "litters": litter_cells,

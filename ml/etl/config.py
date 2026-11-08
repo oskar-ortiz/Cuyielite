@@ -10,7 +10,7 @@ INDIVIDUAL_FILE_GLOB = "REG IND*.xlsx"
 REPRODUCTIVE_FILE_GLOB = "REGISTRO REPRODUCTIVO*.xlsx"
 HEADER_SCAN_ROWS = 30
 INDIVIDUAL_MAX_COLUMNS = 22
-REPRODUCTIVE_MAX_COLUMNS = 12
+REPRODUCTIVE_MAX_COLUMNS = 22
 
 ANIMAL_CODE_PATTERN = r"^[A-Za-z]+\d+$"
 FILLER_CODE_PREFIXES = ("SERVICIO", "CENTRO", "ESLABON", "POZA", "MACHO")
@@ -22,6 +22,8 @@ INDIVIDUAL_HEADER_ALIASES = {
     "tcnv": ("TCNV",),
     "tcnm": ("TCNM",),
     "tcnt": ("TCNT",),
+    "fecha_nacimiento": ("FECHANACIMIENTO",),
+    "fecha_destete": ("FECHADESTETE",),
     "peso_nacimiento_g": ("PESONACIMIENTO",),
     "peso_destete_g": ("PESODESTETE",),
     "peso_4_semanas_g": ("PESO4SEMANAS",),
@@ -43,12 +45,15 @@ REPRODUCTIVE_HEADER_ALIASES = {
     "peso_monta_g": "PESO",
     "ojos": "OJOS",
 }
+REPRODUCTIVE_OPTIONAL_HEADER_ALIASES = {
+    "observations": ("OBSERVACIONES", "OBSERVACION"),
+}
 
 DESTINO_CODES = {
     "M": "Muerte",
     "D": "Descarte",
     "V": "Vendido",
-    "R": "Reemplazado",
+    "R": "Reemplazo",
     "SP": "Sin placa",
     "L": "Levante",
     "E": "Engorde",
@@ -57,7 +62,13 @@ OJOS_CODES = {"1": "Negro", "2": "Rojo"}
 SEXO_CODES = {"1": "Macho", "2": "Hembra"}
 UNKNOWN_CODE = "CODIGO_DESCONOCIDO"
 
-# Confirmed by the user: a T.C.N. cell containing only an integer is a total.
-# Composite forms and the meanings of M, AB, and X remain provisional.
-TCN_INTEGER_IS_TOTAL = True
-TCN_UNCONFIRMED_MARKERS = frozenset({"M", "AB", "X"})
+CONFIRMADO = "CONFIRMADO"
+INFERIDO_POR_DATOS = "INFERIDO_POR_DATOS"
+SIN_CONFIRMAR = "SIN_CONFIRMAR"
+
+TCN_INTEGER_STATUS = INFERIDO_POR_DATOS
+TCN_CONFIRMED_PATTERNS = frozenset({"N+NM", "NM", "AB", "M", "X"})
+TCN_IGNORED_PATTERNS = frozenset({"X"})
+TCN_ABORT_PATTERN = "AB"
+TCN_DEAD_OBSERVATION_MARKER = "M"
+NUPAR_STATUS = INFERIDO_POR_DATOS
