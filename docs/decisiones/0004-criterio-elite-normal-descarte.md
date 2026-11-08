@@ -51,6 +51,20 @@ Transcripción de las respuestas recibidas por WhatsApp:
 9. 135 como mínimo y deben doblar su peso al destete q es a los 15 días.
 10. 4 vivos y un muerto , 5 muertos, AB aborto, x llena casillas vacías , M muerto
 
+### Complemento del instructor por audio (2026-11-07)
+
+1. Un aborto cuenta como parto y se registra con la cantidad. En los Excel
+   revisados no aparece una cantidad junto a `AB`; queda por confirmar cómo se
+   consigna ese dato.
+2. El tamaño de camada para el criterio ELITE es el número de nacidos vivos
+   (`TCNV`).
+3. La sospecha de infertilidad corresponde a dos periodos consecutivos de
+   empadre con machos de fertilidad comprobada sin que la hembra quede preñada.
+   El historial de empadres no está estructurado actualmente y solo aparece en
+   texto libre en observaciones.
+4. Existe un registro reproductivo antiguo del Galpón 2 con hembras de más
+   partos, pero son pocas.
+
 ## Reglas vigentes
 
 ### ELITE — candidata (cría hembra)
@@ -58,7 +72,7 @@ Transcripción de las respuestas recibidas por WhatsApp:
 Una candidata es `ELITE` cuando cumple conjuntamente estos criterios:
 
 - NUPAR de la madre: 2 o 3.
-- Camada: 3 o 4 crías.
+- Nacidos vivos (`TCNV`): 3 o 4.
 - Peso al nacer: al menos 135 g.
 - Peso al destete: al menos el doble del peso al nacer; destete a los 15 días.
 - Ojos negros.
@@ -80,8 +94,22 @@ defecto cuando no corresponde asignar `ELITE` o `DESCARTE`.
   si el problema se repite, se descarta. La aplicación de esta regla es una
   **interpretación por confirmar** de la respuesta 6, cuyo “eso” no está
   especificado.
-- Si no queda preñada, se descarta en el momento.
+- La sospecha de infertilidad se identifica cuando pasa dos periodos
+  consecutivos de empadre con machos de fertilidad comprobada sin quedar
+  preñada; en ese caso se descarta en el momento. Actualmente no hay historial
+  estructurado de empadres para verificar esta condición.
 - La muerte de crías sin anomalía no es motivo para descartar a la reproductora.
+
+## Decisión de implementación propuesta por Diery
+
+- Se proponen dos endpoints: `/ml/predict/hembra` para reproductoras
+  (`NORMAL` o `DESCARTE`) y `/ml/predict/candidata` para crías (`ELITE` o
+  `NORMAL`). El contrato actual no se modifica en este ADR.
+- Primero se implementan las reglas explícitas, devolviendo sus motivos.
+- El modelo ML se orienta a anticipar ELITE al nacimiento y el riesgo de
+  descarte antes del cuarto parto.
+- La existencia del registro reproductivo antiguo del Galpón 2 aporta algunos
+  ejemplos de hembras con más partos, pero su cantidad es limitada.
 
 ## Códigos de registro
 
@@ -116,16 +144,10 @@ disponibles para entrenar esa clase.
 ## Puntos abiertos
 
 - Qué significa `R` en el campo DESTINO.
-- Si “camada 3 o 4” cuenta crías vivas o el total de crías.
-- Cómo se registran la infertilidad y “algo anormal” en las crías; actualmente
-  no hay un campo para ello.
-- Obtener datos de ciclos anteriores para disponer de ejemplos de DESCARTE.
-- La respuesta 6 usa “eso” sin precisar a qué problema se refiere; confirmar la
-  interpretación de dejar un parto adicional y descartar si se repite.
-- El criterio ELITE requiere peso al nacimiento, peso al destete, ojos y
-  NUPAR de la madre, datos que no están en el contrato de `PredictionRequest`
-  descrito en Arquitectura §10. Se coordinará con Oskar; no se cambia aquí el
-  contrato.
+- Cómo queda registrada la cantidad de un aborto (`AB`), ya que no aparece en
+  los Excel revisados.
+- Incorporar un registro estructurado de los periodos de empadre para poder
+  verificar la sospecha de infertilidad.
 
 Lo que no esté verificado queda **Por confirmar**. No se modifican el contrato,
 el `CHECK` de `categoria_ml` ni otros archivos.
