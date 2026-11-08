@@ -1,0 +1,365 @@
+{
+  "dataset": {
+    "class_counts": {
+      "ELITE": 200,
+      "NORMAL": 605
+    },
+    "cross_source_duplicate_ids": 0,
+    "duplicate_rows_removed": 0,
+    "excluded_no_aplica": 1392,
+    "excluded_other_unlabeled": 0,
+    "excluded_review": 59,
+    "rows_by_source": {
+      "REG IND GALPON 1 2026.xlsx": 287,
+      "REG IND GALPON 2 2025-2026.xlsx": 518
+    },
+    "rows_eligible_before_dedup": 805,
+    "rows_total": 2256,
+    "rows_used": 805,
+    "rows_without_usable_identity": 805
+  },
+  "dataset_sha256": "9268ba03436af223c1ee983aed95170dbe7bd534b1c5ef10fcfce48fc10b8c57",
+  "date": "2026-11-08",
+  "experiments": {
+    "A_completo": {
+      "baselines": {
+        "decision_tree_depth_1": {
+          "confusion_matrix_pooled": [
+            [
+              749,
+              1066
+            ],
+            [
+              0,
+              600
+            ]
+          ],
+          "folds": 15,
+          "metrics": {
+            "f1": {
+              "mean": 0.5308333498885285,
+              "std": 0.026886084596286594
+            },
+            "precision": {
+              "mean": 0.36174271969955796,
+              "std": 0.024989836076891776
+            },
+            "recall": {
+              "mean": 1.0,
+              "std": 0.0
+            }
+          }
+        },
+        "majority_class": {
+          "confusion_matrix_pooled": [
+            [
+              1815,
+              0
+            ],
+            [
+              600,
+              0
+            ]
+          ],
+          "folds": 15,
+          "metrics": {
+            "f1": {
+              "mean": 0.0,
+              "std": 0.0
+            },
+            "precision": {
+              "mean": 0.0,
+              "std": 0.0
+            },
+            "recall": {
+              "mean": 0.0,
+              "std": 0.0
+            }
+          }
+        }
+      },
+      "confusion_matrix_label_order": [
+        "NORMAL",
+        "ELITE"
+      ],
+      "confusion_matrix_pooled": [
+        [
+          1812,
+          3
+        ],
+        [
+          0,
+          600
+        ]
+      ],
+      "feature_importance": [
+        {
+          "feature": "nupar_madre",
+          "mean": 0.3091476058363437,
+          "std": 0.008755825807272487
+        },
+        {
+          "feature": "tcnv",
+          "mean": 0.25713554356561424,
+          "std": 0.01081808097938042
+        },
+        {
+          "feature": "ratio_destete_nacimiento",
+          "mean": 0.24193583226485466,
+          "std": 0.011945353713537627
+        },
+        {
+          "feature": "peso_nacimiento_g",
+          "mean": 0.09446183561973714,
+          "std": 0.008543865674762532
+        },
+        {
+          "feature": "peso_destete_g",
+          "mean": 0.09261116975603342,
+          "std": 0.007096142026235843
+        },
+        {
+          "feature": "ojos",
+          "mean": 0.004708012957416856,
+          "std": 0.0021919580091755682
+        }
+      ],
+      "feature_names": [
+        "nupar_madre",
+        "tcnv",
+        "peso_nacimiento_g",
+        "peso_destete_g",
+        "ratio_destete_nacimiento",
+        "ojos"
+      ],
+      "folds": 15,
+      "metrics": {
+        "f1": {
+          "mean": 0.9975308641975308,
+          "std": 0.005111596735869313
+        },
+        "precision": {
+          "mean": 0.9951219512195121,
+          "std": 0.010098520380619827
+        },
+        "recall": {
+          "mean": 1.0,
+          "std": 0.0
+        }
+      },
+      "selected_params_by_outer_fold": [
+        {
+          "fold_count": 1,
+          "params": {
+            "classifier__max_depth": 8,
+            "classifier__min_samples_leaf": 1,
+            "classifier__n_estimators": 100
+          }
+        },
+        {
+          "fold_count": 1,
+          "params": {
+            "classifier__max_depth": 8,
+            "classifier__min_samples_leaf": 5,
+            "classifier__n_estimators": 100
+          }
+        },
+        {
+          "fold_count": 11,
+          "params": {
+            "classifier__max_depth": null,
+            "classifier__min_samples_leaf": 1,
+            "classifier__n_estimators": 100
+          }
+        },
+        {
+          "fold_count": 2,
+          "params": {
+            "classifier__max_depth": null,
+            "classifier__min_samples_leaf": 1,
+            "classifier__n_estimators": 200
+          }
+        }
+      ]
+    },
+    "B_nacimiento": {
+      "baselines": {
+        "decision_tree_depth_1": {
+          "confusion_matrix_pooled": [
+            [
+              777,
+              1038
+            ],
+            [
+              0,
+              600
+            ]
+          ],
+          "folds": 15,
+          "metrics": {
+            "f1": {
+              "mean": 0.5369019484900671,
+              "std": 0.019698310180423687
+            },
+            "precision": {
+              "mean": 0.3671898799551007,
+              "std": 0.018106859323179292
+            },
+            "recall": {
+              "mean": 1.0,
+              "std": 0.0
+            }
+          }
+        },
+        "majority_class": {
+          "confusion_matrix_pooled": [
+            [
+              1815,
+              0
+            ],
+            [
+              600,
+              0
+            ]
+          ],
+          "folds": 15,
+          "metrics": {
+            "f1": {
+              "mean": 0.0,
+              "std": 0.0
+            },
+            "precision": {
+              "mean": 0.0,
+              "std": 0.0
+            },
+            "recall": {
+              "mean": 0.0,
+              "std": 0.0
+            }
+          }
+        }
+      },
+      "confusion_matrix_label_order": [
+        "NORMAL",
+        "ELITE"
+      ],
+      "confusion_matrix_pooled": [
+        [
+          1591,
+          224
+        ],
+        [
+          3,
+          597
+        ]
+      ],
+      "feature_importance": [
+        {
+          "feature": "nupar_madre",
+          "mean": 0.4794094338659946,
+          "std": 0.018432996473588235
+        },
+        {
+          "feature": "tcnv",
+          "mean": 0.3609951215287841,
+          "std": 0.016702636367694635
+        },
+        {
+          "feature": "peso_nacimiento_g",
+          "mean": 0.1586311223017939,
+          "std": 0.010916357824123946
+        },
+        {
+          "feature": "ojos",
+          "mean": 0.000964322303427424,
+          "std": 0.0018488649100435284
+        }
+      ],
+      "feature_names": [
+        "nupar_madre",
+        "tcnv",
+        "peso_nacimiento_g",
+        "ojos"
+      ],
+      "folds": 15,
+      "metrics": {
+        "f1": {
+          "mean": 0.8417359196906333,
+          "std": 0.03523503442585666
+        },
+        "precision": {
+          "mean": 0.7312795204938181,
+          "std": 0.0547176796969642
+        },
+        "recall": {
+          "mean": 0.9949999999999999,
+          "std": 0.014015297764534715
+        }
+      },
+      "selected_params_by_outer_fold": [
+        {
+          "fold_count": 3,
+          "params": {
+            "classifier__max_depth": 8,
+            "classifier__min_samples_leaf": 1,
+            "classifier__n_estimators": 100
+          }
+        },
+        {
+          "fold_count": 12,
+          "params": {
+            "classifier__max_depth": null,
+            "classifier__min_samples_leaf": 5,
+            "classifier__n_estimators": 100
+          }
+        }
+      ]
+    }
+  },
+  "final_model_features": [
+    "nupar_madre",
+    "tcnv",
+    "peso_nacimiento_g",
+    "ojos"
+  ],
+  "final_model_parameters": {
+    "classifier__max_depth": null,
+    "classifier__min_samples_leaf": 5,
+    "classifier__n_estimators": 100
+  },
+  "model": "RandomForestClassifier",
+  "primary_experiment": "B_nacimiento",
+  "protocol": {
+    "folds": 5,
+    "inner_cv": "StratifiedKFold",
+    "inner_folds": 3,
+    "outer": "RepeatedStratifiedKFold",
+    "random_state": 42,
+    "repeats": 3,
+    "scoring": "f1 (pos_label=ELITE)",
+    "search_grid": {
+      "max_depth": [
+        null,
+        8
+      ],
+      "min_samples_leaf": [
+        1,
+        5
+      ],
+      "n_estimators": [
+        100,
+        200
+      ]
+    }
+  },
+  "reproductive_examples": {
+    "descarte": 58,
+    "normal": 266,
+    "total_rows": 353,
+    "unlabeled": 29
+  },
+  "versions": {
+    "python": "3.14.3",
+    "scikit_learn": "1.9.1"
+  }
+}
