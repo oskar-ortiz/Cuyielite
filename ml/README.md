@@ -15,12 +15,22 @@ están en `ml/etl/config.py`; se inspeccionan todas las hojas y no se depende de
 nombres de hoja ni números de fila fijos. El código de animal solo se usa como
 filtro y no se exporta. `NUPAR` se conserva en crudo, sin conciliación ni cruce.
 
-Un T.C.N. reproductivo entero se toma como total (confirmado); los compuestos,
-incluidos `4+1M`, `5M`, `AB` y `X`, son `AMBIGUO` y no producen métricas de
-vivos o mortalidad. La semántica de NUPAR y la dirección del código R siguen
-sin interpretar. Las columnas atómicas TCNV/TCNM/TCNT se procesan aparte.
-`tcn_promedio` del contrato no se asigna a vivos o total: queda POR CONFIRMAR.
+`4+1M` y `5M` se decodifican como vivos y muertos según los códigos confirmados
+por el instructor. `AB` cuenta como parto y como aborto, pero su tamaño queda
+vacío; `X` se ignora. Patrones con cantidad junto a `AB` se reportan como
+`NO_INTERPRETADO_AB_CON_CANTIDAD`, sin inferir su significado. Un T.C.N. que
+contiene solo dígitos se interpreta como vivos, muertos cero y total igual al
+número, con estado `INFERIDO_POR_DATOS`. La semántica de NUPAR y la dirección
+del código R siguen sin interpretar. Las columnas atómicas TCNV/TCNM/TCNT se
+procesan aparte. Según Arquitectura §10 y confirmación del instructor,
+`tcn_promedio` corresponde a `tcn_vivos_promedio` (`CONFIRMADO`).
 `etiqueta` siempre queda vacía.
+
+Los libros reproductivos se descubren con los patrones declarados en
+`ml/etl/config.py`, incluido `REGISTRO REPRODUCTIVO GALPON 2 VIEJO`. El reporte
+agregado contiene hembras por archivo y por número de partos (AB incluido), así
+como la cantidad de observaciones que mencionan `EMPADRE`; no publica filas ni
+códigos de animales.
 
 ## Comandos
 
