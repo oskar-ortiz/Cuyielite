@@ -75,21 +75,60 @@ def _valid_parturition_date(value: Any) -> bool:
 def tcn_pattern(value: Any) -> str:
     if _is_missing(value):
         return "VACIO"
-    text = str(value).strip().upper()
-    if text in config.TCN_UNCONFIRMED_MARKERS:
+    if isinstance(value, bool):
+        return config.UNKNOWN_CODE
+    if isinstance(value, int):
+        text = str(value)
+    elif isinstance(value, float) and value.is_integer():
+        text = str(int(value))
+    else:
+        text = re.sub(r"\s+", "", str(value).strip().upper())
+    if re.fullmatch(r"\d+\+\d+M", text):
+        return "N+NM"
+    if re.fullmatch(r"\d+M", text):
+        return "NM"
+    if re.fullmatch(r"\d+", text):
+        return "N"
+    if text in config.TCN_CONFIRMED_PATTERNS:
         return text
-    if re.fullmatch(r"\d+(?:\+\d+)*[A-Z]*", text):
-        return re.sub(r"\d+", "N", text)
-    return "FORMATO_NO_RECONOCIDO"
+    return config.UNKNOWN_CODE
 
 
 def parse_tcn(value: Any) -> ParsedTCN:
     pattern = tcn_pattern(value)
     if pattern == "VACIO":
-        return ParsedTCN(None, None, None, "VACIO", pattern)
-    if config.TCN_INTEGER_IS_TOTAL and re.fullmatch(r"\d+", str(value).strip()):
-        return ParsedTCN(float(value), None, None, "PARSEADO_TOTAL", pattern)
-    return ParsedTCN(None, None, None, "AMBIGUO", pattern)
+        return ParsedTCN(None, None, None, config.SIN_CONFIRMAR, pattern)
+    if pattern == "N+NM":
+        text = re.sub(r"\s+", "", str(value).strip().upper())
+        match = re.fullmatch(r"(\d+)\+(\d+)M", text)
+        if match is not None:
+            vivos, muertos = (int(value) for value in match.groups())
+            return ParsedTCN(
+                vivos + muertos, vivos, muertos, config.CONFIRMADO, pattern
+            )
+    if pattern == "NM":
+        text = re.sub(r"\s+", "", str(value).strip().upper())
+        match = re.fullmatch(r"(\d+)M", text)
+        if match is not None:
+            muertos = int(match.group(1))
+            return ParsedTCN(
+                muertos, 0, muertos, config.CONFIRMADO, pattern
+            )
+    if pattern == "N":
+        text = (
+            str(int(value))
+            if isinstance(value, float) and value.is_integer()
+            else str(value).strip()
+        )
+        total = int(text)
+        return ParsedTCN(
+            total, total, 0, config.TCN_INTEGER_STATUS, pattern
+        )
+    if pattern in {"AB", "M"}:
+        return ParsedTCN(None, None, None, config.CONFIRMADO, pattern)
+    if pattern in config.TCN_IGNORED_PATTERNS:
+        return ParsedTCN(None, None, None, "IGNORADO", pattern)
+    return ParsedTCN(None, None, None, config.SIN_CONFIRMAR, pattern)
 
 
 def mortality_rate(deaths: Any, total: Any) -> float | None:
@@ -104,21 +143,58 @@ def mortality_rate(deaths: Any, total: Any) -> float | None:
 
 def _quality_status(
     *,
+    data_statuses: set[str],
     has_missing: bool,
     has_unknown_code: bool,
-    has_ambiguous_tcn: bool = False,
-    has_uninterpreted_tcn: bool = False,
 ) -> str:
-    statuses = []
-    if has_ambiguous_tcn:
-        statuses.append("AMBIGUO")
-    if has_uninterpreted_tcn:
-        statuses.append("NO_INTERPRETADO")
+    statuses = set(data_statuses)
     if has_missing:
-        statuses.append("REVISAR")
+        statuses.add(config.SIN_CONFIRMAR)
     if has_unknown_code:
-        statuses.append(config.UNKNOWN_CODE)
-    return "|".join(statuses) if statuses else "OK"
+        statuses.add(config.SIN_CONFIRMAR)
+    if not statuses:
+        statuses.add(config.SIN_CONFIRMAR)
+    ordered_statuses = [
+        status
+        for status in (
+            config.CONFIRMADO,
+            config.INFERIDO_POR_DATOS,
+            config.SIN_CONFIRMAR,
+        )
+        if status in statuses
+    ]
+    if has_missing:
+        ordered_statuses.append("REVISAR")
+    if has_unknown_code:
+        ordered_statuses.append(config.UNKNOWN_CODE)
+    return "|".join(ordered_statuses)
+
+
+def _as_date(value: Any) -> date | None:
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if not isinstance(value, str) or not value.strip():
+        return None
+    text = value.strip()
+    for date_format in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"):
+        try:
+            return datetime.strptime(text, date_format).date()
+        except ValueError:
+            continue
+    return None
+
+
+def _has_dead_marker(value: Any) -> bool | None:
+    if _is_missing(value):
+        return None
+    return bool(
+        re.search(
+            rf"\b{re.escape(config.TCN_DEAD_OBSERVATION_MARKER)}\b",
+            str(value).upper(),
+        )
+    )
 
 
 def transform_reproductoras(
@@ -128,26 +204,32 @@ def transform_reproductoras(
     for record in records:
         eyes_raw = _clean_raw(record.get("ojos"))
         eyes_text = decode_code(eyes_raw, config.OJOS_CODES)
-        dated_litters = [
-            litter
+        parsed_litters = [
+            (litter, parse_tcn(litter["tcn"]))
             for litter in record["litters"]
+        ]
+        dated_litters = [
+            (litter, parsed)
+            for litter, parsed in parsed_litters
             if _valid_parturition_date(litter["date"])
+            and parsed.pattern
+            not in {config.TCN_ABORT_PATTERN, *config.TCN_IGNORED_PATTERNS}
         ]
-        parsed = [parse_tcn(litter["tcn"]) for litter in dated_litters]
-        totals = [
-            value.total
-            for value in parsed
-            if value.status == "PARSEADO_TOTAL" and value.total is not None
+        numeric_events = [
+            parsed for _, parsed in dated_litters if parsed.total is not None
         ]
+        totals = [value.total for value in numeric_events]
         lives = [
             value.vivos
-            for value in parsed
-            if value.status == "PARSEADO_TOTAL" and value.vivos is not None
+            for value in numeric_events
+            if value.vivos is not None
         ]
         mortality_pairs = [
             (value.muertos, value.total)
-            for value in parsed
-            if value.muertos is not None and value.total is not None and value.total > 0
+            for value in numeric_events
+            if value.muertos is not None
+            and value.total is not None
+            and value.total > 0
         ]
         mortality = (
             sum(dead for dead, _ in mortality_pairs)
@@ -155,31 +237,48 @@ def transform_reproductoras(
             if mortality_pairs
             else None
         )
-        has_unknown = eyes_text == config.UNKNOWN_CODE
-        has_ambiguous_tcn = any(value.status == "AMBIGUO" for value in parsed)
-        has_uninterpreted_tcn = any(
-            value.status == "PARSEADO_TOTAL"
-            and (value.vivos is None or value.muertos is None)
-            for value in parsed
+        abortos = sum(
+            parsed.pattern == config.TCN_ABORT_PATTERN
+            for _, parsed in parsed_litters
         )
+        observations = record.get("observations")
+        has_unknown = eyes_text == config.UNKNOWN_CODE
+        data_statuses = {
+            parsed.status
+            for _, parsed in parsed_litters
+            if parsed.status
+            in {
+                config.CONFIRMADO,
+                config.INFERIDO_POR_DATOS,
+                config.SIN_CONFIRMAR,
+            }
+        }
+        if eyes_text is not None and not has_unknown:
+            data_statuses.add(config.CONFIRMADO)
         features.append(
             {
+                "etapa": "reproductora",
                 "partos_acumulados": len(dated_litters),
                 "tcn_vivos_promedio": _average(lives),
                 "tcn_total_promedio": _average(totals),
                 "peso_monta_g": _numeric(record.get("peso_monta_g")),
                 "tasa_mortalidad_camada": mortality,
+                "abortos": abortos,
+                "hembra_muerta": _has_dead_marker(observations),
                 "ojos": eyes_raw,
                 "ojos_texto": eyes_text,
                 "estado_calidad": _quality_status(
                     has_missing=(
                         eyes_raw is None
                         or _numeric(record.get("peso_monta_g")) is None
-                        or any(_is_missing(litter["tcn"]) for litter in dated_litters)
+                        or observations is None
+                        or any(
+                            _is_missing(litter["tcn"])
+                            for litter, _ in dated_litters
+                        )
                     ),
                     has_unknown_code=has_unknown,
-                    has_ambiguous_tcn=has_ambiguous_tcn,
-                    has_uninterpreted_tcn=has_uninterpreted_tcn,
+                    data_statuses=data_statuses,
                 ),
                 "provenance_archivo": record["source_file"],
                 "provenance_hoja": record["source_sheet"],
@@ -208,6 +307,20 @@ def transform_crias(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
             "peso_destete_g": _numeric(record.get("peso_destete_g")),
             "peso_4_semanas_g": _numeric(record.get("peso_4_semanas_g")),
         }
+        birth_date = _as_date(record.get("fecha_nacimiento"))
+        weaning_date = _as_date(record.get("fecha_destete"))
+        days_to_weaning = (
+            (weaning_date - birth_date).days
+            if birth_date is not None and weaning_date is not None
+            else None
+        )
+        ratio = (
+            weights["peso_destete_g"] / weights["peso_nacimiento_g"]
+            if weights["peso_destete_g"] is not None
+            and weights["peso_nacimiento_g"] is not None
+            and weights["peso_nacimiento_g"] > 0
+            else None
+        )
         has_missing = any(
             value is None
             for value in (
@@ -219,17 +332,31 @@ def transform_crias(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 sexo_raw,
                 destino_raw,
                 *weights.values(),
+                days_to_weaning,
             )
         )
         has_unknown = config.UNKNOWN_CODE in (ojos_texto, sexo_texto, destino_texto)
+        data_statuses = set()
+        if nupar_madre is not None:
+            data_statuses.add(config.NUPAR_STATUS)
+        if all(value is not None for value in (tcnv, tcnm, tcnt)):
+            data_statuses.add(config.CONFIRMADO)
+        if any(
+            value is not None and value != config.UNKNOWN_CODE
+            for value in (ojos_texto, sexo_texto, destino_texto)
+        ):
+            data_statuses.add(config.CONFIRMADO)
         features.append(
             {
+                "etapa": "candidata",
                 "nupar_madre": nupar_madre,
                 "tcnv": tcnv,
                 "tcnm": tcnm,
                 "tcnt": tcnt,
                 "tasa_mortalidad_camada": mortality_rate(tcnm, tcnt),
                 **weights,
+                "ratio_destete_nacimiento": ratio,
+                "dias_destete": days_to_weaning,
                 "ojos": ojos_raw,
                 "ojos_texto": ojos_texto,
                 "sexo": sexo_raw,
@@ -240,6 +367,7 @@ def transform_crias(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                     "SIN_PLACA" if _code_key(destino_raw) == "SP" else None
                 ),
                 "estado_calidad": _quality_status(
+                    data_statuses=data_statuses,
                     has_missing=has_missing,
                     has_unknown_code=has_unknown,
                 ),
@@ -259,6 +387,18 @@ def _code_count(value: Any, catalog: dict[str, str]) -> str:
     return key if key in catalog else config.UNKNOWN_CODE
 
 
+def _catalog_counts(
+    records: list[dict[str, Any]],
+    field: str,
+    catalog: dict[str, str],
+) -> dict[str, int]:
+    counts = {code: 0 for code in catalog}
+    counts.update(
+        Counter(_code_count(record.get(field), catalog) for record in records)
+    )
+    return counts
+
+
 def build_aggregate_report(
     reproductive_records: list[dict[str, Any]],
     individual_records: list[dict[str, Any]],
@@ -273,19 +413,19 @@ def build_aggregate_report(
     )
     code_counts = {
         "crias": {
-            "destino": dict(
-                Counter(_code_count(row.get("destino"), config.DESTINO_CODES) for row in individual_records)
+            "destino": _catalog_counts(
+                individual_records, "destino", config.DESTINO_CODES
             ),
-            "ojos": dict(
-                Counter(_code_count(row.get("ojos"), config.OJOS_CODES) for row in individual_records)
+            "ojos": _catalog_counts(
+                individual_records, "ojos", config.OJOS_CODES
             ),
-            "sexo": dict(
-                Counter(_code_count(row.get("sexo"), config.SEXO_CODES) for row in individual_records)
+            "sexo": _catalog_counts(
+                individual_records, "sexo", config.SEXO_CODES
             ),
         },
         "reproductoras": {
-            "ojos": dict(
-                Counter(_code_count(row.get("ojos"), config.OJOS_CODES) for row in reproductive_records)
+            "ojos": _catalog_counts(
+                reproductive_records, "ojos", config.OJOS_CODES
             )
         },
     }

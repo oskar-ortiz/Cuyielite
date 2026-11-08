@@ -15,11 +15,14 @@ from ml.etl.transform import (
 )
 
 REPRODUCTORAS_COLUMNS = [
+    "etapa",
     "partos_acumulados",
     "tcn_vivos_promedio",
     "tcn_total_promedio",
     "peso_monta_g",
     "tasa_mortalidad_camada",
+    "abortos",
+    "hembra_muerta",
     "ojos",
     "ojos_texto",
     "estado_calidad",
@@ -29,6 +32,7 @@ REPRODUCTORAS_COLUMNS = [
     "etiqueta",
 ]
 CRIAS_COLUMNS = [
+    "etapa",
     "nupar_madre",
     "tcnv",
     "tcnm",
@@ -37,6 +41,8 @@ CRIAS_COLUMNS = [
     "peso_nacimiento_g",
     "peso_destete_g",
     "peso_4_semanas_g",
+    "ratio_destete_nacimiento",
+    "dias_destete",
     "ojos",
     "ojos_texto",
     "sexo",
@@ -70,6 +76,16 @@ def write_outputs(
     )
 
 
+def summarize_weaning_days(features: list[dict[str, Any]]) -> dict[str, int]:
+    days = [feature["dias_destete"] for feature in features]
+    measured_days = [value for value in days if value is not None]
+    return {
+        "15": sum(value == 15 for value in measured_days),
+        "no_15": sum(value != 15 for value in measured_days),
+        "sin_datos": len(days) - len(measured_days),
+    }
+
+
 def run_etl(
     input_dir: Path = config.RAW_DATA_DIR,
     output_dir: Path = config.DATA_DIR,
@@ -84,6 +100,7 @@ def run_etl(
         (len(reproductive_features), len(REPRODUCTORAS_COLUMNS)),
         (len(individual_features), len(CRIAS_COLUMNS)),
     )
+    report["dias_destete"] = summarize_weaning_days(individual_features)
     write_outputs(
         reproductive_features,
         individual_features,
