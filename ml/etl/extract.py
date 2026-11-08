@@ -239,12 +239,19 @@ def _merge_stats(target: dict[str, Any], source: dict[str, Any]) -> None:
     target["sheets_processed"] += source["sheets_processed"]
 
 
-def _matching_workbooks(directory: Path, pattern: str) -> list[Path]:
-    return sorted(
+def _matching_workbooks(
+    directory: Path,
+    patterns: str | tuple[str, ...],
+) -> list[Path]:
+    if isinstance(patterns, str):
+        patterns = (patterns,)
+    matches = {
         path
+        for pattern in patterns
         for path in directory.glob(pattern)
         if path.is_file() and not path.name.startswith("~$")
-    )
+    }
+    return sorted(matches)
 
 
 def extract_all(
@@ -254,7 +261,9 @@ def extract_all(
         raise FileNotFoundError(f"Input directory not found: {input_dir}")
 
     individual_files = _matching_workbooks(input_dir, config.INDIVIDUAL_FILE_GLOB)
-    reproductive_files = _matching_workbooks(input_dir, config.REPRODUCTIVE_FILE_GLOB)
+    reproductive_files = _matching_workbooks(
+        input_dir, config.REPRODUCTIVE_FILE_GLOBS
+    )
     if not individual_files:
         raise FileNotFoundError("No individual source workbooks matched the configured pattern.")
     if not reproductive_files:

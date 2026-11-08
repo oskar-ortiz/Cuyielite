@@ -72,6 +72,15 @@ def _valid_parturition_date(value: Any) -> bool:
     return str(value).strip().upper() not in config.EMPTY_DATE_MARKERS
 
 
+def _is_countable_parturition(litter: dict[str, Any], parsed: ParsedTCN) -> bool:
+    has_parturition_date = _valid_parturition_date(litter["date"])
+    is_abortion = parsed.pattern == config.TCN_ABORT_PATTERN
+    return (
+        (has_parturition_date or is_abortion)
+        and parsed.pattern not in config.TCN_IGNORED_PATTERNS
+    )
+
+
 def tcn_pattern(value: Any) -> str:
     if _is_missing(value):
         return "VACIO"
@@ -83,6 +92,8 @@ def tcn_pattern(value: Any) -> str:
         text = str(int(value))
     else:
         text = re.sub(r"\s+", "", str(value).strip().upper())
+    if "AB" in text and re.search(r"\d", text):
+        return "NO_INTERPRETADO_AB_CON_CANTIDAD"
     if re.fullmatch(r"\d+\+\d+M", text):
         return "N+NM"
     if re.fullmatch(r"\d+M", text):
@@ -126,6 +137,8 @@ def parse_tcn(value: Any) -> ParsedTCN:
         )
     if pattern in {"AB", "M"}:
         return ParsedTCN(None, None, None, config.CONFIRMADO, pattern)
+    if pattern == "NO_INTERPRETADO_AB_CON_CANTIDAD":
+        return ParsedTCN(None, None, None, config.SIN_CONFIRMAR, pattern)
     if pattern in config.TCN_IGNORED_PATTERNS:
         return ParsedTCN(None, None, None, "IGNORADO", pattern)
     return ParsedTCN(None, None, None, config.SIN_CONFIRMAR, pattern)
@@ -208,15 +221,13 @@ def transform_reproductoras(
             (litter, parse_tcn(litter["tcn"]))
             for litter in record["litters"]
         ]
-        dated_litters = [
+        parturitions = [
             (litter, parsed)
             for litter, parsed in parsed_litters
-            if _valid_parturition_date(litter["date"])
-            and parsed.pattern
-            not in {config.TCN_ABORT_PATTERN, *config.TCN_IGNORED_PATTERNS}
+            if _is_countable_parturition(litter, parsed)
         ]
         numeric_events = [
-            parsed for _, parsed in dated_litters if parsed.total is not None
+            parsed for _, parsed in parturitions if parsed.total is not None
         ]
         totals = [value.total for value in numeric_events]
         lives = [
@@ -258,7 +269,7 @@ def transform_reproductoras(
         features.append(
             {
                 "etapa": "reproductora",
-                "partos_acumulados": len(dated_litters),
+                "partos_acumulados": len(parturitions),
                 "tcn_vivos_promedio": _average(lives),
                 "tcn_total_promedio": _average(totals),
                 "peso_monta_g": _numeric(record.get("peso_monta_g")),
@@ -274,7 +285,7 @@ def transform_reproductoras(
                         or observations is None
                         or any(
                             _is_missing(litter["tcn"])
-                            for litter, _ in dated_litters
+                            for litter, _ in parturitions
                         )
                     ),
                     has_unknown_code=has_unknown,
@@ -429,10 +440,46 @@ def build_aggregate_report(
             )
         },
     }
+    reproductive_by_file: dict[str, dict[str, Any]] = {}
+    for record in reproductive_records:
+        filename = record["source_file"]
+        file_summary = reproductive_by_file.setdefault(
+            filename,
+            {
+                "filas_hembras": 0,
+                "hembras_por_partos": {
+                    "0": 0,
+                    "1": 0,
+                    "2": 0,
+                    "3": 0,
+                    "4+": 0,
+                },
+                "observaciones_con_empadre": 0,
+            },
+        )
+        file_summary["filas_hembras"] += 1
+        partos = sum(
+            _is_countable_parturition(litter, parse_tcn(litter["tcn"]))
+            for litter in record["litters"]
+        )
+        partos_bucket = str(partos) if partos < 4 else "4+"
+        file_summary["hembras_por_partos"][partos_bucket] += 1
+        observations = record.get("observations")
+        if (
+            isinstance(observations, str)
+            and "EMPADRE" in observations.upper()
+        ):
+            file_summary["observaciones_con_empadre"] += 1
+
     return {
         **extraction_stats,
         "tcn_patterns": dict(tcn_patterns),
         "code_counts": code_counts,
+        "reproductoras_por_archivo": reproductive_by_file,
+        "observaciones_con_empadre": sum(
+            summary["observaciones_con_empadre"]
+            for summary in reproductive_by_file.values()
+        ),
         "shapes": {
             "features_reproductoras": list(reproductive_shape),
             "features_crias": list(individual_shape),

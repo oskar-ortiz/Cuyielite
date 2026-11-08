@@ -10,6 +10,7 @@ from ml.etl import config
 from ml.etl.extract import extract_individual_workbook, extract_reproductive_workbook
 from ml.etl.load import run_etl, summarize_weaning_days
 from ml.etl.transform import (
+    build_aggregate_report,
     decode_code,
     mortality_rate,
     parse_tcn,
@@ -39,6 +40,15 @@ def test_confirmed_tcn_codes():
     assert (abortion.vivos, abortion.muertos, abortion.total) == (None, None, None)
     assert abortion.pattern == "AB"
     assert abortion.status == config.CONFIRMADO
+
+    ambiguous_abortion = parse_tcn("2AB")
+    assert ambiguous_abortion.pattern == "NO_INTERPRETADO_AB_CON_CANTIDAD"
+    assert ambiguous_abortion.status == config.SIN_CONFIRMAR
+    assert (
+        ambiguous_abortion.vivos,
+        ambiguous_abortion.muertos,
+        ambiguous_abortion.total,
+    ) == (None, None, None)
 
     filler = parse_tcn("X")
     assert (filler.vivos, filler.muertos, filler.total) == (None, None, None)
@@ -80,7 +90,7 @@ def test_reproductive_filter_and_new_features():
     assert features[0]["etiqueta"] == ""
 
 
-def test_reproductive_tcn_aggregation_excludes_abortions_and_x():
+def test_reproductive_tcn_aggregation_counts_abortions_and_ignores_x():
     record = {
         "ojos": 1,
         "peso_monta_g": 950,
@@ -88,7 +98,7 @@ def test_reproductive_tcn_aggregation_excludes_abortions_and_x():
         "litters": [
             {"date": date(2026, 1, 1), "tcn": "4+1M"},
             {"date": date(2026, 1, 2), "tcn": "5M"},
-            {"date": date(2026, 1, 3), "tcn": "AB"},
+            {"date": None, "tcn": "AB"},
             {"date": date(2026, 1, 4), "tcn": "X"},
             {"date": date(2026, 1, 5), "tcn": "M"},
         ],
@@ -98,13 +108,79 @@ def test_reproductive_tcn_aggregation_excludes_abortions_and_x():
     }
 
     feature = transform_reproductoras([record])[0]
-    assert feature["partos_acumulados"] == 3
+    assert feature["partos_acumulados"] == 4
     assert feature["abortos"] == 1
     assert feature["tcn_vivos_promedio"] == 2
     assert feature["tcn_total_promedio"] == 5
     assert feature["tasa_mortalidad_camada"] == pytest.approx(0.6)
     assert feature["hembra_muerta"] is True
     assert feature["estado_calidad"].startswith(config.CONFIRMADO)
+
+
+def test_reproductive_report_counts_partos_per_file_and_empadre_observations():
+    reproductive_records = [
+        {
+            "source_file": "reproductive-a.xlsx",
+            "observations": "EMPADRE revisado",
+            "litters": [
+                {"date": date(2026, 1, 1), "tcn": "AB"},
+                {"date": date(2026, 1, 2), "tcn": "X"},
+            ],
+            "tcn_values": ["AB", "X"],
+        },
+        {
+            "source_file": "reproductive-a.xlsx",
+            "observations": "sin nota",
+            "litters": [
+                {"date": date(2026, 1, day), "tcn": "5"}
+                for day in (1, 2)
+            ],
+            "tcn_values": ["5", "5"],
+        },
+        {
+            "source_file": "reproductive-b.xlsx",
+            "observations": "nota de EMPADRE",
+            "litters": [
+                {"date": date(2026, 2, day), "tcn": "5"}
+                for day in (1, 2, 3, 4)
+            ],
+            "tcn_values": ["5", "5", "5", "5"],
+        },
+    ]
+
+    report = build_aggregate_report(
+        reproductive_records,
+        [],
+        {},
+        (3, 15),
+        (0, 23),
+    )
+    assert report["reproductoras_por_archivo"] == {
+        "reproductive-a.xlsx": {
+            "filas_hembras": 2,
+            "hembras_por_partos": {
+                "0": 0,
+                "1": 1,
+                "2": 1,
+                "3": 0,
+                "4+": 0,
+            },
+            "observaciones_con_empadre": 1,
+        },
+        "reproductive-b.xlsx": {
+            "filas_hembras": 1,
+            "hembras_por_partos": {
+                "0": 0,
+                "1": 0,
+                "2": 0,
+                "3": 0,
+                "4+": 1,
+            },
+            "observaciones_con_empadre": 1,
+        },
+    }
+    assert report["observaciones_con_empadre"] == 2
+    assert report["tcn_patterns"]["AB"] == 1
 
 
 def test_atomic_tcn_mortality_uses_deaths_over_total():
