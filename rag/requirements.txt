@@ -4,3 +4,4 @@ psycopg[binary]
 pytest
 PyYAML
 rank_bm25
+requests
