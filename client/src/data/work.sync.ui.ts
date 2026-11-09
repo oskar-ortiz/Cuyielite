@@ -12,10 +12,6 @@ export interface SyncView {
   tone: SyncTone;
 }
 
-function changes(count: number): string {
-  return count === 1 ? '1 cambio' : `${count} cambios`;
-}
-
 // Un fallo de red o un 503 se puede reintentar; un token inválido o un contexto
 // incompatible exigen revisar la configuración antes de volver a intentarlo.
 export function classifySyncError(error: unknown): 'offline' | 'error' {
@@ -47,7 +43,15 @@ export function describeSyncState(input: {
   const pending = status?.pending ?? 0;
   const conflicts = status?.conflicts ?? 0;
   const rejected = status?.rejected ?? 0;
-  const note = rejected > 0 ? ` El servidor rechazó ${changes(rejected)}; requiere revisión.` : '';
+  const pendingText = pending === 1 ? '1 cambio local espera envío.' : `${pending} cambios locales esperan envío.`;
+  const conflictText =
+    conflicts === 1 ? '1 conflicto espera tu decisión.' : `${conflicts} conflictos esperan tu decisión.`;
+  const note =
+    rejected === 0
+      ? ''
+      : rejected === 1
+        ? ' El servidor rechazó 1 cambio; requiere revisión.'
+        : ` El servidor rechazó ${rejected} cambios; requieren revisión.`;
 
   if (syncing) {
     return {
@@ -61,7 +65,7 @@ export function describeSyncState(input: {
     return {
       phase: 'conflict',
       title: 'Conflictos pendientes',
-      detail: `${changes(conflicts)} esperan tu decisión. Los cambios locales se conservan.` + note,
+      detail: `${conflictText} Los cambios locales se conservan.` + note,
       tone: 'warning',
     };
   }
@@ -85,7 +89,7 @@ export function describeSyncState(input: {
     return {
       phase: 'pending',
       title: 'Cambios pendientes',
-      detail: `${changes(pending)} locales esperan envío.` + note,
+      detail: pendingText + note,
       tone: 'warning',
     };
   }
