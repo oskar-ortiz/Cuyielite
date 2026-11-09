@@ -25,6 +25,14 @@ def _has_valid_code(value: Any) -> bool:
     return bool(re.fullmatch(config.ANIMAL_CODE_PATTERN, code))
 
 
+def _is_candidate_record(record: dict[str, Any]) -> bool:
+    sex_key = _header_key(record.get("sexo"))
+    destination_key = _header_key(record.get("destino"))
+    sex = config.SEXO_CODES.get(sex_key, sex_key)
+    destination = config.DESTINO_CODES.get(destination_key, destination_key)
+    return sex.casefold() == "hembra" and destination.casefold() != "muerte"
+
+
 def _is_filler_code(value: Any) -> bool:
     code = str(value).strip().upper() if value is not None else ""
     return any(code.startswith(prefix) for prefix in config.FILLER_CODE_PREFIXES)
@@ -89,9 +97,12 @@ def _source_provenance(path: Path, sheet: str, row_number: int) -> dict[str, Any
     }
 
 
-def extract_individual_workbook(path: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+def _extract_individual_workbook_with_codes(
+    path: Path,
+) -> tuple[list[dict[str, Any]], list[str], dict[str, Any]]:
     workbook = openpyxl.load_workbook(path, read_only=True, data_only=True)
     records: list[dict[str, Any]] = []
+    codes: list[str] = []
     stats: dict[str, Any] = {
         "rows_read": 0,
         "rows_accepted": 0,
@@ -136,9 +147,17 @@ def extract_individual_workbook(path: Path) -> tuple[list[dict[str, Any]], dict[
                         **_source_provenance(path, worksheet.title, row_index + 1),
                     }
                 )
+                codes.append(str(code).strip().casefold())
                 stats["rows_accepted"] += 1
     finally:
         workbook.close()
+    return records, codes, stats
+
+
+def extract_individual_workbook(
+    path: Path,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    records, _, stats = _extract_individual_workbook_with_codes(path)
     return records, stats
 
 
@@ -271,6 +290,7 @@ def extract_all(
 
     individual_records: list[dict[str, Any]] = []
     reproductive_records: list[dict[str, Any]] = []
+    identity_occurrences: dict[str, list[tuple[int, str]]] = {}
     report: dict[str, Any] = {
         "individual": {
             "rows_read": 0,
@@ -290,9 +310,55 @@ def extract_all(
         },
     }
     for path in individual_files:
-        records, stats = extract_individual_workbook(path)
+        records, codes, stats = _extract_individual_workbook_with_codes(path)
+        offset = len(individual_records)
         individual_records.extend(records)
+        for row_offset, code in enumerate(codes):
+            identity_occurrences.setdefault(code, []).append(
+                (offset + row_offset, path.name)
+            )
         _merge_stats(report["individual"], stats)
+
+    conflict_rows: set[int] = set()
+    conflict_rows_by_file: Counter[str] = Counter()
+    conflict_identity_count = 0
+    for occurrences in identity_occurrences.values():
+        candidate_occurrences = [
+            (index, source)
+            for index, source in occurrences
+            if _is_candidate_record(individual_records[index])
+        ]
+        if len({source for _, source in candidate_occurrences}) < 2:
+            continue
+        first_record = individual_records[candidate_occurrences[0][0]]
+        first_values = {
+            key: value
+            for key, value in first_record.items()
+            if key not in {"source_file", "source_sheet", "source_row"}
+        }
+        has_different_values = any(
+            {
+                key: value
+                for key, value in individual_records[index].items()
+                if key not in {"source_file", "source_sheet", "source_row"}
+            }
+            != first_values
+            for index, _ in candidate_occurrences[1:]
+        )
+        if not has_different_values:
+            continue
+        conflict_identity_count += 1
+        for index, source in candidate_occurrences:
+            conflict_rows.add(index)
+            conflict_rows_by_file[source] += 1
+            individual_records[index]["duplicate_conflict"] = True
+
+    report["duplicate_conflicts"] = {
+        "identities": conflict_identity_count,
+        "rows": len(conflict_rows),
+        "rows_by_source_file": dict(sorted(conflict_rows_by_file.items())),
+    }
+
     for path in reproductive_files:
         records, stats = extract_reproductive_workbook(path)
         reproductive_records.extend(records)

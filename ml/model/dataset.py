@@ -64,7 +64,11 @@ def load_dataset(path: Path) -> CandidateDataset:
         raise ValueError(f"CSV de candidatas sin columnas requeridas: {missing_columns}")
 
     labels = frame["etiqueta"].str.strip().str.upper()
-    eligible_mask = labels.isin(TARGET_LABELS)
+    quality_states = frame["estado_calidad"].fillna("").astype(str)
+    conflict_mask = quality_states.str.contains(
+        r"(?:^|\|)CONFLICTO_DUPLICADO(?:\||$)", regex=True
+    )
+    eligible_mask = labels.isin(TARGET_LABELS) & ~conflict_mask
     eligible = frame.loc[eligible_mask].copy()
     eligible["__label"] = labels.loc[eligible_mask]
 
@@ -104,6 +108,9 @@ def load_dataset(path: Path) -> CandidateDataset:
     no_apply_mask = excluded_states.str.contains(
         r"(?:^|\|)NO_APLICA(?:\||$)", regex=True
     )
+    conflict_excluded_mask = excluded_states.str.contains(
+        r"(?:^|\|)CONFLICTO_DUPLICADO(?:\||$)", regex=True
+    )
 
     features_a = _as_model_features(retained, FEATURES_A).reset_index(drop=True)
     features_b = _as_model_features(retained, FEATURES_B).reset_index(drop=True)
@@ -115,7 +122,10 @@ def load_dataset(path: Path) -> CandidateDataset:
         "class_counts": dict(sorted(class_counts.items())),
         "excluded_no_aplica": int(no_apply_mask.sum()),
         "excluded_review": int(review_mask.sum()),
-        "excluded_other_unlabeled": int((~no_apply_mask & ~review_mask).sum()),
+        "excluded_duplicate_conflict": int(conflict_mask.sum()),
+        "excluded_other_unlabeled": int(
+            (~no_apply_mask & ~review_mask & ~conflict_excluded_mask).sum()
+        ),
         "duplicate_rows_removed": duplicate_rows,
         "cross_source_duplicate_ids": len(duplicate_cross_source_ids),
         "rows_without_usable_identity": missing_identity,

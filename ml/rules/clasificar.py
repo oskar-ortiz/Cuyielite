@@ -88,6 +88,14 @@ def _is_death_destination(row: dict[str, Any]) -> bool:
 
 def clasificar_candidata(fila: dict[str, Any]) -> dict[str, Any]:
     """Return ELITE/NORMAL, an empty class for review, or NO_APLICA."""
+    estado = _estado_origen(fila)
+    if "CONFLICTO_DUPLICADO" in estado.split("|"):
+        return _result(
+            "",
+            ["no clasificable: duplicado con datos en conflicto"],
+            estado,
+        )
+
     sex = fila.get("sexo_texto")
     if _missing(sex):
         sex = fila.get("sexo")
