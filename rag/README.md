@@ -1,9 +1,9 @@
 # Pipeline RAG local
 
 Pipeline de indexación y consulta interna del manual del SENA. Las respuestas
-son extractivas y presentan citas `Documento, p. N`; no se implementa ni se
-invoca un LLM. `consultar(pregunta, top_k)` entrega `respuesta` y `fuentes`,
-compatibles con `AssistantQueryResponse`.
+se generan localmente con Ollama cuando se habilita `LLM_PROVIDER=ollama`, con
+respaldo extractivo y citas `Documento, p. N`. Por defecto no se invoca un LLM.
+`consultar(pregunta, top_k)` entrega `respuesta` y `fuentes`.
 
 ## Preparación
 
@@ -41,10 +41,31 @@ Para este PDF se excluyen las páginas PDF 1–11, que contienen portada, licenc
 créditos, índice y agradecimientos. La numeración conservada en las citas es la
 del PDF.
 
-La respuesta se genera mediante `ExtractiveGenerator`, inyectable por la
-interfaz `AnswerGenerator`; una implementación futura de LLM puede conectarse
-sin cambiar la recuperación ni el contrato. No se conecta un LLM en este
-pipeline.
+## Generación local con Ollama
+
+Instala Ollama para Windows desde [ollama.com/download](https://ollama.com/download)
+y, en una terminal, descarga el modelo configurado:
+
+```powershell
+ollama pull qwen2.5:7b-instruct
+```
+
+Ollama expone por defecto `http://localhost:11434`. Copia las variables RAG de
+`.env.example` a tu `.env` local y activa el proveedor:
+
+```dotenv
+LLM_PROVIDER=ollama
+OLLAMA_URL=http://localhost:11434
+OLLAMA_MODEL=qwen2.5:7b-instruct
+LLM_TIMEOUT_S=60
+LLM_TEMPERATURE=0.1
+```
+
+La llamada es a `/api/chat` con `stream=false`. El prompt limita la respuesta al
+contexto, pide citas `[1]`, `[2]` y prohíbe inventar cifras. El código traduce
+solo índices existentes a citas de documento y página. Sin fragmentos sobre el
+umbral no se llama a Ollama; si el proveedor está desactivado o falla, se usa
+respuesta extractiva. No se transmite el corpus a servicios externos.
 
 ## Evaluación y pruebas
 
@@ -58,6 +79,17 @@ rag\.venv\Scripts\python -m rag.ask evaluate
 
 El informe guarda solo acierto@1, acierto@3, acierto@5 y MRR agregados en
 `rag/reports/evaluacion.md`.
+
+Para generar la tabla de revisión manual de las 25 preguntas:
+
+```powershell
+$env:RAG_DATABASE_URL = "postgresql://..."
+$env:LLM_PROVIDER = "ollama"
+rag\.venv\Scripts\python -m rag.eval.evaluate_generation
+```
+
+El informe queda en `rag/reports/evaluacion_generacion.md`; sus respuestas se
+acortan y la columna de calificación se deja vacía.
 
 La línea base léxica no requiere PostgreSQL ni modelos:
 

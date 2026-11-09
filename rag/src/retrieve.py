@@ -125,4 +125,15 @@ def consultar(
     min_similarity = float(os.getenv("RAG_MIN_SIMILARITY", str(DEFAULT_MIN_SIMILARITY)))
     with psycopg.connect(database_url) as connection:
         results = retrieve(connection, pregunta, selected_embedder, top_k, min_similarity)
-    return build_response(pregunta, results, generator)
+    if generator is not None:
+        return build_response(pregunta, results, generator)
+
+    from rag.src.generate import generar
+
+    generated = generar(pregunta, results)
+    return {
+        "respuesta": generated["respuesta"],
+        "fuentes": generated["citas"],
+        "modo": generated["modo"],
+        "citas": generated["citas"],
+    }
