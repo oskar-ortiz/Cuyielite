@@ -52,6 +52,19 @@ $env:DATABASE_URL = $env:TEST_DATABASE_URL
 python -m pytest backend -q
 ```
 
+El endpoint de laboratorio `GET /sync/pull` requiere `SYNC_CURSOR_SIGNING_KEY`:
+una clave aleatoria persistente de al menos 32 bytes, fuera de Git. No rotarla
+entre reinicios del mismo laboratorio; los cursores anteriores dejarían de validar.
+Para una prueba local aislada, generar y conservar la clave fuera del repositorio:
+
+```powershell
+$keyBytes = [byte[]]::new(32)
+[Security.Cryptography.RandomNumberGenerator]::Fill($keyBytes)
+$env:SYNC_CURSOR_SIGNING_KEY = [Convert]::ToBase64String($keyBytes)
+```
+
+Las pruebas automatizadas usan una clave sintética no válida para producción.
+
 ## Registro, checksum y no-op
 
 - Tabla `schema_migrations(id TEXT PK, checksum TEXT, applied_at TIMESTAMPTZ)`.
