@@ -1,7 +1,7 @@
 # 0004. Criterio ELITE / NORMAL / DESCARTE
 
 **Estado:** VALIDADA POR EL INSTRUCTOR DEL SENA (respuestas por WhatsApp,
-2026-11-07). Pendiente de revisión y aceptación final de Oskar.
+2026-11-07). aprobada.
 
 ## Contexto y alcance
 
