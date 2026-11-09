@@ -102,15 +102,15 @@ describe('GalponDetalle', () => {
     expect(await screen.findByText(/Error al cargar el galpón/)).toBeInTheDocument();
   });
 
-  it('muestra el detalle de trabajo sin permitir ediciones de la base sin outbox', async () => {
+  it('muestra el detalle de trabajo con accesos de edición y sin tocar la demo', async () => {
     listWorkGalpones.mockResolvedValue([{ id: 'g1', nombre: 'Trabajo Norte', ubicacion: null }]);
     listWorkPozas.mockResolvedValue([{ id: 'p1', galponId: 'g1', codigo: 'T-1', tipo: 'cría', capacidadMaxima: 20 }]);
     renderDetalleTrabajo('/trabajo/galpones/g1');
     expect(await screen.findByText('T-1')).toBeInTheDocument();
-    expect(screen.getByText('Base de trabajo · solo consulta')).toBeInTheDocument();
-    expect(screen.queryByText('Editar galpón')).not.toBeInTheDocument();
-    expect(screen.queryByText('Nueva poza')).not.toBeInTheDocument();
-    expect(screen.queryByText('Editar')).not.toBeInTheDocument();
+    expect(screen.getByText('Base de trabajo')).toBeInTheDocument();
+    expect(screen.getByText('Editar galpón')).toBeInTheDocument();
+    expect(screen.getByText('Nueva poza')).toBeInTheDocument();
+    expect(screen.getByText('Editar')).toBeInTheDocument();
     expect(listGalpones).not.toHaveBeenCalled();
   });
 });

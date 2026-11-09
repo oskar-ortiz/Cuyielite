@@ -12,11 +12,16 @@ import {
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { getGalponesRepository } from '../data/galpones.repository.factory';
+import { getGalponesRepositoryFor } from '../data/galpones.repository.scope';
 import { normalizePoza, validatePoza } from '../data/galpones.validation';
 
-const CrearPoza: React.FC = () => {
+interface CrearPozaProps {
+  mode?: 'demo' | 'trabajo';
+}
+
+const CrearPoza: React.FC<CrearPozaProps> = ({ mode = 'demo' }) => {
   const navigate = useNavigate();
+  const basePath = mode === 'trabajo' ? '/trabajo/galpones' : '/galpones';
   const { id } = useParams<{ id: string }>();
   const [codigo, setCodigo] = useState('');
   const [tipo, setTipo] = useState('');
@@ -39,13 +44,13 @@ const CrearPoza: React.FC = () => {
     setErrors([]);
     try {
       const normalized = normalizePoza(input);
-      await getGalponesRepository().createPoza({
+      await getGalponesRepositoryFor(mode).createPoza({
         galponId: id,
         codigo: normalized.codigo,
         tipo: normalized.tipo,
         capacidadMaxima: normalized.capacidadMaxima,
       });
-      navigate(`/galpones/${id}`);
+      navigate(`${basePath}/${id}`);
     } catch (e) {
       setErrors([String(e)]);
     } finally {
@@ -58,9 +63,9 @@ const CrearPoza: React.FC = () => {
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref={`/galpones/${id}`} text="Cancelar" />
+            <IonBackButton defaultHref={`${basePath}/${id}`} text="Cancelar" />
           </IonButtons>
-          <IonTitle>Nueva poza</IonTitle>
+          <IonTitle>{mode === 'trabajo' ? 'Nueva poza · Trabajo' : 'Nueva poza'}</IonTitle>
         </IonToolbar>
       </IonHeader>
       <IonContent className="ion-padding">

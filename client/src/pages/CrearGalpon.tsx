@@ -13,11 +13,16 @@ import {
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { getGalponesRepository } from '../data/galpones.repository.factory';
+import { getGalponesRepositoryFor } from '../data/galpones.repository.scope';
 import { normalizeGalpon, validateGalpon } from '../data/galpones.validation';
 
-const CrearGalpon: React.FC = () => {
+interface CrearGalponProps {
+  mode?: 'demo' | 'trabajo';
+}
+
+const CrearGalpon: React.FC<CrearGalponProps> = ({ mode = 'demo' }) => {
   const navigate = useNavigate();
+  const basePath = mode === 'trabajo' ? '/trabajo/galpones' : '/galpones';
   const [nombre, setNombre] = useState('');
   const [ubicacion, setUbicacion] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
@@ -34,8 +39,8 @@ const CrearGalpon: React.FC = () => {
     setErrors([]);
     try {
       const normalized = normalizeGalpon(input);
-      await getGalponesRepository().createGalpon(normalized);
-      navigate('/galpones');
+      await getGalponesRepositoryFor(mode).createGalpon(normalized);
+      navigate(basePath);
     } catch (e) {
       setErrors([String(e)]);
     } finally {
@@ -48,9 +53,9 @@ const CrearGalpon: React.FC = () => {
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref="/galpones" text="Cancelar" />
+            <IonBackButton defaultHref={basePath} text="Cancelar" />
           </IonButtons>
-          <IonTitle>Nuevo galpón</IonTitle>
+          <IonTitle>{mode === 'trabajo' ? 'Nuevo galpón · Trabajo' : 'Nuevo galpón'}</IonTitle>
         </IonToolbar>
       </IonHeader>
       <IonContent className="ion-padding">
