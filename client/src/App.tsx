@@ -10,6 +10,7 @@ import EditarPoza from './pages/EditarPoza';
 import GalponDetalle from './pages/GalponDetalle';
 import Galpones from './pages/Galpones';
 import ModoInicio from './pages/ModoInicio';
+import SincronizacionTrabajo from './pages/SincronizacionTrabajo';
 import SqlitePoc from './pages/SqlitePoc';
 
 /* Core CSS required for Ionic components to work properly */
@@ -51,6 +52,7 @@ const App: React.FC = () => (
         <Route path="/" element={<ModoInicio />} />
         <Route path="/galpones" element={<Galpones />} />
         <Route path="/trabajo/galpones" element={<Galpones mode="trabajo" />} />
+        <Route path="/trabajo/sincronizacion" element={<SincronizacionTrabajo />} />
         <Route path="/trabajo/conflictos" element={<ConflictosTrabajo />} />
         <Route path="/galpones/nuevo" element={<CrearGalpon />} />
         <Route path="/galpones/:id" element={<GalponDetalle />} />

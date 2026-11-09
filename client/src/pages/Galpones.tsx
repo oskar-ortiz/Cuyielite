@@ -86,9 +86,14 @@ const Galpones: React.FC<GalponesProps> = ({ mode = 'demo' }) => {
             Cambiar modo
           </IonButton>
           {workMode && (
-            <IonButton size="small" fill="clear" routerLink="/trabajo/conflictos">
-              Revisar conflictos
-            </IonButton>
+            <>
+              <IonButton size="small" fill="clear" routerLink="/trabajo/sincronizacion">
+                Sincronización
+              </IonButton>
+              <IonButton size="small" fill="clear" routerLink="/trabajo/conflictos">
+                Revisar conflictos
+              </IonButton>
+            </>
           )}
         </div>
         {loading ? (

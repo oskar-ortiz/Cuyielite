@@ -63,6 +63,8 @@ describe('Galpones', () => {
     );
     expect(await screen.findByText('La base de trabajo todavía no tiene galpones.')).toBeInTheDocument();
     expect(screen.getByText('Base de trabajo · solo consulta')).toBeInTheDocument();
+    expect(screen.getByText('Sincronización')).toBeInTheDocument();
+    expect(screen.getByText('Revisar conflictos')).toBeInTheDocument();
     expect(screen.queryByText('Datos de demostración')).not.toBeInTheDocument();
     expect(screen.queryByText('Nuevo')).not.toBeInTheDocument();
     expect(listGalpones).not.toHaveBeenCalled();
