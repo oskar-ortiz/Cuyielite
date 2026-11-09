@@ -1,6 +1,6 @@
 # ADR 0005: Modelo de embeddings y generación del RAG
 
-- Estado: ACEPTADA por Diery; pendiente de revisión de Oskar
+- Estado: ACEPTADA aprobada por ambos;
 - Fecha: 2026-11-08
 
 ## Contexto
