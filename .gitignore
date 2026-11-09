@@ -25,6 +25,9 @@ ml/reports/generados/
 db/seeds/real_*
 *.dump
 db/raw_Lope*
+rag/corpus/
+rag/.cache/
+rag/models/
 
 # Editor / SO / logs
 .vscode/

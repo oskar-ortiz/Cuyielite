@@ -1,0 +1,56 @@
+preguntas:
+  - pregunta: ¿Qué función cumplen las instalaciones de un galpón en la producción de cuyes?
+    paginas_esperadas: [15]
+  - pregunta: ¿Qué materiales y criterios de orientación se consideran para construir el galpón?
+    paginas_esperadas: [16]
+  - pregunta: ¿Qué condiciones de temperatura y humedad recomienda el manual?
+    paginas_esperadas: [18]
+  - pregunta: ¿En qué se diferencian las jaulas y las pozas para alojar cuyes?
+    paginas_esperadas: [21, 22]
+  - pregunta: ¿Qué recomendaciones presenta el manual para seleccionar animales reproductores?
+    paginas_esperadas: [26]
+  - pregunta: ¿Qué información se registra al identificar una cría recién nacida?
+    paginas_esperadas: [27]
+  - pregunta: ¿Qué características de la leche materna se mencionan para la crianza de gazapos?
+    paginas_esperadas: [29]
+  - pregunta: ¿Qué requerimientos nutricionales se consideran para las distintas etapas productivas?
+    paginas_esperadas: [31, 32]
+  - pregunta: ¿Por qué se deben hacer gradualmente los cambios en la alimentación?
+    paginas_esperadas: [33]
+  - pregunta: ¿Qué alternativas de forraje se mencionan para climas fríos y cálidos?
+    paginas_esperadas: [34, 35]
+  - pregunta: ¿Qué aspectos se consideran para establecer praderas destinadas a la alimentación?
+    paginas_esperadas: [36]
+  - pregunta: ¿Cómo se aprovechan los sistemas silvopastoriles en la alimentación de cuyes?
+    paginas_esperadas: [40]
+  - pregunta: ¿Qué son los bloques multinutricionales y cuál es su uso en la alimentación?
+    paginas_esperadas: [43]
+  - pregunta: ¿Qué prácticas recomienda el manual para el manejo de camas y compostaje?
+    paginas_esperadas: [47, 48]
+  - pregunta: ¿Qué usos y precauciones se describen para la orina de cuy en las praderas?
+    paginas_esperadas: [51, 52]
+  - pregunta: ¿Qué condiciones permiten aprovechar el estiércol mediante lombricultivo?
+    paginas_esperadas: [55, 56, 57, 58]
+  - pregunta: ¿Qué grupos y criterios se utilizan para seleccionar cuyes reproductores?
+    paginas_esperadas: [62, 63, 64]
+  - pregunta: ¿Qué datos incluyen los registros individuales de nacimiento y sus nomenclaturas?
+    paginas_esperadas: [65, 66, 67]
+  - pregunta: ¿Qué medidas de bioseguridad propone el manual para prevenir problemas sanitarios?
+    paginas_esperadas: [69, 70]
+  - pregunta: ¿Cuáles son las etapas principales del faenado y sacrificio del cuy?
+    paginas_esperadas: [79, 80]
+  - pregunta: ¿Cuál es la capital de Francia y qué monumentos turísticos tiene?
+    paginas_esperadas: []
+    fuera_de_corpus: true
+  - pregunta: ¿Cómo se calcula el impuesto de renta de una empresa?
+    paginas_esperadas: []
+    fuera_de_corpus: true
+  - pregunta: ¿Qué tecnología permite instalar paneles solares en una vivienda?
+    paginas_esperadas: []
+    fuera_de_corpus: true
+  - pregunta: ¿Cuáles fueron las causas de la Segunda Guerra Mundial?
+    paginas_esperadas: []
+    fuera_de_corpus: true
+  - pregunta: ¿Qué ejercicios ayudan a mejorar la técnica de natación?
+    paginas_esperadas: []
+    fuera_de_corpus: true
