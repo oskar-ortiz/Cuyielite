@@ -4,10 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Galpones from './Galpones';
 
-const { listGalpones, listPozasByGalpon, listWorkGalpones } = vi.hoisted(() => ({
+const { listGalpones, listPozasByGalpon, listWorkGalpones, getWorkStatus } = vi.hoisted(() => ({
   listGalpones: vi.fn(),
   listPozasByGalpon: vi.fn(),
   listWorkGalpones: vi.fn(),
+  getWorkStatus: vi.fn(),
 }));
 
 vi.mock('../data/galpones.repository.factory', () => ({
@@ -18,11 +19,16 @@ vi.mock('../data/work.galpones.repository', () => ({
   getWorkGalponesReader: () => ({ listGalpones: listWorkGalpones }),
 }));
 
+vi.mock('../data/work.sync.repository', () => ({
+  getWorkSyncRepository: () => ({ status: getWorkStatus }),
+}));
+
 describe('Galpones', () => {
   beforeEach(() => {
     listGalpones.mockReset();
     listPozasByGalpon.mockReset();
     listWorkGalpones.mockReset();
+    getWorkStatus.mockReset().mockResolvedValue({ pending: 0 });
   });
 
   it('muestra todos los galpones con su marcado', async () => {
@@ -54,17 +60,21 @@ describe('Galpones', () => {
     expect(await screen.findByText(/Error al cargar galpones/)).toBeInTheDocument();
   });
 
-  it('consulta solo trabajo y deshabilita las altas antes de la outbox', async () => {
+  it('consulta solo trabajo, permite altas y muestra cambios pendientes', async () => {
     listWorkGalpones.mockResolvedValue([]);
+    getWorkStatus.mockResolvedValue({ pending: 2 });
     render(
       <MemoryRouter>
         <Galpones mode="trabajo" />
       </MemoryRouter>,
     );
     expect(await screen.findByText('La base de trabajo todavía no tiene galpones.')).toBeInTheDocument();
-    expect(screen.getByText('Base de trabajo · solo consulta')).toBeInTheDocument();
+    expect(screen.getByText('Base de trabajo')).toBeInTheDocument();
+    expect(screen.getByText('2 cambios pendientes')).toBeInTheDocument();
+    expect(screen.getByText('Sincronización')).toBeInTheDocument();
+    expect(screen.getByText('Revisar conflictos')).toBeInTheDocument();
     expect(screen.queryByText('Datos de demostración')).not.toBeInTheDocument();
-    expect(screen.queryByText('Nuevo')).not.toBeInTheDocument();
+    expect(screen.getByText('Nuevo')).toBeInTheDocument();
     expect(listGalpones).not.toHaveBeenCalled();
   });
 });

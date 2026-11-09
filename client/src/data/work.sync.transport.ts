@@ -2,6 +2,7 @@ import { Capacitor, CapacitorHttp, registerPlugin } from '@capacitor/core';
 
 import type { SyncPushResponse } from './work.sync.client.js';
 import type { ConflictCase, ConflictResolutionResult, ConflictReview } from './work.sync.conflicts.js';
+import type { WorkSyncStatus } from './work.sync.status.js';
 
 // Transporte nativo acotado para sincronizacion de laboratorio (T6).
 // El token vive solo en memoria; la URL base es loopback fija y no la elige
@@ -36,6 +37,7 @@ interface SyncLabPlugin {
   push(options: { token: string; body: unknown }): Promise<unknown>;
   pull(options: { token: string; cursor: string | null; limit: number }): Promise<unknown>;
   sync(options: { token: string }): Promise<unknown>;
+  status(): Promise<WorkSyncStatus>;
   listConflicts(): Promise<{ cases: ConflictCase[] }>;
   keepCentral(options: { review: ConflictReview }): Promise<ConflictResolutionResult>;
   retryConflict(options: { review: ConflictReview; input: Record<string, unknown> }): Promise<ConflictResolutionResult>;

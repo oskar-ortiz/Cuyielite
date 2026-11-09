@@ -16,7 +16,7 @@ Grupos de madre utilizados: 275. Filas elegibles sin identificador de animal uti
 
 ## Resultados de validación cruzada
 
-Precisión, recall y F1 se informan por clase como media ± desviación estándar entre pliegues externos. Cada observación aparece una vez en la matriz agregada, con orden de clase NORMAL, ELITE.
+Se informa media ± desviación estándar entre pliegues. Las matrices agregan las predicciones de todos los pliegues repetidos y usan orden de clase NORMAL, ELITE.
 
 | Experimento | Variables | Precisión ELITE | Recall ELITE | F1 ELITE |
 | --- | --- | --- | --- | --- |
@@ -36,6 +36,13 @@ Precisión, recall y F1 se informan por clase como media ± desviación estánda
 | --- | --- | --- | --- |
 | NORMAL | 1.000 ± 0.000 | 0.998 ± 0.004 | 0.999 ± 0.002 |
 | ELITE | 0.995 ± 0.011 | 1.000 ± 0.000 | 0.998 ± 0.006 |
+
+#### Precisión, recall y F1 por clase
+
+| Clase | Precisión | Recall | F1 |
+| --- | --- | --- | --- |
+| NORMAL | 1.000 ± 0.000 | 0.998 ± 0.003 | 0.999 ± 0.002 |
+| ELITE | 0.995 ± 0.010 | 1.000 ± 0.000 | 0.998 ± 0.005 |
 
 #### Importancia media de variables
 
@@ -80,6 +87,13 @@ Métricas de línea base calculadas sobre los mismos pliegues agrupados; la lín
 | --- | --- | --- | --- |
 | NORMAL | 1.000 ± 0.000 | 0.876 ± 0.040 | 0.933 ± 0.023 |
 | ELITE | 0.731 ± 0.061 | 1.000 ± 0.000 | 0.844 ± 0.042 |
+
+#### Precisión, recall y F1 por clase
+
+| Clase | Precisión | Recall | F1 |
+| --- | --- | --- | --- |
+| NORMAL | 0.998 ± 0.005 | 0.877 ± 0.035 | 0.933 ± 0.019 |
+| ELITE | 0.731 ± 0.055 | 0.995 ± 0.014 | 0.842 ± 0.035 |
 
 #### Importancia media de variables
 

@@ -16,9 +16,7 @@ const ModoInicio: React.FC = () => (
       </section>
       <section aria-labelledby="modo-trabajo">
         <h2 id="modo-trabajo">Trabajo</h2>
-        <p>
-          Consulta la base local de trabajo. Las altas, ediciones y la sincronización llegarán en próximas entregas.
-        </p>
+        <p>Crea y edita galpones y pozas en la base de trabajo, y sincroniza cuando lo indiques.</p>
         <IonButton routerLink="/trabajo/galpones" fill="outline">
           Entrar a trabajo
         </IonButton>

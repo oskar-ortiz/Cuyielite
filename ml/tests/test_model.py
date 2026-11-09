@@ -154,6 +154,13 @@ def test_same_seed_produces_identical_cross_validation_metrics():
     first = evaluate_experiment(features.loc[:, FEATURES_B], labels, FEATURES_B, **options)
     second = evaluate_experiment(features.loc[:, FEATURES_B], labels, FEATURES_B, **options)
     assert first["metrics"] == second["metrics"]
+    assert first["metrics_by_class"] == second["metrics_by_class"]
+    assert set(first["metrics_by_class"]) == {"NORMAL", "ELITE"}
+    assert set(first["metrics_by_class"]["ELITE"]) == {
+        "precision",
+        "recall",
+        "f1",
+    }
     assert first["confusion_matrix_pooled"] == second["confusion_matrix_pooled"]
     assert first["feature_importance"] == second["feature_importance"]
     assert first["metrics_by_class"] == second["metrics_by_class"]
@@ -282,3 +289,4 @@ def test_metrics_report_contains_no_animal_identifiers():
     assert "ID-SYNTHETIC-ANIMAL-123" not in report
     assert "CHAPA-REAL-123" not in report
     assert "fuga de información" in report
+    assert "Precisión, recall y F1 por clase" in report

@@ -91,9 +91,9 @@ def render_report(metadata: dict[str, Any]) -> str:
         "",
         "## Resultados de validación cruzada",
         "",
-        "Precisión, recall y F1 se informan por clase como media ± desviación "
-        "estándar entre pliegues externos. Cada observación aparece una vez en "
-        "la matriz agregada, con orden de clase NORMAL, ELITE.",
+        "Se informa media ± desviación estándar entre pliegues. Las matrices "
+        "agregan las predicciones de todos los pliegues repetidos y usan orden "
+        "de clase NORMAL, ELITE.",
         "",
         _markdown_table(
             ["Experimento", "Variables", "Precisión ELITE", "Recall ELITE", "F1 ELITE"],
@@ -123,22 +123,22 @@ def render_report(metadata: dict[str, Any]) -> str:
                     [["Real NORMAL", tn, fp], ["Real ELITE", fn, tp]],
                 ),
                 "",
-                "#### Métricas por clase (media ± desviación estándar)",
-                "",
-                _markdown_table(
-                    ["Clase", "Precisión", "Recall", "F1"],
-                    [
+                    "#### Precisión, recall y F1 por clase",
+                    "",
+                    _markdown_table(
+                        ["Clase", "Precisión", "Recall", "F1"],
                         [
-                            label,
-                            _format_class_metric(result, label, "precision"),
-                            _format_class_metric(result, label, "recall"),
-                            _format_class_metric(result, label, "f1"),
-                        ]
-                        for label in ("NORMAL", "ELITE")
-                    ],
-                ),
-                "",
-                "#### Importancia media de variables",
+                            [
+                                label,
+                                _format_class_metric(result, label, "precision"),
+                                _format_class_metric(result, label, "recall"),
+                                _format_class_metric(result, label, "f1"),
+                            ]
+                            for label in ("NORMAL", "ELITE")
+                        ],
+                    ),
+                    "",
+                    "#### Importancia media de variables",
                 "",
                 _markdown_table(
                     ["Variable", "Importancia media", "Desviación estándar"],

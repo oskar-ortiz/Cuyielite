@@ -14,11 +14,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import type { Poza } from '../data/galpones.repository';
-import { getGalponesRepository } from '../data/galpones.repository.factory';
+import { getGalponesRepositoryFor } from '../data/galpones.repository.scope';
 import { normalizePoza, validatePoza } from '../data/galpones.validation';
 
-const EditarPoza: React.FC = () => {
+interface EditarPozaProps {
+  mode?: 'demo' | 'trabajo';
+}
+
+const EditarPoza: React.FC<EditarPozaProps> = ({ mode = 'demo' }) => {
   const navigate = useNavigate();
+  const basePath = mode === 'trabajo' ? '/trabajo/galpones' : '/galpones';
   const { id, pozaId } = useParams<{ id: string; pozaId: string }>();
   const [poza, setPoza] = useState<Poza | null>(null);
   const [codigo, setCodigo] = useState('');
@@ -46,7 +51,7 @@ const EditarPoza: React.FC = () => {
     setSaveError(null);
     setNotFound(false);
     setPoza(null);
-    const repo = getGalponesRepository();
+    const repo = getGalponesRepositoryFor(mode);
     repo
       .listPozasByGalpon(currentId)
       .then((pozas) => {
@@ -71,7 +76,7 @@ const EditarPoza: React.FC = () => {
       .finally(() => {
         if (requestId === requestIdRef.current) setLoading(false);
       });
-  }, [id, pozaId]);
+  }, [id, pozaId, mode]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -100,14 +105,14 @@ const EditarPoza: React.FC = () => {
       normalized.tipo === poza.tipo &&
       normalized.capacidadMaxima === poza.capacidadMaxima
     ) {
-      navigate(`/galpones/${id}`);
+      navigate(`${basePath}/${id}`);
       return;
     }
     setSaving(true);
     setSaveError(null);
     try {
-      await getGalponesRepository().updatePoza(id, pozaId, normalized);
-      navigate(`/galpones/${id}`);
+      await getGalponesRepositoryFor(mode).updatePoza(id, pozaId, normalized);
+      navigate(`${basePath}/${id}`);
     } catch (e) {
       setSaveError(String(e));
     } finally {
@@ -136,7 +141,7 @@ const EditarPoza: React.FC = () => {
         <IonHeader>
           <IonToolbar>
             <IonButtons slot="start">
-              <IonBackButton defaultHref={`/galpones/${id}`} text="Volver" />
+              <IonBackButton defaultHref={`${basePath}/${id}`} text="Volver" />
             </IonButtons>
             <IonTitle>Error</IonTitle>
           </IonToolbar>
@@ -154,7 +159,7 @@ const EditarPoza: React.FC = () => {
         <IonHeader>
           <IonToolbar>
             <IonButtons slot="start">
-              <IonBackButton defaultHref={`/galpones/${id}`} text="Galpón" />
+              <IonBackButton defaultHref={`${basePath}/${id}`} text="Galpón" />
             </IonButtons>
             <IonTitle>Poza no encontrada</IonTitle>
           </IonToolbar>
@@ -171,9 +176,9 @@ const EditarPoza: React.FC = () => {
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref={`/galpones/${id}`} text="Cancelar" />
+            <IonBackButton defaultHref={`${basePath}/${id}`} text="Cancelar" />
           </IonButtons>
-          <IonTitle>Editar poza</IonTitle>
+          <IonTitle>{mode === 'trabajo' ? 'Editar poza · Trabajo' : 'Editar poza'}</IonTitle>
         </IonToolbar>
       </IonHeader>
       <IonContent className="ion-padding">
