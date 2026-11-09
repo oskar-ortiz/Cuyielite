@@ -1,6 +1,6 @@
 # Informe de métricas — Random Forest de candidatas
 
-- Fecha: 2026-11-08
+- Fecha: 2026-11-09
 - Versión scikit-learn: 1.9.1
 - SHA-256 del CSV etiquetado: `9268ba03436af223c1ee983aed95170dbe7bd534b1c5ef10fcfce48fc10b8c57`
 - Protocolo: RepeatedStratifiedKFold, 5 pliegues × 3 repeticiones; ajuste interno StratifiedKFold de 3 pliegues.
@@ -16,7 +16,7 @@ Filas elegibles sin identificador utilizable: 805; por ello no fue posible compr
 
 ## Resultados de validación cruzada
 
-Precisión, recall y F1 corresponden a `ELITE`; se informa media ± desviación estándar entre pliegues. La matriz agrega las predicciones de todos los pliegues repetidos y usa orden de clase NORMAL, ELITE.
+Se informa media ± desviación estándar entre pliegues. Las matrices agregan las predicciones de todos los pliegues repetidos y usan orden de clase NORMAL, ELITE.
 
 | Experimento | Variables | Precisión ELITE | Recall ELITE | F1 ELITE |
 | --- | --- | --- | --- | --- |
@@ -29,6 +29,13 @@ Precisión, recall y F1 corresponden a `ELITE`; se informa media ± desviación 
 | --- | --- | --- |
 | Real NORMAL | 1812 | 3 |
 | Real ELITE | 0 | 600 |
+
+#### Precisión, recall y F1 por clase
+
+| Clase | Precisión | Recall | F1 |
+| --- | --- | --- | --- |
+| NORMAL | 1.000 ± 0.000 | 0.998 ± 0.003 | 0.999 ± 0.002 |
+| ELITE | 0.995 ± 0.010 | 1.000 ± 0.000 | 0.998 ± 0.005 |
 
 #### Importancia media de variables
 
@@ -52,6 +59,13 @@ Precisión, recall y F1 corresponden a `ELITE`; se informa media ± desviación 
 | --- | --- | --- |
 | Real NORMAL | 1591 | 224 |
 | Real ELITE | 3 | 597 |
+
+#### Precisión, recall y F1 por clase
+
+| Clase | Precisión | Recall | F1 |
+| --- | --- | --- | --- |
+| NORMAL | 0.998 ± 0.005 | 0.877 ± 0.035 | 0.933 ± 0.019 |
+| ELITE | 0.731 ± 0.055 | 0.995 ± 0.014 | 0.842 ± 0.035 |
 
 #### Importancia media de variables
 

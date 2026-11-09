@@ -10,6 +10,7 @@ import EditarPoza from './pages/EditarPoza';
 import GalponDetalle from './pages/GalponDetalle';
 import Galpones from './pages/Galpones';
 import ModoInicio from './pages/ModoInicio';
+import SincronizacionTrabajo from './pages/SincronizacionTrabajo';
 import SqlitePoc from './pages/SqlitePoc';
 
 /* Core CSS required for Ionic components to work properly */
@@ -51,10 +52,15 @@ const App: React.FC = () => (
         <Route path="/" element={<ModoInicio />} />
         <Route path="/galpones" element={<Galpones />} />
         <Route path="/trabajo/galpones" element={<Galpones mode="trabajo" />} />
+        <Route path="/trabajo/galpones/nuevo" element={<CrearGalpon mode="trabajo" />} />
+        <Route path="/trabajo/sincronizacion" element={<SincronizacionTrabajo />} />
         <Route path="/trabajo/conflictos" element={<ConflictosTrabajo />} />
         <Route path="/galpones/nuevo" element={<CrearGalpon />} />
         <Route path="/galpones/:id" element={<GalponDetalle />} />
         <Route path="/trabajo/galpones/:id" element={<GalponDetalle mode="trabajo" />} />
+        <Route path="/trabajo/galpones/:id/editar" element={<EditarGalpon mode="trabajo" />} />
+        <Route path="/trabajo/galpones/:id/pozas/nueva" element={<CrearPoza mode="trabajo" />} />
+        <Route path="/trabajo/galpones/:id/pozas/:pozaId/editar" element={<EditarPoza mode="trabajo" />} />
         <Route path="/galpones/:id/editar" element={<EditarGalpon />} />
         <Route path="/galpones/:id/pozas/nueva" element={<CrearPoza />} />
         <Route path="/galpones/:id/pozas/:pozaId/editar" element={<EditarPoza />} />

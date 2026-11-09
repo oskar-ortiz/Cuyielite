@@ -1,73 +1,58 @@
-# Diagnóstico de cohorte y criterios ELITE — Galpón 2
+# Diagnóstico de los agregados ELITE
 
-## Comparación 398 vs. 519
+## Alcance y método
 
-El número de **519** se reproduce con el ETL actual sobre
-`REG IND GALPON 2 2025-2026.xlsx`:
+Se leyeron en modo de solo lectura los dos registros individuales configurados
+en el ETL. Se aplicó `clasificar_candidata` y el mismo denominador de
+`ml.rules.report._female_candidate_reference`: sexo `Hembra` y destino distinto
+de `Muerte`. Las filas en estado `REVISAR` permanecen en el denominador, pero
+no se cuentan como ELITE.
 
-| Paso de inclusión actual | Hembras |
-|---|---:|
-| Registros aceptados por el ETL con sexo hembra | 703 |
-| Destino `Muerte` excluido | 184 |
-| Hembras que quedan en la cohorte actual | **519** |
-| De esas 519: destino vacío | 391 |
-| De esas 519: destino `Vendido` | 128 |
+Para deduplicar, los códigos de animal se mantuvieron solo en memoria y se
+normalizaron sin distinguir mayúsculas/minúsculas. Se contabilizó una vez cada
+código único entre los archivos; cuando estaba en ambos, se asignó al primer
+archivo por orden alfabético. No hubo códigos faltantes ni duplicados dentro
+de un mismo archivo. No se incluyen códigos, filas, datos individuales ni
+ningún dato de animales en este informe.
 
-El incremento respecto de la cifra exploratoria es **121 hembras** (519 − 398,
-un 30,4 % de 398). El universo actual excluye hembras con destino `Muerte`,
-pero conserva las de destino `Vendido`; la cifra inicial 398 no viene
-acompañada de un filtro reproducible en el repositorio. Quitar todas las
-vendidas a las 519 actuales deja **391**, no 398: quedan **7** registros de
-diferencia. Por tanto, los datos disponibles no permiten atribuir
-definitivamente el cambio de 398 a 519 a una causa exacta ni afirmar que
-aparecieron 121 animales nuevos. Es una diferencia de cohortes/filtros hasta
-que se recupere el procedimiento de la exploración inicial.
+## Resultado por archivo de origen
 
-## Fallos de criterios en la cohorte actual
+| Archivo | Hembras candidatas antes de deduplicar | ELITE antes de deduplicar | NORMAL | REVISAR | Hembras únicas tras deduplicación global | ELITE únicas |
+|---|---:|---:|---:|---:|---:|---:|
+| REG IND GALPON 1 2026.xlsx | 344 | 55 | 232 | 57 | 344 | 55 |
+| REG IND GALPON 2 2025-2026.xlsx | 519 | 145 | 373 | 1 | 501 | 143 |
+| **Total** | **863** | **200** | **605** | **58** | **845** | **198** |
 
-Denominador: 519 hembras tras excluir destino `Muerte`. Los fallos de cada fila
-se cuentan **por separado**; una misma hembra puede fallar varios criterios.
-El único valor faltante se considera no cumplido para esta tabla, aunque la
-clasificación por reglas lo deja para revisión.
+El agregado sin deduplicar reproduce **200/863**. Hay **18 duplicados entre
+archivos**: al asignarlos al primer origen, 18 filas de Galpón 2 dejan de
+contar en el total único. No se detectaron duplicados dentro de cada archivo.
 
-| Criterio | Cumple | Incumple con dato | Faltante | No cumple, incluido faltante |
-|---|---:|---:|---:|---:|
-| NUPAR de la madre 2 o 3 | 295 | 224 | 0 | 224 |
-| TCNV de 3 o 4 nacidos vivos | 348 | 171 | 0 | 171 |
-| Peso al nacimiento ≥135 g | 459 | 60 | 0 | 60 |
-| Peso al destete ≥2× peso al nacimiento | 364 | 154 | 1 | 155 |
-| Ojos negros | 515 | 4 | 0 | 4 |
+## Comprobación de 52/398
 
-Como comprobación adicional, aplicados en ese orden y contando el faltante de
-destete como no apto, quedan **519 → 295 → 205 → 186 → 145 → 145**. Así,
-**145/519** pasan los cinco criterios actuales. Los conteos de fallos
-individuales no son sumables porque se solapan.
+Al procesar únicamente `REG IND GALPON 2 2025-2026.xlsx`, el resultado con el
+filtro y las reglas actuales es **145/519** antes de deduplicar contra el otro
+archivo. La deduplicación global deja **143/501**. Como no hay duplicados
+internos en Galpón 2, deduplicar solo ese archivo no cambia sus **145/519**.
 
-El criterio de peso al empadre de 900–1000 g no está incluido en esta
-reproducción: no forma parte de estos campos individuales de Galpón 2. Tampoco
-se infiere con datos ausentes.
+Por tanto, **52/398 no se reproduce** con el archivo actual de Galpón 2 y el
+denominador/reglas descritos. El libro contiene 703 filas aceptadas de hembras:
+184 clasifican como destino `Muerte`, 391 no tienen destino registrado y 128
+tienen destino `Vendido`; la cohorte candidata usada aquí excluye solo
+`Muerte`. Esto confirma que el resultado depende de la definición de cohorte,
+además de las reglas y la versión de los datos. No hay evidencia en los
+archivos actuales que permita atribuir de forma verificable el agregado
+histórico 52/398 a otro filtro concreto.
 
-## Repetidos y deduplicación
+## Interpretación y límites
 
-En la cohorte candidata viva, hay **18 códigos de animal** que aparecen tanto
-en el archivo de Galpón 2 como en el de Galpón 1; al quitar las filas de
-Galpón 2 que coinciden con Galpón 1, su conteo pasa de 519 a 501. No se
-publican los códigos.
-
-**La deduplicación no está implementada en el ETL actual.** El ETL filtra los
-códigos inválidos, pero no conserva el identificador en las features ni
-deduplica registros. Además, estos 18 pares no son filas idénticas: se
-observaron diferencias en NUPAR en 9 pares, TCNV y peso al nacimiento en 16
-pares cada uno, peso al destete en los 18 pares, ojos en 1 par y destino en 7
-pares. Por eso no se eliminaron silenciosamente: el ETL necesita una regla
-acordada de precedencia/conciliación antes de poder consolidar observaciones
-conflictivas. El conteo 501 es solo el resultado agregado de elegir la fila de
-Galpón 1, no una resolución de cuál registro es correcto.
-
-## Método y límites
-
-Se usó el ETL de features y las reglas de `ml.rules.clasificar` sobre los
-libros locales en modo solo lectura. Los identificadores se usaron solo en
-memoria para contar coincidencias; no se incluyen en este informe. Las cifras
-son agregados exploratorios de una sola explotación, no validación
-independiente ni etiquetas confirmadas por un experto.
+- **200/863** combina Galpón 1 y Galpón 2, antes de deduplicar; no es una cifra
+  exclusiva de Galpón 2 ni una proporción de ejemplos utilizables para el
+  entrenamiento.
+- La deduplicación reduce el agregado combinado a **198/845**. No se deben
+  comparar directamente estos totales con el conteo previo si no se explicita
+  si se deduplicó.
+- Los conteos son el resultado de las reglas vigentes del ADR 0004 sobre los
+  archivos disponibles; no validan resultados productivos ni etiquetas
+  independientes.
+- Este trabajo fue diagnóstico. No se modificaron reglas, ETL, archivos fuente
+  ni datos locales.
