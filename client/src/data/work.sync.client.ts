@@ -139,7 +139,9 @@ export async function prepareOperation(db: MigrationDb, localSeq: number, device
     const predecessorId = op.predecessor_id as string | null;
     let acceptedPredecessorVersion: string | null = null;
     if (predecessorId) {
-      const predecessor = await one(db, 'SELECT state,result_json FROM sync_outbox WHERE operation_id=?', [predecessorId]);
+      const predecessor = await one(db, 'SELECT state,result_json FROM sync_outbox WHERE operation_id=?', [
+        predecessorId,
+      ]);
       if (!predecessor || predecessor.state !== 'accepted') return false;
       const receipt = JSON.parse(String(predecessor.result_json ?? 'null')) as SyncOperationResult | null;
       const version = receipt?.record?.version;
@@ -168,9 +170,7 @@ export async function prepareOperation(db: MigrationDb, localSeq: number, device
     if (action !== 'create' && action !== 'update') return false;
 
     const baseVersion =
-      action === 'create'
-        ? null
-        : (acceptedPredecessorVersion ?? (op.base_anchor as string | null) ?? null);
+      action === 'create' ? null : (acceptedPredecessorVersion ?? (op.base_anchor as string | null) ?? null);
     if (action === 'update' && (!baseVersion || !/^[1-9][0-9]*$/.test(baseVersion))) return false;
 
     const snapshot = JSON.parse(op.business_snapshot as string);
@@ -204,9 +204,11 @@ export async function prepareEligible(
   maxLocalSeq = Number.MAX_SAFE_INTEGER,
 ): Promise<number> {
   await initializeWorkSyncDatabase(db);
-  const queued = await all(db, "SELECT local_seq FROM sync_outbox WHERE state='queued' AND local_seq<=? ORDER BY local_seq", [
-    maxLocalSeq,
-  ]);
+  const queued = await all(
+    db,
+    "SELECT local_seq FROM sync_outbox WHERE state='queued' AND local_seq<=? ORDER BY local_seq",
+    [maxLocalSeq],
+  );
   let prepared = 0;
   for (const row of queued) {
     if (await prepareOperation(db, row.local_seq as number, deviceId)) prepared++;
