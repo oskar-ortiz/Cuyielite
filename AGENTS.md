@@ -13,7 +13,7 @@ Fuente: `README.md`.
 ## Stack
 
 - Cliente: Ionic + React + Capacitor (Android / Windows).
-- Persistencia local: PostgreSQL (administrada con DBeaver).
+- Persistencia local: SQLite (Android / Windows).
 - Backend: Python FastAPI (Controllers, Services, Repositories).
 - Base central: PostgreSQL + pgvector.
 - IA: Random Forest (scikit-learn) y motor RAG.
