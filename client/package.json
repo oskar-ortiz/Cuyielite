@@ -17,7 +17,7 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
-    "build:migration": "tsc src/data/galpones.migration.ts src/data/galpones.validation.ts src/data/work.schema.ts src/data/work.migration.ts src/data/work.sync.schema.ts src/data/work.sync.migration.ts src/data/work.outbox.ts --module esnext --target es2022 --outDir plugins/sqlite-poc/electron/dist --esModuleInterop --skipLibCheck --moduleResolution bundler"
+    "build:migration": "tsc src/data/galpones.migration.ts src/data/galpones.validation.ts src/data/work.schema.ts src/data/work.migration.ts src/data/work.sync.schema.ts src/data/work.sync.migration.ts src/data/work.outbox.ts --module esnext --target es2022 --outDir plugins/sqlite-poc/electron/dist --esModuleInterop --skipLibCheck --moduleResolution bundler && tsc src/data/galpones.validation.ts src/data/work.schema.ts src/data/work.migration.ts src/data/work.sync.schema.ts src/data/work.sync.migration.ts src/data/work.outbox.ts src/data/work.sync.client.ts src/data/work.sync.scope.ts --module esnext --target es2022 --outDir plugins/sync-lab/electron/dist --esModuleInterop --skipLibCheck --moduleResolution bundler"
   },
   "dependencies": {
     "@capacitor-community/sqlite": "8.1.1",
@@ -31,6 +31,7 @@
     "@ionic/react": "^9.0.0",
     "@ionic/react-router": "^9.0.0",
     "capacitor-sqlite-poc": "file:plugins/sqlite-poc",
+    "capacitor-sync-lab": "file:plugins/sync-lab",
     "ionicons": "^8.1.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
