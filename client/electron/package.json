@@ -8,7 +8,7 @@
   "scripts": {
     "build": "tsc",
     "start": "electron .",
-    "pack": "npm --prefix .. run build:migration && npm run build && capacitor-electron vendor && electron-builder --config electron-builder.config.js"
+    "pack": "npm --prefix .. run build:migration && npm --prefix .. run build:electron && npm --prefix .. run sync:electron && npm run build && capacitor-electron vendor && electron-builder --config electron-builder.config.js"
   },
   "devDependencies": {
     "electron": "45.2.1",

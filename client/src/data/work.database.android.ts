@@ -7,6 +7,18 @@ const sqlite = new SQLiteConnection(CapacitorSQLite);
 
 let connectionPromise: Promise<SQLiteDBConnection> | null = null;
 
+async function createWorkConnection(): Promise<SQLiteDBConnection> {
+  try {
+    return await sqlite.createConnection('trabajo', false, 'no-encryption', 3, false);
+  } catch (error) {
+    // A WebView reload recreates this JS wrapper but can leave the native
+    // connection registered. Close only that stale work connection.
+    if (!String(error).includes('Connection trabajo already exists')) throw error;
+    await CapacitorSQLite.closeConnection({ database: 'trabajo', readonly: false });
+    return sqlite.createConnection('trabajo', false, 'no-encryption', 3, false);
+  }
+}
+
 export function adaptWorkConnection(c: SQLiteDBConnection): MigrationDb {
   return {
     exec: async (sql: string) => {
@@ -28,7 +40,7 @@ export async function getWorkConnection(): Promise<SQLiteDBConnection> {
       let c: SQLiteDBConnection | null = null;
       try {
         // disable auto transactions for controlled migration
-        c = await sqlite.createConnection('trabajo', false, 'no-encryption', 3, false);
+        c = await createWorkConnection();
         await c.open();
 
         await initializeWorkSyncDatabase(adaptWorkConnection(c));

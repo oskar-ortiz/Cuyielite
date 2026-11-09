@@ -64,8 +64,13 @@ describe('preparación local de operaciones de sincronización', () => {
     expect(await prepareEligible(db, identity.deviceId)).toBe(1);
     expect(getOutbox(sqlite, edit.operationId!)?.state).toBe('queued');
 
-    // Simula el estado persistido después de que el servidor aceptó la operación anterior.
-    sqlite.prepare("UPDATE sync_outbox SET state='accepted' WHERE operation_id=?").run(galpon.operationId);
+    // Simula un recibo central persistido para la operación anterior.
+    const previousRequest = JSON.parse(getOutbox(sqlite, galpon.operationId!)!.frozen_request!) as FrozenRequest;
+    const previousReceipt = acceptedResponse(previousRequest).results[0];
+    previousReceipt.record!.version = '7';
+    sqlite
+      .prepare("UPDATE sync_outbox SET state='accepted', result_json=? WHERE operation_id=?")
+      .run(JSON.stringify(previousReceipt), galpon.operationId);
     sqlite
       .prepare("UPDATE sync_record_state SET server_version='7' WHERE entity='galpon' AND record_id=?")
       .run(galpon.id);
@@ -198,6 +203,36 @@ describe('preparación local de operaciones de sincronización', () => {
         .prepare("SELECT server_version FROM sync_record_state WHERE entity='galpon' AND record_id=?")
         .get(galpon.id),
     ).toEqual({ server_version: null });
+  });
+
+  it('ancla la operacion sucesora a la version aceptada de su predecesora', async () => {
+    const { sqlite, db } = makeDb();
+    const galpon = await createWorkGalpon(db, { nombre: 'G1', ubicacion: null });
+    const edit = await updateWorkGalpon(db, galpon.id, { nombre: 'G1 editado', ubicacion: null });
+    const ctx = await initializeWorkSyncDatabase(db);
+
+    expect(await prepareEligible(db, ctx.deviceId)).toBe(1);
+    const result = await sendPrepared(db, async (request) => {
+      const response = acceptedResponse(request);
+      response.results[0].record!.version = '12';
+      return response;
+    });
+    expect(result.sent).toBe(1);
+    expect(await prepareEligible(db, ctx.deviceId)).toBe(1);
+    const successor = getOutbox(sqlite, edit.operationId!)?.frozen_request;
+    expect(JSON.parse(successor!).operations[0].base_version).toBe('12');
+  });
+
+  it('limita la preparación al corte local capturado por el coordinador', async () => {
+    const { sqlite, db } = makeDb();
+    await createWorkGalpon(db, { nombre: 'G1', ubicacion: null });
+    await createWorkGalpon(db, { nombre: 'G2', ubicacion: null });
+    const ctx = await initializeWorkSyncDatabase(db);
+    const firstSeq = (sqlite.prepare('SELECT MIN(local_seq) AS seq FROM sync_outbox').get() as { seq: number }).seq;
+
+    expect(await prepareEligible(db, ctx.deviceId, firstSeq)).toBe(1);
+    const rows = sqlite.prepare('SELECT state FROM sync_outbox ORDER BY local_seq').all() as { state: string }[];
+    expect(rows.map((row) => row.state)).toEqual(['prepared', 'queued']);
   });
 });
 

@@ -30,7 +30,10 @@ const Galpones: React.FC<GalponesProps> = ({ mode = 'demo' }) => {
   const [error, setError] = useState<string | null>(null);
 
   const requestIdRef = useRef(0);
+  const inFlightRef = useRef(false);
   const load = useCallback(() => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
     const requestId = ++requestIdRef.current;
     setLoading(true);
     setError(null);
@@ -46,12 +49,12 @@ const Galpones: React.FC<GalponesProps> = ({ mode = 'demo' }) => {
         setError(String(e));
       })
       .finally(() => {
+        inFlightRef.current = false;
         if (requestId === requestIdRef.current) setLoading(false);
       });
   }, [workMode]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
     return () => {
       requestIdRef.current = -1;
@@ -82,6 +85,11 @@ const Galpones: React.FC<GalponesProps> = ({ mode = 'demo' }) => {
           <IonButton size="small" fill="clear" routerLink="/">
             Cambiar modo
           </IonButton>
+          {workMode && (
+            <IonButton size="small" fill="clear" routerLink="/trabajo/conflictos">
+              Revisar conflictos
+            </IonButton>
+          )}
         </div>
         {loading ? (
           <p className="estado-vacio">Cargando galpones…</p>
