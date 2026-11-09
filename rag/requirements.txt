@@ -1,0 +1,6 @@
+pymupdf
+sentence-transformers
+psycopg[binary]
+pytest
+PyYAML
+rank_bm25
