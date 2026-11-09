@@ -51,13 +51,33 @@ implementación Electron que el plugin comunitario no proporciona.
 
 El paquete Windows unpacked se generó con
 `npm --prefix electron run pack -- --dir`; electron-builder completó el empaquetado
-x64 y `capacitor-electron vendor` incluyó los plugins locales. No se ejecutó aún
-el ciclo contra el backend desde el binario empaquetado.
+x64 y `capacitor-electron vendor` incluyó los plugins locales.
 
-La E2E nativa con servicio/PostgreSQL temporal (contexto, bind, push, recibo,
-reintento y reapertura) sigue pendiente. Pull, cursor y UI de conflictos siguen
-en cortes S4 posteriores.
+## Verificación nativa S3 sobre `dev` integrado
 
-En el corte de envío/recibo se ejecutaron 7 pruebas enfocadas; en el corte de
-vinculación, 6 pruebas enfocadas. La E2E nativa de toda la cadena se mantiene
-como criterio separado hasta completar pull/conflictos e integración.
+El 8 de noviembre de 2026 se repitió el ciclo S3 sobre el código integrado en
+`dev` (`48875733`, merge del PR #74). Se usaron un PostgreSQL temporal exclusivo
+con DDL central y migraciones `0001`/`0002`, un backend en `127.0.0.1:8000`, dos
+dispositivos sintéticos en el mismo ámbito, un perfil Windows aislado y un AVD
+Android temporal. El entorno no recibió datos del Centro Lope.
+
+| Comprobación | Windows empaquetado | Android emulado |
+| --- | --- | --- |
+| Contexto autenticado y vinculación de ámbito | Coinciden `scope_id` y `device_id` autorizados | Coinciden `scope_id` y `device_id` autorizados |
+| Transporte nativo con `window.fetch` del renderer bloqueado | `SyncLab` ejecutó las solicitudes en el proceso principal | `CapacitorHttp` ejecutó las solicitudes nativas |
+| Dependencia galpón → poza | Primero galpón `accepted`, luego poza `accepted` | Primero galpón `accepted`, luego poza `accepted` |
+| Cierre y reapertura | `dataset_id`, dispositivo, ámbito, registros y recibos persistieron | `dataset_id`, dispositivo, ámbito, registros y recibos persistieron tras `force-stop` |
+| Reenvío del cuerpo congelado | Recibo original; sin filas nuevas | Recibo original; sin filas nuevas |
+
+Tras ambas ejecuciones, PostgreSQL contenía exactamente un ámbito, dos
+dispositivos, dos galpones sintéticos, dos pozas sintéticas, cuatro recibos,
+cuatro cambios y `last_sequence = 4`. En cada SQLite local quedaron un galpón,
+una poza y dos operaciones `accepted`. El listado de demostración en Android
+continuó mostrando los cuatro galpones habituales, separado de trabajo.
+
+La invocación Android se hizo con un módulo de prueba incluido únicamente en el
+APK temporal. Ese módulo se retiró del código fuente antes de reconstruir y
+sincronizar el cliente normal; no se distribuye una pantalla de diagnóstico.
+El laboratorio, el AVD y los perfiles temporales se eliminan tras verificar el
+resultado. Pull, cursor y conflictos corresponden a S4 y requieren evidencia
+propia antes de declararse cerrados.
