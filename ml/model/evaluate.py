@@ -75,15 +75,19 @@ def build_pipeline(features: tuple[str, ...]) -> Pipeline:
     return Pipeline([("preprocessor", preprocessor), ("classifier", classifier)])
 
 
-def _metrics(y_true: pd.Series, y_pred: np.ndarray) -> dict[str, float]:
+def _metrics(
+    y_true: pd.Series,
+    y_pred: np.ndarray,
+    pos_label: str = "ELITE",
+) -> dict[str, float]:
     return {
         "precision": float(
-            precision_score(y_true, y_pred, pos_label="ELITE", zero_division=0)
+            precision_score(y_true, y_pred, pos_label=pos_label, zero_division=0)
         ),
         "recall": float(
-            recall_score(y_true, y_pred, pos_label="ELITE", zero_division=0)
+            recall_score(y_true, y_pred, pos_label=pos_label, zero_division=0)
         ),
-        "f1": float(f1_score(y_true, y_pred, pos_label="ELITE", zero_division=0)),
+        "f1": float(f1_score(y_true, y_pred, pos_label=pos_label, zero_division=0)),
     }
 
 
@@ -180,6 +184,7 @@ def evaluate_experiment(
     )
 
     folds = []
+    class_folds = {label: [] for label in LABEL_ORDER}
     pooled_true = []
     pooled_pred = []
     importances = defaultdict(list)
@@ -198,6 +203,8 @@ def evaluate_experiment(
         predictions = search.predict(features.iloc[test_indices])
         truth = labels.iloc[test_indices]
         folds.append(_metrics(truth, predictions))
+        for label in LABEL_ORDER:
+            class_folds[label].append(_metrics(truth, predictions, label))
         pooled_true.extend(truth.tolist())
         pooled_pred.extend(predictions.tolist())
         parameter_counts[
@@ -229,6 +236,10 @@ def evaluate_experiment(
         "feature_names": list(feature_names),
         "folds": len(folds),
         "metrics": _summarize_folds(folds),
+        "metrics_by_class": {
+            label: _summarize_folds(class_folds[label])
+            for label in LABEL_ORDER
+        },
         "confusion_matrix_pooled": matrix.tolist(),
         "confusion_matrix_label_order": list(LABEL_ORDER),
         "feature_importance": importance_summary,
