@@ -17,14 +17,12 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import (
     GridSearchCV,
-    RepeatedStratifiedKFold,
-    StratifiedKFold,
+    StratifiedGroupKFold,
 )
 from sklearn.pipeline import Pipeline
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import make_scorer
 from sklearn.preprocessing import OneHotEncoder
-from sklearn.tree import DecisionTreeClassifier
 
 
 DEFAULT_PARAM_GRID = {
@@ -129,55 +127,133 @@ def _feature_importance(
 def _baseline_evaluation(
     features: pd.DataFrame,
     labels: pd.Series,
+    groups: pd.Series,
     splits: list[tuple[np.ndarray, np.ndarray]],
     baseline: str,
 ) -> dict[str, Any]:
     folds = []
+    fold_metrics = []
+    class_folds = {label: [] for label in LABEL_ORDER}
     pooled_true = []
     pooled_pred = []
+    fold_groups = []
     for train_indices, test_indices in splits:
         if baseline == "majority":
             estimator = DummyClassifier(strategy="most_frequent")
+            estimator.fit(features.iloc[train_indices], labels.iloc[train_indices])
+            predictions = estimator.predict(features.iloc[test_indices])
+        elif baseline == "rule_b":
+            predictions = _simple_rule(features.iloc[test_indices])
         else:
-            estimator = DecisionTreeClassifier(
-                max_depth=1,
-                class_weight="balanced",
-                random_state=42,
-            )
-        estimator.fit(features.iloc[train_indices], labels.iloc[train_indices])
-        predictions = estimator.predict(features.iloc[test_indices])
+            raise ValueError(f"Línea base desconocida: {baseline}")
         truth = labels.iloc[test_indices]
-        folds.append(_metrics(truth, predictions))
+        fold_groups.append(
+            {
+                "rows": int(len(test_indices)),
+                "groups": int(groups.iloc[test_indices].nunique()),
+            }
+        )
+        metrics = _metrics(truth, predictions)
+        folds.append(metrics)
+        class_metrics = {}
+        for label in LABEL_ORDER:
+            class_metrics[label] = _metrics(truth, predictions, label)
+            class_folds[label].append(class_metrics[label])
+        fold_metrics.append(
+            {
+                "rows": int(len(test_indices)),
+                "groups": fold_groups[-1]["groups"],
+                "metrics": metrics,
+                "metrics_by_class": class_metrics,
+            }
+        )
         pooled_true.extend(truth.tolist())
         pooled_pred.extend(predictions.tolist())
     matrix = confusion_matrix(pooled_true, pooled_pred, labels=LABEL_ORDER)
     return {
         "metrics": _summarize_folds(folds),
+        "metrics_by_class": {
+            label: _summarize_folds(class_folds[label])
+            for label in LABEL_ORDER
+        },
         "confusion_matrix_pooled": matrix.tolist(),
         "folds": len(folds),
+        "fold_metrics": fold_metrics,
+        "fold_sizes": fold_groups,
     }
+
+
+def _simple_rule(features: pd.DataFrame) -> np.ndarray:
+    """Apply the four birth-time criteria used by Experiment B."""
+    nupar = pd.to_numeric(features["nupar_madre"], errors="coerce")
+    tcnv = pd.to_numeric(features["tcnv"], errors="coerce")
+    birth_weight = pd.to_numeric(features["peso_nacimiento_g"], errors="coerce")
+    eyes = features["ojos"].astype("string").str.strip().str.upper()
+    elite = (
+        nupar.isin({2, 3})
+        & tcnv.isin({3, 4})
+        & birth_weight.ge(135)
+        & eyes.isin({"1", "NEGRO"})
+    )
+    return np.where(elite.fillna(False), "ELITE", "NORMAL")
+
+
+def _validate_disjoint_groups(
+    groups: pd.Series,
+    splits: list[tuple[np.ndarray, np.ndarray]],
+) -> list[dict[str, int]]:
+    fold_groups = []
+    seen_test_groups: set[str] = set()
+    for train_indices, test_indices in splits:
+        train_groups = set(groups.iloc[train_indices].astype(str))
+        test_groups = set(groups.iloc[test_indices].astype(str))
+        if train_groups & test_groups:
+            raise ValueError("Un grupo de madre aparece en train y test.")
+        if seen_test_groups & test_groups:
+            raise ValueError("Un grupo de madre aparece en más de un pliegue test.")
+        seen_test_groups.update(test_groups)
+        fold_groups.append(
+            {
+                "train": len(train_groups),
+                "test": len(test_groups),
+            }
+        )
+    if len(seen_test_groups) != groups.nunique():
+        raise ValueError("La validación no asignó todos los grupos de madres.")
+    return fold_groups
 
 
 def evaluate_experiment(
     features: pd.DataFrame,
     labels: pd.Series,
     feature_names: tuple[str, ...],
+    groups: pd.Series,
     *,
     n_splits: int = 5,
-    n_repeats: int = 3,
     inner_splits: int = 3,
     random_state: int = 42,
     param_grid: dict[str, tuple[Any, ...]] | None = None,
 ) -> dict[str, Any]:
-    """Tune inside each training fold and evaluate on repeated held-out folds."""
+    """Tune and evaluate with mother groups held out from every fold."""
+    features = features.reset_index(drop=True)
+    labels = labels.reset_index(drop=True)
+    groups = groups.reset_index(drop=True)
+    if not (len(features) == len(labels) == len(groups)):
+        raise ValueError("Features, etiquetas y grupos deben tener igual longitud.")
+    if groups.isna().any():
+        raise ValueError("La validación agrupada requiere madre identificada.")
+    if groups.nunique() < n_splits:
+        raise ValueError("No hay suficientes madres para los pliegues solicitados.")
+
     grid = param_grid or DEFAULT_PARAM_GRID
-    outer = RepeatedStratifiedKFold(
+    outer = StratifiedGroupKFold(
         n_splits=n_splits,
-        n_repeats=n_repeats,
+        shuffle=True,
         random_state=random_state,
     )
-    splits = list(outer.split(features, labels))
-    inner = StratifiedKFold(
+    splits = list(outer.split(features, labels, groups))
+    fold_groups = _validate_disjoint_groups(groups, splits)
+    inner = StratifiedGroupKFold(
         n_splits=inner_splits,
         shuffle=True,
         random_state=random_state,
@@ -199,7 +275,11 @@ def evaluate_experiment(
             refit=True,
             error_score="raise",
         )
-        search.fit(features.iloc[train_indices], labels.iloc[train_indices])
+        search.fit(
+            features.iloc[train_indices],
+            labels.iloc[train_indices],
+            groups=groups.iloc[train_indices],
+        )
         predictions = search.predict(features.iloc[test_indices])
         truth = labels.iloc[test_indices]
         folds.append(_metrics(truth, predictions))
@@ -226,15 +306,16 @@ def evaluate_experiment(
     importance_summary.sort(key=lambda item: (-item["mean"], item["feature"]))
     baselines = {
         "majority_class": _baseline_evaluation(
-            features, labels, splits, "majority"
+            features, labels, groups, splits, "majority"
         ),
-        "decision_tree_depth_1": _baseline_evaluation(
-            features, labels, splits, "tree"
+        "regla_simple_B": _baseline_evaluation(
+            features, labels, groups, splits, "rule_b"
         ),
     }
     return {
         "feature_names": list(feature_names),
         "folds": len(folds),
+        "fold_metrics": fold_metrics,
         "metrics": _summarize_folds(folds),
         "metrics_by_class": {
             label: _summarize_folds(class_folds[label])
@@ -242,6 +323,8 @@ def evaluate_experiment(
         },
         "confusion_matrix_pooled": matrix.tolist(),
         "confusion_matrix_label_order": list(LABEL_ORDER),
+        "grouped_by": "MADRE No.",
+        "groups_by_fold": fold_groups,
         "feature_importance": importance_summary,
         "selected_params_by_outer_fold": [
             {"params": json.loads(params), "fold_count": count}
@@ -255,17 +338,18 @@ def fit_final_model(
     features: pd.DataFrame,
     labels: pd.Series,
     feature_names: tuple[str, ...],
+    groups: pd.Series,
     *,
     inner_splits: int = 5,
     random_state: int = 42,
     param_grid: dict[str, tuple[Any, ...]] | None = None,
 ) -> GridSearchCV:
-    """Tune and refit the deployable B model on all eligible candidates."""
+    """Tune and refit the deployable B model with mother-grouped folds."""
     search = GridSearchCV(
         estimator=build_pipeline(feature_names),
         param_grid=param_grid or DEFAULT_PARAM_GRID,
         scoring=ELITE_F1_SCORER,
-        cv=StratifiedKFold(
+        cv=StratifiedGroupKFold(
             n_splits=inner_splits,
             shuffle=True,
             random_state=random_state,
@@ -274,5 +358,5 @@ def fit_final_model(
         refit=True,
         error_score="raise",
     )
-    search.fit(features, labels)
+    search.fit(features, labels, groups=groups)
     return search
