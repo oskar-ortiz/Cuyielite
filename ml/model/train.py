@@ -40,6 +40,15 @@ def _format_metric(result: dict[str, Any], metric: str) -> str:
     return f"{values['mean']:.3f} ± {values['std']:.3f}"
 
 
+def _format_class_metric(
+    result: dict[str, Any],
+    label: str,
+    metric: str,
+) -> str:
+    values = result["metrics_by_class"][label][metric]
+    return f"{values['mean']:.3f} ± {values['std']:.3f}"
+
+
 def render_report(metadata: dict[str, Any]) -> str:
     """Render a metrics report using only aggregate metadata."""
     data = metadata["dataset"]
@@ -50,9 +59,10 @@ def render_report(metadata: dict[str, Any]) -> str:
         f"- Fecha: {metadata['date']}",
         f"- Versión scikit-learn: {metadata['versions']['scikit_learn']}",
         f"- SHA-256 del CSV etiquetado: `{metadata['dataset_sha256']}`",
-        f"- Protocolo: RepeatedStratifiedKFold, 5 pliegues × "
-        f"{metadata['protocol']['repeats']} repeticiones; ajuste interno "
-        f"StratifiedKFold de {metadata['protocol']['inner_folds']} pliegues.",
+        f"- Protocolo: StratifiedGroupKFold, "
+        f"{metadata['protocol']['outer_folds']} pliegues externos y "
+        f"{metadata['protocol']['inner_folds']} internos; agrupación por código "
+        "crudo `MADRE No.` y random_state=42.",
         "- Clasificador: `RandomForestClassifier(class_weight='balanced', "
         "random_state=42)`; búsqueda de hiperparámetros dentro de cada pliegue "
         "de entrenamiento.",
@@ -61,7 +71,7 @@ def render_report(metadata: dict[str, Any]) -> str:
         "",
         _markdown_table(
             ["Filas", "ELITE", "NORMAL", "NO_APLICA excluidas", "REVISAR excluidas",
-             "Duplicados retirados"],
+             "Duplicados retirados", "Madre no identificada"],
             [[
                 data["rows_used"],
                 data["class_counts"].get("ELITE", 0),
@@ -69,18 +79,21 @@ def render_report(metadata: dict[str, Any]) -> str:
                 data["excluded_no_aplica"],
                 data["excluded_review"],
                 data["duplicate_rows_removed"],
+                data["rows_excluded_missing_mother"],
             ]],
         ),
         "",
-        f"Filas elegibles sin identificador utilizable: "
-        f"{data['rows_without_usable_identity']}; por ello no fue posible "
-        "comprobar duplicados para esas filas.",
+        f"Grupos de madre utilizados: {data['mother_groups']}. "
+        f"Filas elegibles sin identificador de animal utilizable: "
+        f"{data['rows_without_usable_identity']}; esas filas no permitían "
+        "comprobar duplicados y las observaciones sin madre se excluyeron del "
+        "experimento agrupado.",
         "",
         "## Resultados de validación cruzada",
         "",
-        "Precisión, recall y F1 corresponden a `ELITE`; se informa media ± "
-        "desviación estándar entre pliegues. La matriz agrega las predicciones "
-        "de todos los pliegues repetidos y usa orden de clase NORMAL, ELITE.",
+        "Precisión, recall y F1 se informan por clase como media ± desviación "
+        "estándar entre pliegues externos. Cada observación aparece una vez en "
+        "la matriz agregada, con orden de clase NORMAL, ELITE.",
         "",
         _markdown_table(
             ["Experimento", "Variables", "Precisión ELITE", "Recall ELITE", "F1 ELITE"],
@@ -110,6 +123,21 @@ def render_report(metadata: dict[str, Any]) -> str:
                     [["Real NORMAL", tn, fp], ["Real ELITE", fn, tp]],
                 ),
                 "",
+                "#### Métricas por clase (media ± desviación estándar)",
+                "",
+                _markdown_table(
+                    ["Clase", "Precisión", "Recall", "F1"],
+                    [
+                        [
+                            label,
+                            _format_class_metric(result, label, "precision"),
+                            _format_class_metric(result, label, "recall"),
+                            _format_class_metric(result, label, "f1"),
+                        ]
+                        for label in ("NORMAL", "ELITE")
+                    ],
+                ),
+                "",
                 "#### Importancia media de variables",
                 "",
                 _markdown_table(
@@ -125,15 +153,48 @@ def render_report(metadata: dict[str, Any]) -> str:
                 ),
                 "",
                 _markdown_table(
-                    ["Línea base", "Precisión ELITE", "Recall ELITE", "F1 ELITE"],
+                    ["Línea base", "Clase", "Precisión", "Recall", "F1"],
                     [
                         [
                             baseline_name,
-                            _format_metric(baseline, "precision"),
-                            _format_metric(baseline, "recall"),
-                            _format_metric(baseline, "f1"),
+                            label,
+                            _format_class_metric(baseline, label, "precision"),
+                            _format_class_metric(baseline, label, "recall"),
+                            _format_class_metric(baseline, label, "f1"),
                         ]
                         for baseline_name, baseline in result["baselines"].items()
+                        for label in ("NORMAL", "ELITE")
+                    ],
+                ),
+                "",
+                "Métricas de línea base calculadas sobre los mismos pliegues "
+                "agrupados; la línea mayoritaria predice la clase más frecuente "
+                "del entrenamiento de cada pliegue y la regla simple aplica los "
+                "cuatro umbrales de B.",
+                "",
+            ]
+        )
+        lines.extend(
+            [
+                "#### Detalle por pliegue externo",
+                "",
+                _markdown_table(
+                    [
+                        "Pliegue",
+                        "Grupos test",
+                        "Filas test",
+                        "F1 NORMAL",
+                        "F1 ELITE",
+                    ],
+                    [
+                        [
+                            index,
+                            fold["groups"],
+                            fold["rows"],
+                            f"{fold['metrics_by_class']['NORMAL']['f1']:.3f}",
+                            f"{fold['metrics_by_class']['ELITE']['f1']:.3f}",
+                        ]
+                        for index, fold in enumerate(result["fold_metrics"], 1)
                     ],
                 ),
                 "",
@@ -164,9 +225,15 @@ def render_report(metadata: dict[str, Any]) -> str:
             "- La muestra procede de una sola explotación/centro e incluye "
             "registros de Galpón 1 y Galpón 2. La validación mezcla ambos galpones; "
             "no equivale a validación externa ni a evaluación en un galpón aislado.",
+            "- Las etiquetas provienen de reglas de clasificación, no de un "
+            "experto ni de una evaluación independiente.",
+            "- La agrupación usa el valor crudo `MADRE No.` porque no existe una "
+            "reconciliación validada de esos códigos con una identidad global. "
+            "Colisiones o reutilizaciones entre archivos podrían mezclar madres "
+            "distintas o no detectar una misma madre con códigos diferentes.",
             "- Las filas sin identificador utilizable no permiten detectar posibles "
-            "duplicados entre archivos. Los datos no se separaron por animal ni por "
-            "galpón, lo cual puede inflar métricas si hay dependencias entre registros.",
+            "duplicados entre archivos; los duplicados con identidad conocida se "
+            "deduplican antes de la validación.",
             "- Random Forest y líneas base se evaluaron sobre una muestra de "
             f"{data['rows_used']} observaciones clasificables; las métricas dependen "
             "del tamaño y composición de esta muestra.",
@@ -187,17 +254,21 @@ def train(
     report_path: Path = DEFAULT_REPORT,
 ) -> dict[str, Any]:
     dataset: CandidateDataset = load_dataset(data_dir / "features_crias_etiquetadas.csv")
+    if dataset.groups is None:
+        raise ValueError(
+            "El dataset no tiene procedencia suficiente para validar por MADRE No."
+        )
     experiment_a = evaluate_experiment(
-        dataset.features_a, dataset.labels, FEATURES_A
+        dataset.features_a, dataset.labels, FEATURES_A, dataset.groups
     )
     experiment_b = evaluate_experiment(
-        dataset.features_b, dataset.labels, FEATURES_B
+        dataset.features_b, dataset.labels, FEATURES_B, dataset.groups
     )
     reproductive_counts = reproductive_label_counts(
         data_dir / "features_reproductoras_etiquetadas.csv"
     )
     final_search = fit_final_model(
-        dataset.features_b, dataset.labels, FEATURES_B
+        dataset.features_b, dataset.labels, FEATURES_B, dataset.groups
     )
 
     model_dir.mkdir(parents=True, exist_ok=True)
@@ -215,13 +286,13 @@ def train(
         "dataset_sha256": dataset.sha256,
         "dataset": dataset.stats,
         "protocol": {
-            "outer": "RepeatedStratifiedKFold",
-            "folds": 5,
-            "repeats": 3,
-            "inner_cv": "StratifiedKFold",
+            "outer": "StratifiedGroupKFold",
+            "outer_folds": 5,
+            "inner_cv": "StratifiedGroupKFold",
             "inner_folds": 3,
             "scoring": "f1 (pos_label=ELITE)",
             "random_state": 42,
+            "grouping": "MADRE No. (código crudo)",
             "search_grid": {
                 "n_estimators": [100, 200],
                 "max_depth": [None, 8],

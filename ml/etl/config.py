@@ -21,6 +21,7 @@ EMPTY_DATE_MARKERS = frozenset({"X"})
 
 INDIVIDUAL_HEADER_ALIASES = {
     "animal_code": ("ANIMALNO",),
+    "mother_code": ("MADRENO",),
     "nupar_madre": ("NUPAR",),
     "tcnv": ("TCNV",),
     "tcnm": ("TCNM",),
