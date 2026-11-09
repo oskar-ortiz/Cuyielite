@@ -128,5 +128,5 @@ npm run build
 - Contenedor `cuyelite-s5e2e-692608`, base `cuyelite_s5e2e_692608` y su volumen eliminados con `docker rm -f`.
 - Backend de laboratorio detenido; puertos `8000`, `55432`, `9333` y `9225` liberados.
 - Perfil temporal de Windows, archivos de secretos, scripts y copias de bases temporales eliminados.
-- Emulador `Pixel_36` apagado. La app instalada y su base sintética quedaron como estaban; no se borró su datos.
+- Emulador `Pixel_36` apagado. La app instalada y su base de demostración quedaron intactas; la base de trabajo conserva los datos sintéticos del recorrido. No se borraron datos de la app.
 - Contenedor preexistente `cuyelite-s3-test` intacto.
