@@ -2,9 +2,20 @@
 
 S4 se verificó el 9 de noviembre de 2026 con datos sintéticos y un PostgreSQL de laboratorio aislado. La sincronización descargó registros en páginas, conservó el cursor tras reiniciar y exigió una decisión explícita cuando el servidor y un dispositivo editaron el mismo galpón. Esta entrega no inicia S5 ni importa datos del Centro Lope.
 
-## Alcance y cortes revisables
+## Alcance e integración en `dev`
 
-El código se dividió en unidades pequeñas: cursor firmado del backend, API pull, validación del contrato cliente, aplicación transaccional, coordinador, modelo y resolución de conflictos, transporte nativo, interfaz y recuperación de conexión Android. Cada rama `feat/sync-s4-*` parte de la anterior; los PR hacia `dev` se integran en ese orden para que el diff de revisión corresponda a una unidad.
+El código se preparó en ramas pequeñas: cursor firmado del backend, API pull, validación del contrato cliente, aplicación transaccional, coordinador, modelo y resolución de conflictos, transporte nativo, interfaz y recuperación de conexión Android. La integración real fue:
+
+| PR | Contenido | Resultado |
+| --- | --- | --- |
+| #75 | Evidencia nativa S3 | Fusionado en `dev`. |
+| #76 | Cursor firmado S4 | Fusionado en `dev`. |
+| #80 | API pull | Fusionado en `dev`; CI backend [correcto](https://github.com/oskar-ortiz/Cuyielite/actions/runs/42570007471). |
+| #81 | Contrato y validación cliente | Fusionado en `dev`; CI cliente [correcto](https://github.com/oskar-ortiz/Cuyielite/actions/runs/42570147618). |
+| #82 | Restantes cortes de código S4, incluida la reconexión Android | Fusionado en `dev`; CI cliente [correcto](https://github.com/oskar-ortiz/Cuyielite/actions/runs/42570160093). |
+| #83 | Esta evidencia nativa S4 | Fusionado en `dev`. |
+
+Aunque los cortes locales estaban por debajo de 400 líneas cada uno, el PR #82 agrupó varios y terminó con 2.394 adiciones y 30 eliminaciones en 30 archivos. Ese PR superó el tamaño de revisión previsto; esta nota registra el resultado real y sirve para conservar cortes separados en integraciones futuras.
 
 | Capa | Resultado verificado |
 | --- | --- |
