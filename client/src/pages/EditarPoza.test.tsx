@@ -4,9 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import EditarPoza from './EditarPoza';
 
-const { listPozasByGalpon, updatePoza } = vi.hoisted(() => ({
+const { listPozasByGalpon, updatePoza, workListPozas, workUpdatePoza } = vi.hoisted(() => ({
   listPozasByGalpon: vi.fn(),
   updatePoza: vi.fn(),
+  workListPozas: vi.fn(),
+  workUpdatePoza: vi.fn(),
 }));
 
 vi.mock('@ionic/react', () => ({
@@ -42,6 +44,14 @@ vi.mock('../data/galpones.repository.factory', () => ({
   }),
 }));
 
+vi.mock('../data/work.galpones.repository', () => ({
+  getWorkGalponesRepository: () => ({
+    listGalpones: vi.fn().mockResolvedValue([]),
+    listPozasByGalpon: workListPozas,
+    updatePoza: workUpdatePoza,
+  }),
+}));
+
 const renderPage = (ruta: string) =>
   render(
     <MemoryRouter initialEntries={[ruta]}>
@@ -55,6 +65,8 @@ describe('EditarPoza', () => {
   beforeEach(() => {
     listPozasByGalpon.mockReset();
     updatePoza.mockReset();
+    workListPozas.mockReset();
+    workUpdatePoza.mockReset();
   });
 
   it('precarga los valores actuales', async () => {
@@ -127,5 +139,46 @@ describe('EditarPoza', () => {
     listPozasByGalpon.mockResolvedValue([]);
     renderPage('/galpones/g1/pozas/zzz/editar');
     expect(await screen.findByText(/No existe una poza/)).toBeInTheDocument();
+  });
+
+  it('en trabajo precarga y guarda por la outbox sin tocar la demo', async () => {
+    workListPozas.mockResolvedValue([{ id: 'p1', galponId: 'g1', codigo: 'T-1', tipo: 'Cría', capacidadMaxima: 20 }]);
+    workUpdatePoza.mockResolvedValue({ id: 'p1', galponId: 'g1', codigo: 'T-2', tipo: 'Engorde', capacidadMaxima: 30 });
+    render(
+      <MemoryRouter initialEntries={['/trabajo/galpones/g1/pozas/p1/editar']}>
+        <Routes>
+          <Route path="/trabajo/galpones/:id/pozas/:pozaId/editar" element={<EditarPoza mode="trabajo" />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByDisplayValue('T-1');
+    expect(screen.getByText('Editar poza · Trabajo')).toBeInTheDocument();
+    fireEvent.change(screen.getByDisplayValue('T-1'), { target: { value: 'T-2' } });
+    fireEvent.change(screen.getByDisplayValue('Cría'), { target: { value: 'Engorde' } });
+    fireEvent.change(screen.getByDisplayValue('20'), { target: { value: '30' } });
+    fireEvent.click(screen.getByText('Guardar'));
+    await waitFor(() =>
+      expect(workUpdatePoza).toHaveBeenCalledWith('g1', 'p1', {
+        codigo: 'T-2',
+        tipo: 'Engorde',
+        capacidadMaxima: 30,
+      }),
+    );
+    expect(updatePoza).not.toHaveBeenCalled();
+    expect(listPozasByGalpon).not.toHaveBeenCalled();
+  });
+
+  it('en trabajo guardar sin cambios no llama a la outbox', async () => {
+    workListPozas.mockResolvedValue([{ id: 'p1', galponId: 'g1', codigo: 'T-1', tipo: 'Cría', capacidadMaxima: 20 }]);
+    render(
+      <MemoryRouter initialEntries={['/trabajo/galpones/g1/pozas/p1/editar']}>
+        <Routes>
+          <Route path="/trabajo/galpones/:id/pozas/:pozaId/editar" element={<EditarPoza mode="trabajo" />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByDisplayValue('T-1');
+    fireEvent.click(screen.getByText('Guardar'));
+    await waitFor(() => expect(workUpdatePoza).not.toHaveBeenCalled());
   });
 });

@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Galpon } from '../data/galpones.repository';
 import { getGalponesRepository } from '../data/galpones.repository.factory';
 import { getWorkGalponesReader } from '../data/work.galpones.repository';
+import { getWorkSyncRepository } from '../data/work.sync.repository';
 import './galpones.css';
 
 interface GalponesProps {
@@ -28,6 +29,7 @@ const Galpones: React.FC<GalponesProps> = ({ mode = 'demo' }) => {
   const [galpones, setGalpones] = useState<Galpon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<number | null>(null);
 
   const requestIdRef = useRef(0);
   const inFlightRef = useRef(false);
@@ -43,6 +45,16 @@ const Galpones: React.FC<GalponesProps> = ({ mode = 'demo' }) => {
       .then((data) => {
         if (requestId !== requestIdRef.current) return;
         setGalpones(data);
+        if (workMode) {
+          getWorkSyncRepository()
+            .status()
+            .then((status) => {
+              if (requestId === requestIdRef.current) setPending(status.pending);
+            })
+            .catch(() => {
+              if (requestId === requestIdRef.current) setPending(null);
+            });
+        }
       })
       .catch((e) => {
         if (requestId !== requestIdRef.current) return;
@@ -70,18 +82,19 @@ const Galpones: React.FC<GalponesProps> = ({ mode = 'demo' }) => {
       <IonHeader>
         <IonToolbar>
           <IonTitle>{workMode ? 'Galpones · Trabajo' : 'Galpones'}</IonTitle>
-          {!workMode && (
-            <IonButton slot="end" routerLink="/galpones/nuevo">
-              Nuevo
-            </IonButton>
-          )}
+          <IonButton slot="end" routerLink={workMode ? '/trabajo/galpones/nuevo' : '/galpones/nuevo'}>
+            Nuevo
+          </IonButton>
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen>
         <div className="marcado-demo">
           <IonChip color={workMode ? 'primary' : 'warning'}>
-            {workMode ? 'Base de trabajo · solo consulta' : 'Datos de demostración'}
+            {workMode ? 'Base de trabajo' : 'Datos de demostración'}
           </IonChip>
+          {workMode && pending !== null && pending > 0 && (
+            <IonChip color="warning">{pending === 1 ? '1 cambio pendiente' : `${pending} cambios pendientes`}</IonChip>
+          )}
           <IonButton size="small" fill="clear" routerLink="/">
             Cambiar modo
           </IonButton>

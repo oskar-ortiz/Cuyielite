@@ -150,19 +150,15 @@ const GalponDetalle: React.FC<GalponDetalleProps> = ({ mode = 'demo' }) => {
           </IonButtons>
           <IonTitle>{galpon.nombre}</IonTitle>
           <IonButtons slot="end">
-            {!workMode && (
-              <>
-                <IonButton routerLink={`/galpones/${id}/editar`}>Editar galpón</IonButton>
-                <IonButton routerLink={`/galpones/${id}/pozas/nueva`}>Nueva poza</IonButton>
-              </>
-            )}
+            <IonButton routerLink={`${basePath}/${id}/editar`}>Editar galpón</IonButton>
+            <IonButton routerLink={`${basePath}/${id}/pozas/nueva`}>Nueva poza</IonButton>
           </IonButtons>
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen>
         <div className="marcado-demo">
           <IonChip color={workMode ? 'primary' : 'warning'}>
-            {workMode ? 'Base de trabajo · solo consulta' : 'Datos de demostración'}
+            {workMode ? 'Base de trabajo' : 'Datos de demostración'}
           </IonChip>
         </div>
         {pozas.length === 0 ? (
@@ -175,11 +171,9 @@ const GalponDetalle: React.FC<GalponDetalleProps> = ({ mode = 'demo' }) => {
                   <h2>{poza.codigo}</h2>
                   <p>{poza.tipo}</p>
                 </IonLabel>
-                {!workMode && (
-                  <IonButton slot="end" routerLink={`/galpones/${id}/pozas/${poza.id}/editar`}>
-                    Editar
-                  </IonButton>
-                )}
+                <IonButton slot="end" routerLink={`${basePath}/${id}/pozas/${poza.id}/editar`}>
+                  Editar
+                </IonButton>
               </IonItem>
             ))}
           </IonList>
