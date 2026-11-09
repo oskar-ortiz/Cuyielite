@@ -16,10 +16,22 @@ const sqlite = new SQLiteConnection(CapacitorSQLite);
 
 let connectionPromise: Promise<SQLiteDBConnection> | null = null;
 
+async function createConnection(): Promise<SQLiteDBConnection> {
+  try {
+    return await sqlite.createConnection('cuyielite', false, 'no-encryption', 1, false);
+  } catch (error) {
+    // A WebView reload recreates this JS wrapper but can leave the native
+    // connection registered. Close only that stale demo connection.
+    if (!String(error).includes('Connection cuyielite already exists')) throw error;
+    await CapacitorSQLite.closeConnection({ database: 'cuyielite', readonly: false });
+    return sqlite.createConnection('cuyielite', false, 'no-encryption', 1, false);
+  }
+}
+
 async function getConnection(): Promise<SQLiteDBConnection> {
   if (!connectionPromise) {
     connectionPromise = (async () => {
-      const c = await sqlite.createConnection('cuyielite', false, 'no-encryption', 1, false);
+      const c = await createConnection();
       await c.open();
 
       const adapter: MigrationDb = {

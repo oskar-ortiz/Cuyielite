@@ -12,6 +12,7 @@ import { prepareEligible, sendPrepared } from './work.sync.client.js';
 import { runSyncCycle } from './work.sync.coordinator.js';
 import { listConflictCases, resolveConflictKeepCentral, resolveConflictRetry } from './work.sync.conflicts.js';
 import { initializeWorkSyncDatabase } from './work.sync.migration.js';
+import { readWorkSyncStatus } from './work.sync.status.js';
 
 const LAB_BASE_URL = 'http://127.0.0.1:8000';
 
@@ -87,7 +88,7 @@ async function request(route, token, init) {
 class SyncLab {
   static __capacitorElectronPlugin = {
     name: 'SyncLab',
-    methods: ['context', 'push', 'pull', 'bind', 'prepare', 'send', 'sync', 'listConflicts', 'keepCentral', 'retryConflict'],
+    methods: ['context', 'push', 'pull', 'bind', 'prepare', 'send', 'sync', 'status', 'listConflicts', 'keepCentral', 'retryConflict'],
   };
 
   async load() {}
@@ -171,6 +172,15 @@ class SyncLab {
     const db = openWorkDb();
     try {
       return { cases: await listConflictCases(makeAdapter(db)) };
+    } finally {
+      db.close();
+    }
+  }
+
+  async status() {
+    const db = openWorkDb();
+    try {
+      return await readWorkSyncStatus(makeAdapter(db));
     } finally {
       db.close();
     }
