@@ -184,6 +184,7 @@ def evaluate_experiment(
     )
 
     folds = []
+    fold_metrics = []
     class_folds = {label: [] for label in LABEL_ORDER}
     pooled_true = []
     pooled_pred = []
@@ -202,7 +203,9 @@ def evaluate_experiment(
         search.fit(features.iloc[train_indices], labels.iloc[train_indices])
         predictions = search.predict(features.iloc[test_indices])
         truth = labels.iloc[test_indices]
-        folds.append(_metrics(truth, predictions))
+        metrics = _metrics(truth, predictions)
+        folds.append(metrics)
+        fold_metrics.append(metrics)
         for label in LABEL_ORDER:
             class_folds[label].append(_metrics(truth, predictions, label))
         pooled_true.extend(truth.tolist())
@@ -235,6 +238,7 @@ def evaluate_experiment(
     return {
         "feature_names": list(feature_names),
         "folds": len(folds),
+        "fold_metrics": fold_metrics,
         "metrics": _summarize_folds(folds),
         "metrics_by_class": {
             label: _summarize_folds(class_folds[label])
