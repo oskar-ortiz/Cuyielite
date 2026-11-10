@@ -100,16 +100,23 @@ defecto cuando no corresponde asignar `ELITE` o `DESCARTE`.
   estructurado de empadres para verificar esta condición.
 - La muerte de crías sin anomalía no es motivo para descartar a la reproductora.
 
-## Decisión de implementación propuesta por Diery
+## Decisión de implementación
 
-- Se proponen dos endpoints: `/ml/predict/hembra` para reproductoras
-  (`NORMAL` o `DESCARTE`) y `/ml/predict/candidata` para crías (`ELITE` o
-  `NORMAL`). El contrato actual no se modifica en este ADR.
-- Primero se implementan las reglas explícitas, devolviendo sus motivos.
-- El modelo ML se orienta a anticipar ELITE al nacimiento y el riesgo de
-  descarte antes del cuarto parto.
-- La existencia del registro reproductivo antiguo del Galpón 2 aporta algunos
-  ejemplos de hembras con más partos, pero su cantidad es limitada.
+Se acuerdan dos endpoints, sin cambiar el contrato actual de
+`PredictionRequest` ni el esquema:
+
+- `/ml/predict/hembra`: clasifica reproductoras como `NORMAL` o `DESCARTE`.
+- `/ml/predict/candidata`: clasifica crías hembras como `ELITE` o `NORMAL`.
+
+Las reglas explícitas determinan la clase y devuelven sus motivos. El Random
+Forest puede aportar una estimación anticipatoria para candidatas al
+nacimiento, pero no sustituye ni sobrescribe la decisión de las reglas. Las
+rutas HTTP quedan fuera de este ADR.
+
+El modelo ML se orienta a anticipar ELITE al nacimiento y el riesgo de descarte
+antes del cuarto parto. La existencia del registro reproductivo antiguo del
+Galpón 2 aporta algunos ejemplos de hembras con más partos, pero su cantidad es
+limitada.
 
 ## Códigos de registro
 
@@ -144,7 +151,7 @@ disponibles para entrenar esa clase.
 ## Puntos abiertos
 
 - Qué significa `R` en el campo DESTINO.
-- Cómo queda registrada la cantidad de un aborto (`AB`), ya que no aparece en
+- Cómo registrar la cantidad asociada a un aborto (`AB`), ya que no aparece en
   los Excel revisados.
 - Incorporar un registro estructurado de los periodos de empadre para poder
   verificar la sospecha de infertilidad.

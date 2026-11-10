@@ -4,9 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import EditarGalpon from './EditarGalpon';
 
-const { listGalpones, updateGalpon } = vi.hoisted(() => ({
+const { listGalpones, updateGalpon, workListGalpones, workUpdateGalpon } = vi.hoisted(() => ({
   listGalpones: vi.fn(),
   updateGalpon: vi.fn(),
+  workListGalpones: vi.fn(),
+  workUpdateGalpon: vi.fn(),
 }));
 
 vi.mock('@ionic/react', () => ({
@@ -49,6 +51,14 @@ vi.mock('../data/galpones.repository.factory', () => ({
   }),
 }));
 
+vi.mock('../data/work.galpones.repository', () => ({
+  getWorkGalponesRepository: () => ({
+    listGalpones: workListGalpones,
+    listPozasByGalpon: vi.fn().mockResolvedValue([]),
+    updateGalpon: workUpdateGalpon,
+  }),
+}));
+
 const renderPage = (ruta: string) =>
   render(
     <MemoryRouter initialEntries={[ruta]}>
@@ -62,6 +72,8 @@ describe('EditarGalpon', () => {
   beforeEach(() => {
     listGalpones.mockReset();
     updateGalpon.mockReset();
+    workListGalpones.mockReset();
+    workUpdateGalpon.mockReset();
   });
 
   it('precarga los valores actuales', async () => {
@@ -122,5 +134,40 @@ describe('EditarGalpon', () => {
     listGalpones.mockResolvedValue([]);
     renderPage('/galpones/zzz/editar');
     expect(await screen.findByText(/No existe un galpón/)).toBeInTheDocument();
+  });
+
+  it('en trabajo precarga, guarda por la outbox y no toca la demo', async () => {
+    workListGalpones.mockResolvedValue([{ id: 'g1', nombre: 'Trabajo Norte', ubicacion: 'Lote T' }]);
+    workUpdateGalpon.mockResolvedValue({ id: 'g1', nombre: 'Trabajo Sur', ubicacion: 'Lote T' });
+    render(
+      <MemoryRouter initialEntries={['/trabajo/galpones/g1/editar']}>
+        <Routes>
+          <Route path="/trabajo/galpones/:id/editar" element={<EditarGalpon mode="trabajo" />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByDisplayValue('Trabajo Norte');
+    expect(screen.getByText('Editar galpón · Trabajo')).toBeInTheDocument();
+    fireEvent.change(screen.getByDisplayValue('Trabajo Norte'), { target: { value: 'Trabajo Sur' } });
+    fireEvent.click(screen.getByText('Guardar'));
+    await waitFor(() =>
+      expect(workUpdateGalpon).toHaveBeenCalledWith('g1', { nombre: 'Trabajo Sur', ubicacion: 'Lote T' }),
+    );
+    expect(updateGalpon).not.toHaveBeenCalled();
+    expect(listGalpones).not.toHaveBeenCalled();
+  });
+
+  it('en trabajo guardar sin cambios no llama a la outbox', async () => {
+    workListGalpones.mockResolvedValue([{ id: 'g1', nombre: 'Trabajo Norte', ubicacion: null }]);
+    render(
+      <MemoryRouter initialEntries={['/trabajo/galpones/g1/editar']}>
+        <Routes>
+          <Route path="/trabajo/galpones/:id/editar" element={<EditarGalpon mode="trabajo" />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    await screen.findByDisplayValue('Trabajo Norte');
+    fireEvent.click(screen.getByText('Guardar'));
+    await waitFor(() => expect(workUpdateGalpon).not.toHaveBeenCalled());
   });
 });

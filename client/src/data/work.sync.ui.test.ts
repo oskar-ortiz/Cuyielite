@@ -23,7 +23,7 @@ describe('estado visible de sincronización', () => {
       syncing: false,
     });
     expect(view).toMatchObject({ phase: 'conflict', title: 'Conflictos pendientes', tone: 'warning' });
-    expect(view.detail).toContain('1 cambio');
+    expect(view.detail).toContain('1 conflicto espera');
     expect(view.detail).toContain('se conservan');
   });
 
@@ -68,6 +68,24 @@ describe('estado visible de sincronización', () => {
     const view = describeSyncState({ status: status({ rejected: 1 }), syncing: false });
     expect(view.detail).toContain('1 cambio');
     expect(view.detail).toContain('requiere revisión');
+  });
+
+  it('concuerda en singular y plural para pendientes, conflictos y rechazos', () => {
+    expect(describeSyncState({ status: status({ pending: 1 }), syncing: false }).detail).toBe(
+      '1 cambio local espera envío.',
+    );
+    expect(describeSyncState({ status: status({ pending: 2 }), syncing: false }).detail).toBe(
+      '2 cambios locales esperan envío.',
+    );
+    expect(describeSyncState({ status: status({ conflicts: 1 }), syncing: false }).detail).toBe(
+      '1 conflicto espera tu decisión. Los cambios locales se conservan.',
+    );
+    expect(describeSyncState({ status: status({ conflicts: 2 }), syncing: false }).detail).toBe(
+      '2 conflictos esperan tu decisión. Los cambios locales se conservan.',
+    );
+    expect(describeSyncState({ status: status({ rejected: 2 }), syncing: false }).detail).toContain(
+      '2 cambios; requieren revisión',
+    );
   });
 });
 

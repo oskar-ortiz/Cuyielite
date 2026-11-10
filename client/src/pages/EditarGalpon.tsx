@@ -15,11 +15,16 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import type { Galpon } from '../data/galpones.repository';
-import { getGalponesRepository } from '../data/galpones.repository.factory';
+import { getGalponesRepositoryFor } from '../data/galpones.repository.scope';
 import { normalizeGalpon, validateGalpon } from '../data/galpones.validation';
 
-const EditarGalpon: React.FC = () => {
+interface EditarGalponProps {
+  mode?: 'demo' | 'trabajo';
+}
+
+const EditarGalpon: React.FC<EditarGalponProps> = ({ mode = 'demo' }) => {
   const navigate = useNavigate();
+  const basePath = mode === 'trabajo' ? '/trabajo/galpones' : '/galpones';
   const { id } = useParams<{ id: string }>();
   const [galpon, setGalpon] = useState<Galpon | null>(null);
   const [nombre, setNombre] = useState('');
@@ -45,7 +50,7 @@ const EditarGalpon: React.FC = () => {
     setSaveError(null);
     setNotFound(false);
     setGalpon(null);
-    const repo = getGalponesRepository();
+    const repo = getGalponesRepositoryFor(mode);
     repo
       .listGalpones()
       .then((galpones) => {
@@ -69,7 +74,7 @@ const EditarGalpon: React.FC = () => {
       .finally(() => {
         if (requestId === requestIdRef.current) setLoading(false);
       });
-  }, [id]);
+  }, [id, mode]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -94,14 +99,14 @@ const EditarGalpon: React.FC = () => {
     }
     const normalized = normalizeGalpon(input);
     if (normalized.nombre === galpon.nombre && normalized.ubicacion === galpon.ubicacion) {
-      navigate(`/galpones/${id}`);
+      navigate(`${basePath}/${id}`);
       return;
     }
     setSaving(true);
     setSaveError(null);
     try {
-      await getGalponesRepository().updateGalpon(id, normalized);
-      navigate(`/galpones/${id}`);
+      await getGalponesRepositoryFor(mode).updateGalpon(id, normalized);
+      navigate(`${basePath}/${id}`);
     } catch (e) {
       setSaveError(String(e));
     } finally {
@@ -130,7 +135,7 @@ const EditarGalpon: React.FC = () => {
         <IonHeader>
           <IonToolbar>
             <IonButtons slot="start">
-              <IonBackButton defaultHref={`/galpones/${id}`} text="Volver" />
+              <IonBackButton defaultHref={`${basePath}/${id}`} text="Volver" />
             </IonButtons>
             <IonTitle>Error</IonTitle>
           </IonToolbar>
@@ -148,7 +153,7 @@ const EditarGalpon: React.FC = () => {
         <IonHeader>
           <IonToolbar>
             <IonButtons slot="start">
-              <IonBackButton defaultHref="/galpones" text="Galpones" />
+              <IonBackButton defaultHref={basePath} text="Galpones" />
             </IonButtons>
             <IonTitle>Galpón no encontrado</IonTitle>
           </IonToolbar>
@@ -165,9 +170,9 @@ const EditarGalpon: React.FC = () => {
       <IonHeader>
         <IonToolbar>
           <IonButtons slot="start">
-            <IonBackButton defaultHref={`/galpones/${id}`} text="Cancelar" />
+            <IonBackButton defaultHref={`${basePath}/${id}`} text="Cancelar" />
           </IonButtons>
-          <IonTitle>Editar galpón</IonTitle>
+          <IonTitle>{mode === 'trabajo' ? 'Editar galpón · Trabajo' : 'Editar galpón'}</IonTitle>
         </IonToolbar>
       </IonHeader>
       <IonContent className="ion-padding">

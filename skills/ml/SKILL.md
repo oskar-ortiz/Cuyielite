@@ -21,7 +21,8 @@ Python 3.12, scikit-learn (`RandomForestClassifier` y `sklearn.metrics`), pandas
 - Las variables de entrada deben ser features derivadas del esquema de base de datos, nunca columnas raw sin procesar.
 
 ## Comandos
-- Por confirmar: definir comandos y rutas de ETL, entrenamiento y predicción; `ml/` aún no contiene módulos ejecutables.
+- ETL y pruebas: ver [ml/README.md](../../ml/README.md); el ETL local requiere fuentes autorizadas en `db/raw_Lope/`.
+- Entrenamiento: `python -m ml.model.train`, después de generar los CSV de características etiquetadas.
 
 ## Qué no tocar
 - No cambiar `backend/requirements.txt` sin coordinar con Oskar.
@@ -36,3 +37,4 @@ Python 3.12, scikit-learn (`RandomForestClassifier` y `sklearn.metrics`), pandas
 - [ ] Implementar la predicción con PredictionService; la ruta HTTP queda por confirmar.
 - [ ] Generar alerta automática para hembras en categoría DESCARTE (persistir en tabla ALERTAS).
 - [ ] Documentar umbrales de clasificación y acordar con experto zootécnico si las etiquetas derivan de reglas.
+- [x] Crear CI para ejecutar `ml/tests` sin Docker ni acceso a datos o modelos reales.
