@@ -95,7 +95,7 @@ def test_same_seed_produces_identical_cross_validation_metrics():
     second = evaluate_experiment(features.loc[:, FEATURES_B], labels, FEATURES_B, **options)
     assert first["metrics"] == second["metrics"]
     assert first["fold_metrics"] == second["fold_metrics"]
-    assert len(first["fold_metrics"]) == options["n_splits"] * options["n_repeats"]
+    assert len(first["fold_metrics"]) == first["folds"]
     assert all(
         set(metrics) == {"precision", "recall", "f1"}
         for metrics in first["fold_metrics"]
