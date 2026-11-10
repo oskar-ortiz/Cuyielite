@@ -71,13 +71,14 @@ def render_report(metadata: dict[str, Any]) -> str:
         "",
         _markdown_table(
             ["Filas", "ELITE", "NORMAL", "NO_APLICA excluidas", "REVISAR excluidas",
-             "Duplicados retirados", "Madre no identificada"],
+             "Conflictos duplicados excluidos", "Duplicados retirados"],
             [[
                 data["rows_used"],
                 data["class_counts"].get("ELITE", 0),
                 data["class_counts"].get("NORMAL", 0),
                 data["excluded_no_aplica"],
                 data["excluded_review"],
+                data.get("excluded_duplicate_conflict", 0),
                 data["duplicate_rows_removed"],
                 data["rows_excluded_missing_mother"],
             ]],

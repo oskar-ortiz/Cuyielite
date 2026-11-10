@@ -213,6 +213,10 @@ def test_reports_are_aggregate_only_and_csvs_preserve_empty_labels_for_review(
             ojos_texto="",
             animal_code="CHAPA-TEST-4",
         ),
+        candidate(
+            estado_calidad="CONFIRMADO|CONFLICTO_DUPLICADO",
+            animal_code="CHAPA-TEST-6",
+        ),
     ]
     reproductive_rows = [
         reproductive(
@@ -241,10 +245,21 @@ def test_reports_are_aggregate_only_and_csvs_preserve_empty_labels_for_review(
     assert report["por_etapa"]["candidata"]["clases"] == {
         "ELITE": 1,
         "NORMAL": 1,
-        "SIN_CLASE": 2,
+        "SIN_CLASE": 3,
     }
     assert report["por_etapa"]["candidata"]["estados"]["REVISAR"] == 1
     assert report["por_etapa"]["candidata"]["estados"]["NO_APLICA"] == 1
+    assert report["por_etapa"]["candidata"]["estados"]["CONFLICTO_DUPLICADO"] == 1
+    assert report["duplicados_en_conflicto"]["filas"] == 1
+    assert report["referencia_antes_de_excluir_conflictos"][
+        "elite_en_archivo_actual"
+    ] == 2
+    assert report["referencia_exploratoria_galpon_2"][
+        "elite_en_archivo_actual"
+    ] == 1
+    assert report["referencia_exploratoria_galpon_2"][
+        "hembras_candidatas_en_archivo_actual"
+    ] == 3
     assert report["hembras_por_partos"]["4+"] == 1
 
     with (data_dir / "features_crias_etiquetadas.csv").open(
@@ -253,4 +268,6 @@ def test_reports_are_aggregate_only_and_csvs_preserve_empty_labels_for_review(
         labeled_candidates = list(csv.DictReader(file))
     assert labeled_candidates[3]["etiqueta"] == ""
     assert "REVISAR" in labeled_candidates[3]["estado_calidad"]
+    assert labeled_candidates[4]["etiqueta"] == ""
+    assert "CONFLICTO_DUPLICADO" in labeled_candidates[4]["estado_calidad"]
     assert "CHAPA-TEST" not in labeled_candidates[0]["motivos"]

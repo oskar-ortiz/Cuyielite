@@ -107,20 +107,42 @@ def _female_candidate_reference(
     decisions: list[dict[str, Any]],
 ) -> dict[str, Any]:
     eligible = [
-        decision
+        (row, decision)
         for row, decision in zip(rows, decisions, strict=True)
         if str(row.get("sexo_texto", "")).strip().casefold() == "hembra"
         and str(row.get("destino_texto", "")).strip().casefold() != "muerte"
+        and "CONFLICTO_DUPLICADO" not in _tokens(
+            str(row.get("estado_calidad", ""))
+        )
     ]
-    elite_count = sum(decision["clase"] == "ELITE" for decision in eligible)
+    by_file: dict[str, dict[str, int]] = {}
+    for row, decision in eligible:
+        filename = str(row.get("provenance_archivo", "")).strip() or "SIN_FUENTE"
+        counts = by_file.setdefault(
+            filename, {"hembras_candidatas": 0, "elite": 0}
+        )
+        counts["hembras_candidatas"] += 1
+        counts["elite"] += decision["clase"] == "ELITE"
+
+    conflicting_candidates = sum(
+        str(row.get("sexo_texto", "")).strip().casefold() == "hembra"
+        and str(row.get("destino_texto", "")).strip().casefold() != "muerte"
+        and "CONFLICTO_DUPLICADO" in _tokens(
+            str(row.get("estado_calidad", ""))
+        )
+        for row in rows
+    )
+    elite_count = sum(counts["elite"] for counts in by_file.values())
     return {
         "elite_en_archivo_actual": elite_count,
         "hembras_candidatas_en_archivo_actual": len(eligible),
+        "conflictos_duplicados_excluidos": conflicting_candidates,
+        "por_archivo": dict(sorted(by_file.items())),
         "referencia_exploratoria_elite": REFERENCE_ELITE,
         "referencia_exploratoria_hembras": REFERENCE_FEMALE_CANDIDATES,
         "nota": (
-            "Comparación de agregados; el universo de este CSV puede diferir "
-            "de la cohorte exploratoria Galpón 2 (52 de 398)."
+            "La cohorte exploratoria Galpón 2 (52 de 398) no se reproduce "
+            "exactamente; se reportan los agregados actuales."
         ),
     }
 
@@ -136,6 +158,17 @@ def process_features(
 
     candidate_output, candidate_decisions = _classify_rows(
         candidate_rows, clasificar_candidata
+    )
+    candidate_rows_without_conflict = []
+    for row in candidate_rows:
+        without_conflict = dict(row)
+        tokens = _tokens(str(row.get("estado_calidad", "")))
+        if "CONFLICTO_DUPLICADO" in tokens:
+            tokens.remove("CONFLICTO_DUPLICADO")
+            without_conflict["estado_calidad"] = "|".join(sorted(tokens))
+        candidate_rows_without_conflict.append(without_conflict)
+    _, candidate_decisions_before_conflicts = _classify_rows(
+        candidate_rows_without_conflict, clasificar_candidata
     )
     reproductive_output, reproductive_decisions = _classify_rows(
         reproductive_rows, clasificar_reproductora
@@ -162,6 +195,16 @@ def process_features(
         "referencia_exploratoria_galpon_2": _female_candidate_reference(
             candidate_rows, candidate_decisions
         ),
+        "referencia_antes_de_excluir_conflictos": _female_candidate_reference(
+            candidate_rows_without_conflict, candidate_decisions_before_conflicts
+        ),
+        "duplicados_en_conflicto": {
+            "filas": sum(
+                "CONFLICTO_DUPLICADO"
+                in _tokens(str(row.get("estado_calidad", "")))
+                for row in candidate_rows
+            )
+        },
     }
     report_dir.mkdir(parents=True, exist_ok=True)
     with (report_dir / "clasificacion_agregada.json").open(

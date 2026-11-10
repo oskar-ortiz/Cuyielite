@@ -67,6 +67,8 @@ def test_dataset_filters_labels_and_deduplicates_usable_identifiers(tmp_path):
          "ID-SYNTHETIC", "source-b.xlsx"],
         ["1", "2", "120", "200", "1.6", "2", "NORMAL", "CONFIRMADO",
          "", "source-a.xlsx"],
+        ["2", "3", "140", "280", "2.0", "1", "ELITE",
+         "CONFIRMADO|CONFLICTO_DUPLICADO", "CONFLICT-TEST", "source-c.xlsx"],
         ["", "", "", "", "", "", "", "NO_APLICA", "", "source-a.xlsx"],
         ["", "", "", "", "", "", "", "REVISAR", "", "source-a.xlsx"],
     ]
@@ -81,8 +83,10 @@ def test_dataset_filters_labels_and_deduplicates_usable_identifiers(tmp_path):
     assert dataset.stats["cross_source_duplicate_ids"] == 1
     assert dataset.stats["excluded_no_aplica"] == 1
     assert dataset.stats["excluded_review"] == 1
+    assert dataset.stats["excluded_duplicate_conflict"] == 1
     assert dataset.stats["rows_without_usable_identity"] == 1
     assert "ID-SYNTHETIC" not in json.dumps(dataset.stats)
+    assert "CONFLICT-TEST" not in json.dumps(dataset.stats)
 
 
 def test_dataset_loads_mother_groups_from_workbook_provenance(tmp_path):

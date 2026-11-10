@@ -357,6 +357,13 @@ def transform_crias(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
             for value in (ojos_texto, sexo_texto, destino_texto)
         ):
             data_statuses.add(config.CONFIRMADO)
+        quality_status = _quality_status(
+            data_statuses=data_statuses,
+            has_missing=has_missing,
+            has_unknown_code=has_unknown,
+        )
+        if record.get("duplicate_conflict"):
+            quality_status = f"{quality_status}|CONFLICTO_DUPLICADO"
         features.append(
             {
                 "etapa": "candidata",
@@ -377,11 +384,7 @@ def transform_crias(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "identidad": (
                     "SIN_PLACA" if _code_key(destino_raw) == "SP" else None
                 ),
-                "estado_calidad": _quality_status(
-                    data_statuses=data_statuses,
-                    has_missing=has_missing,
-                    has_unknown_code=has_unknown,
-                ),
+                "estado_calidad": quality_status,
                 "provenance_archivo": record["source_file"],
                 "provenance_hoja": record["source_sheet"],
                 "provenance_fila": record["source_row"],

@@ -1,13 +1,18 @@
 from datetime import date
 import json
 from pathlib import Path
+from shutil import copyfile
 
 from openpyxl import Workbook
 import pandas as pd
 import pytest
 
 from ml.etl import config
-from ml.etl.extract import extract_individual_workbook, extract_reproductive_workbook
+from ml.etl.extract import (
+    extract_all,
+    extract_individual_workbook,
+    extract_reproductive_workbook,
+)
 from ml.etl.load import run_etl, summarize_weaning_days
 from ml.etl.transform import (
     build_aggregate_report,
@@ -74,6 +79,72 @@ def test_filler_rows_are_filtered_from_individual_register():
     assert stats["rows_rejected"]["filler_code"] == 1
     assert stats["rows_rejected"]["invalid_animal_code"] == 1
     assert all("animal_code" not in record for record in records)
+
+
+def test_cross_file_conflicts_are_marked_without_exporting_codes(tmp_path):
+    input_dir = tmp_path / "raw"
+    input_dir.mkdir()
+    copyfile(
+        FIXTURES / "REGISTRO REPRODUCTIVO SINTETICO.xlsx",
+        input_dir / "REGISTRO REPRODUCTIVO SINTETICO.xlsx",
+    )
+    headers = [
+        "ANIMAL No.",
+        "NUPAR",
+        "T.C.N.V",
+        "T.C.N.M",
+        "T.C.N.T",
+        "FECHA NACIMIENTO",
+        "FECHA DESTETE",
+        "PESO NACIMIENTO",
+        "PESO DESTETE",
+        "PESO 4 SEMANAS",
+        "OJOS",
+        "SEXO",
+        "DESTINO",
+    ]
+    for filename, nupar in (("REG IND A.xlsx", 2), ("REG IND B.xlsx", 3)):
+        workbook = Workbook()
+        worksheet = workbook.active
+        worksheet.append(headers)
+        worksheet.append(
+            [
+                "AN001",
+                nupar,
+                3,
+                0,
+                3,
+                date(2026, 1, 1),
+                date(2026, 1, 21),
+                140,
+                280,
+                350,
+                1,
+                2,
+                "R",
+            ]
+        )
+        workbook.save(input_dir / filename)
+
+    _, records, report = extract_all(input_dir)
+    features = transform_crias(records)
+
+    assert len(records) == 2
+    assert all(record["duplicate_conflict"] for record in records)
+    assert all(
+        "animal_code" not in record and "AN001" not in str(record)
+        for record in records
+    )
+    assert report["duplicate_conflicts"] == {
+        "identities": 1,
+        "rows": 2,
+        "rows_by_source_file": {
+            "REG IND A.xlsx": 1,
+            "REG IND B.xlsx": 1,
+        },
+    }
+    assert all("CONFLICTO_DUPLICADO" in feature["estado_calidad"] for feature in features)
+    assert "AN001" not in json.dumps(report)
 
 
 def test_reproductive_filter_and_new_features():
