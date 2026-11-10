@@ -21,7 +21,8 @@ PostgreSQL + pgvector, tabla `embeddings_sena` e índice HNSW con distancia cose
 - El corpus original de manuales SENA no se versiona; su ubicación local queda por confirmar. Los datos reales no se versionan; su uso es académico, con autorización del SENA. Al repositorio solo se suben código, scripts y reportes agregados.
 
 ## Comandos
-- Por confirmar: definir comandos y rutas de indexación, consulta y evaluación; `rag/` aún no contiene módulos ejecutables.
+- Indexación, consulta y evaluación: ver [rag/README.md](../../rag/README.md); indexar o consultar requiere los recursos locales y PostgreSQL configurados.
+- Pruebas sin base de datos: `python -m pytest rag/tests -m "not db" -q`.
 
 ## Qué no tocar
 - No añadir la extensión `vector` ni `embeddings_sena` a la base local del cliente SQLite.
@@ -35,4 +36,4 @@ PostgreSQL + pgvector, tabla `embeddings_sena` e índice HNSW con distancia cose
 - [ ] Por confirmar: definir la ubicación local del corpus de manuales SENA y asegurar que no se versionen los documentos originales.
 - [ ] Ejecutar pipeline de indexación y validar que `embeddings_sena` se populate en base central PostgreSQL.
 - [ ] Probar consulta RAG con 20 preguntas de evaluación del SENA y validar precisión de recuperación y citación de fuentes.
-- [ ] Crear workflow de CI para `rag/**` cuando existan scripts definidos.
+- [x] Crear workflow de CI para ejecutar `rag/tests` sin Docker, descarga de modelos ni datos reales; se excluyen las pruebas marcadas `db`.

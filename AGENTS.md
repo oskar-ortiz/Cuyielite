@@ -100,8 +100,6 @@ Fuente: `.github/workflows/`.
 
 ## TODO: completar
 
-- `ml/`: dataset, entrenamiento y evaluación del Random Forest frente al criterio experto; convenciones y contrato en [skills/ml/SKILL.md](skills/ml/SKILL.md).
-- `rag/`: indexación interna de manuales SENA y consulta con citación; modelo de embeddings y LLM pendientes. Convenciones en [skills/rag/SKILL.md](skills/rag/SKILL.md).
 - Convenciones internas de `backend/` (estructura Controllers/Services/Repositories).
 - Convenciones de `client/` una vez creado el proyecto Ionic.
 - `db/`: DDL PostgreSQL central/local, control delta y seeds solo sintéticos; convenciones en [skills/db/SKILL.md](skills/db/SKILL.md).
