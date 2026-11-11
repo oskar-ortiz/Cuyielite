@@ -376,7 +376,7 @@ publicar_cambios(conn, scope_id, registros)
 
 `conn` ya tiene una transacción activa, con autocommit deshabilitado. La función no abre otra conexión, no inicia una transacción independiente, no hace `commit`/`rollback` ni cierra la conexión. Propaga el error para que el orquestador revierta todo. No vuelve a escribir los campos de negocio ni decide identidades; actualiza metadatos de publicación y escribe historial/contador. El resultado devuelto es provisional hasta el COMMIT exterior.
 
-Estado de implementación en la rama `feat/d1-publicacion-dominio` (2026-11-10): primitiva implementada y verificada en laboratorio con 16 pruebas; migración `0004` provisional pendiente de coordinar con el CHECK de pesajes de Diery. **No tiene llamador operativo**: solo la invocan pruebas y un orquestador sintético. `pull_changes` no filtra entidades nuevas y la API v1 falla antes de entregar cursor; D2 debe resolver la descarga.
+Estado de implementación en la rama `feat/d1-publicacion-dominio` (2026-11-10): primitiva implementada y verificada en laboratorio con 16 pruebas. Diery confirmó `0004` para D1 y `0005_*` para su CHECK independiente de pesajes. **No tiene llamador operativo**: solo la invocan pruebas y un orquestador sintético. `pull_changes` no filtra entidades nuevas y la API v1 falla antes de entregar cursor; D2 debe resolver la descarga.
 
 El ámbito se autoriza en la entrada confiable del orquestador; no basta recibir un UUID en el JSON. La función exige un ámbito existente, comprueba la pertenencia de filas y referencias y no mueve registros entre ámbitos. La numeración de la migración de ámbito/versiones se coordina con el CHECK de pesajes de Diery.
 
