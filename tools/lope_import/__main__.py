@@ -99,6 +99,13 @@ def audit_file(path: str, report: AuditReport):
 
 
 def main(argv=None):
+    if argv is None:
+        argv = sys.argv[1:]
+    if argv and argv[0] == "promote":
+        from .promote import main as promote_main
+
+        return promote_main(argv[1:])
+
     parser = argparse.ArgumentParser(description="Auditoria de solo lectura de fuentes Excel")
     parser.add_argument("files", nargs="+", help="Rutas explicitas de archivos Excel")
     parser.add_argument("--output", "-o", required=True, help="Ruta absoluta de salida del reporte (fuera del repo)")
