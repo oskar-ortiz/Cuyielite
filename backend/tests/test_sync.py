@@ -53,12 +53,12 @@ def _ctx(client):
     return client.get("/sync/context").json()
 
 
-def test_pull_v1_no_filtra_entidad_nueva_y_api_falla_actualmente(client):
-    """Documenta el comportamiento real de v1 ante una entidad publicada en D1.
+def test_pull_entrega_entidad_de_dominio(client):
+    """D2: una entidad de dominio en la historia ya no rompe la respuesta HTTP.
 
-    El servicio no filtra: devuelve el ítem y avanzaría el cursor. La respuesta
-    Pydantic v1 rechaza la entidad y la API falla antes de entregar un cursor.
-    No se debe filtrar silenciosamente mientras no exista D2.
+    Antes de D2 el servicio devolvia el item y Pydantic lo rechazaba (500).
+    Ahora el esquema de respuesta acepta las cinco entidades y el item se entrega
+    con su secuencia, version y snapshot intactos.
     """
     import psycopg
     from fastapi.testclient import TestClient
@@ -102,7 +102,12 @@ def test_pull_v1_no_filtra_entidad_nueva_y_api_falla_actualmente(client):
         raise_server_exceptions=False,
     ) as raw_client:
         response = raw_client.get("/sync/pull")
-    assert response.status_code == 500
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert [item["entity"] for item in body["items"]] == ["cuyes"]
+    assert body["items"][0]["seq"] == "1"
+    assert body["items"][0]["record"]["version"] == "1"
+    assert body["items"][0]["record"]["data"]["codigo_identificacion"] == "C001"
 
 
 def test_context_rejects_missing_token(client):

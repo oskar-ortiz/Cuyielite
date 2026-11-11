@@ -6,6 +6,13 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
+# Entidades de dominio cuya descarga habilita D2. El push v1 sigue limitado a
+# galpon|poza: solo cambia la representacion de la respuesta de pull.
+DOMAIN_ENTITY_NAMES = ("cuyes", "partos", "pesajes", "eventos", "parto_crias")
+PULL_ENTITY_NAMES = ("galpon", "poza", *DOMAIN_ENTITY_NAMES)
+PULL_ENTITY_PATTERN = "^(" + "|".join(PULL_ENTITY_NAMES) + ")$"
+
+
 class SyncOperation(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -70,7 +77,7 @@ class SyncPullItem(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     seq: str = Field(pattern=r"^(0|[1-9][0-9]*)$")
-    entity: str = Field(pattern=r"^(galpon|poza)$")
+    entity: str = Field(pattern=PULL_ENTITY_PATTERN)
     record: SyncRecord
 
 

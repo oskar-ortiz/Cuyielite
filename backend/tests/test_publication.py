@@ -656,9 +656,9 @@ def test_escritores_concurrentes_ordenan_contador(db_url):
         conn.close()
 
 
-def test_v1_sigue_rechazando_entidades_nuevas():
+def test_push_v1_rechaza_entidades_nuevas_y_pull_las_acepta():
     from pydantic import ValidationError
-    from backend.app.schemas.sync import SyncPullItem, SyncOperation
+    from backend.app.schemas.sync import PULL_ENTITY_NAMES, SyncPullItem, SyncOperation
 
     payload = {
         "operation_id": uuid.uuid4(),
@@ -668,19 +668,23 @@ def test_v1_sigue_rechazando_entidades_nuevas():
         "client_created_at": "2026-11-10T10:00:00Z",
         "data": {},
     }
+    # El push v1 no admite entidades de dominio: su contrato no cambia en D2.
     with pytest.raises(ValidationError):
         SyncOperation(**payload)
-    with pytest.raises(ValidationError):
-        SyncPullItem(
-            seq="1",
-            entity="cuyes",
-            record={
-                "id": uuid.uuid4(),
-                "version": "1",
-                "created_at": "2026-11-10T10:00:00Z",
-                "updated_at": "2026-11-10T10:00:00Z",
-                "deleted_at": None,
-                "last_client_edited_at": None,
-                "data": {},
-            },
-        )
+
+    # La respuesta de pull si las representa desde D2.
+    assert {"cuyes", "partos", "pesajes", "eventos", "parto_crias"} <= set(PULL_ENTITY_NAMES)
+    item = SyncPullItem(
+        seq="1",
+        entity="cuyes",
+        record={
+            "id": uuid.uuid4(),
+            "version": "1",
+            "created_at": "2026-11-10T10:00:00Z",
+            "updated_at": "2026-11-10T10:00:00Z",
+            "deleted_at": None,
+            "last_client_edited_at": None,
+            "data": {},
+        },
+    )
+    assert item.entity == "cuyes"
