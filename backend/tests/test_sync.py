@@ -53,6 +53,58 @@ def _ctx(client):
     return client.get("/sync/context").json()
 
 
+def test_pull_v1_no_filtra_entidad_nueva_y_api_falla_actualmente(client):
+    """Documenta el comportamiento real de v1 ante una entidad publicada en D1.
+
+    El servicio no filtra: devuelve el ítem y avanzaría el cursor. La respuesta
+    Pydantic v1 rechaza la entidad y la API falla antes de entregar un cursor.
+    No se debe filtrar silenciosamente mientras no exista D2.
+    """
+    import psycopg
+    from fastapi.testclient import TestClient
+
+    from backend.app.main import app
+    from backend.app.services.sync import pull_changes
+
+    context = client.get("/sync/context").json()
+    scope_id = uuid.UUID(context["scope_id"])
+    record_id = uuid.uuid4()
+    snapshot = {
+        "id": str(record_id),
+        "version": "1",
+        "created_at": "2026-11-10T10:00:00Z",
+        "updated_at": "2026-11-10T10:00:00Z",
+        "deleted_at": None,
+        "last_client_edited_at": None,
+        "data": {"codigo_identificacion": "C001"},
+    }
+    with psycopg.connect(os.environ["TEST_DATABASE_URL"]) as conn:
+        sequence = conn.execute(
+            "UPDATE sync_scopes SET last_sequence = last_sequence + 1 "
+            "WHERE id = %s RETURNING last_sequence",
+            (scope_id,),
+        ).fetchone()[0]
+        conn.execute(
+            "INSERT INTO sync_changes "
+            "(scope_id, sequence, entity, record_id, record_version, snapshot) "
+            "VALUES (%s, %s, 'cuyes', %s, 1, %s)",
+            (scope_id, sequence, record_id, json.dumps(snapshot)),
+        )
+
+    token = client.headers.get("Authorization", "").removeprefix("Bearer ")
+    result = pull_changes(token, None, 50)
+    assert [item["entity"] for item in result["items"]] == ["cuyes"]
+    assert result["next_cursor"]
+
+    with TestClient(
+        app,
+        headers={"Authorization": f"Bearer {token}"},
+        raise_server_exceptions=False,
+    ) as raw_client:
+        response = raw_client.get("/sync/pull")
+    assert response.status_code == 500
+
+
 def test_context_rejects_missing_token(client):
     response = client.get("/sync/context", headers={"Authorization": ""})
     assert response.status_code == 401
