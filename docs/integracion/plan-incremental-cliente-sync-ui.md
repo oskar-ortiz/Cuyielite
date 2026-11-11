@@ -205,7 +205,7 @@ El orden anterior corrige el error de aplicar pesajes antes de eventos. El servi
 
 ### Problema de las referencias entre páginas
 
-Abortar y reintentar la misma página indefinidamente no funciona si la FK llega en una página posterior. Se propone un **staging local durable** (no existe hoy):
+Abortar y reintentar la misma página indefinidamente no funciona si la FK llega en una página posterior. Se propone un **staging local durable** (implementado en D3 como `sync_inbox`):
 
 | Tabla propuesta | Columnas | Uso |
 | --- | --- | --- |
@@ -321,7 +321,7 @@ Estados obligatorios: carga, vacío, error, datos incompletos, sin conexión, si
 | D1. Publicación de plataforma | Migración coordinada de ámbito/versiones; `publicar_cambios(conn, scope_id, registros)` sin commit propio, con estado anterior y versión esperada. Orquestador sintético solo en pruebas. | D0 y numeración coordinada con Diery | Atomicidad exterior, rollback, no-op, concurrencia, versiones y v1 protegido; §10.1. |
 | D1B. Integración del orquestador ETL | Diery implementa/conecta su promoción; Oskar aporta adaptador. Envelope `lope_promocion/v1`, lote/origen e idempotencia durable. | D1 y contrato de llamada congelado | Un lote sintético confirma/revierte completo; reintento no publica dos veces. La promoción real espera transporte compatible. |
 | D2. Sync v2 backend | Ampliar schemas/controllers/services y validaciones a nuevas entidades | D1 | Push/pull de animales, partos, pesajes, eventos y vínculo; dos dispositivos; conflictos y cursor. **Parcial: D2 entrega solo la descarga (pull) de dominio, verificada con prueba integrada D1→D2; el push v2 sigue pendiente.** |
-| D3. SQLite v4 y aplicación local | Migración v3→v4, outbox/record_state ampliados, `sync_inbox` y aplicación transaccional | D2 | Base existente conservada; outbox/conflictos/cursor/staging intactos; referencia en página posterior no bloquea. |
+| D3. SQLite v4 y aplicación local | Migración v3→v4, outbox/record_state ampliados, `sync_inbox` y aplicación transaccional | D2 | Base existente conservada; outbox/conflictos/cursor/staging intactos; referencia en página posterior no bloquea. **Implementado y verificado en pruebas, builds y ejecución nativa Windows/Electron y Android; falta la UI D4.** |
 | D4. Cliente de dominio y UI | Repositorios, formularios y fichas de animal/parto/pesaje/evento | D3 | Crear/editar offline, outbox, no-op, dependencias, reapertura y demo aislada. |
 | D5a. Contratos/adaptadores ML/RAG | Schemas, validaciones, envelope de errores y adaptadores con datos sintéticos; sin acceso a animales reales | D0 | Contratos de `contrato-servicios-ml-rag.md`; pruebas unitarias; sin defaults inventados. |
 | D5b. Endpoints ML/RAG integrados | Rutas con ámbito/acceso; persistencia solo con política e idempotencia resueltas | D1, D5a y publicación compatible cuando haya escrituras | Validación real del animal, reglas/RF separados, RAG de dos campos, errores y pruebas de integración. |
@@ -364,12 +364,14 @@ La idempotencia completa de la herramienta de Diery se demuestra conjuntamente e
 
 **Estado D2 (2026-11-10, rama `feat/d2-pull-dominio`):** resuelto el límite anterior. `SyncPullItem.entity` acepta `galpon`, `poza`, `cuyes`, `partos`, `pesajes`, `eventos` y `parto_crias`; `GET /sync/pull` entrega los snapshots publicados por D1 con su `seq` y `record.version`, sin transformarlos. El ámbito sigue derivándose del Bearer token y el cursor firmado solo avanza sobre lo entregado. El push v1 no cambia y la aplicación en SQLite sigue en D3. La frontera de plataforma se verifica con una promoción sintética en `backend/tests/test_integracion_d1_d2.py` (base temporal propia, rollback y rechazo de push de dominio); el orquestador real de Diery no está en este checkout. Evidencia, contrato de llamada y límites en [d2-pull-dominio](../verificaciones/d2-pull-dominio.md).
 
+**Estado D3 (2026-11-11, rama `feat/sync-d3-sqlite-apply`):** migración v3→v4 conservadora con `previous_sync_checksum`, recreación de `sync_record_state`/`sync_outbox` con CHECK ampliado y `sync_inbox` durable. La aplicación local ordena por dependencia, mantiene staging y cursor en la misma transacción, es idempotente al repetir página, conserva outbox/conflicto local y revierte todo ante fallo. El validador acepta timestamps con `Z` u offset (snapshots reales de D1/D2 usan `+00:00`). Verificado con 173 pruebas unitarias, lint, build web/Electron, builds nativos (APK debug y paquete NSIS) y ejecución nativa con datos sintéticos en Electron y en emulador Android: 25 comprobaciones de datos en ambos entornos. Evidencia y límites en [d3-sqlite-apply](../verificaciones/d3-sqlite-apply.md). La UI y los formularios de dominio siguen en D4.
+
 ## 11. Riesgos y decisiones abiertas
 
 1. Congelar la forma interna before/after/versión esperada y el backfill de históricos sin ámbito; la propiedad del orquestador ya la definió Diery.
 2. Numeración central coordinada: D1 `0004`; CHECK de pesajes de Diery `0005_*`. El `4` local sigue siendo una propuesta, no una reserva.
 3. Protocolo v2/capacidades y resincronización de clientes antiguos sin omitir cambios por cursor filtrado.
-4. DDL de inbox, retención/versiones y tratamiento de dependencias incompletas; fin de ventana no equivale a ausencia definitiva.
+4. Retención/versiones y compactación de `sync_inbox`, y tratamiento de dependencias incompletas; fin de ventana no equivale a ausencia definitiva. El DDL v4 ya existe; queda la política de retención y la UI de diagnóstico (D4).
 5. Envelope ETL e idempotencia durable del lote/origen en D1B.
 6. Persistencia de categoria_ml incompleta, alerta/código/deduplicación y contrato de lectura/sync de alertas.
 7. Inputs/procedencia y errores HTTP ML; datos de modelo inválidos no son errores 4xx del usuario.
