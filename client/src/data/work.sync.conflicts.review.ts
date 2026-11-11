@@ -114,7 +114,7 @@ export async function listConflictCases(db: MigrationDb): Promise<ConflictCase[]
         `SELECT o.entity,o.record_id,o.operation_id,s.local_head_operation_id,s.server_version
        FROM sync_outbox o JOIN sync_record_state s
          ON s.entity=o.entity AND s.record_id=o.record_id
-      WHERE o.state='conflict' ORDER BY o.local_seq`,
+      WHERE o.state='conflict' AND o.entity IN ('galpon','poza') ORDER BY o.local_seq`,
       )
     ).values ?? [];
   const cases: ConflictCase[] = [];
