@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import { migrateAndSeed } from './galpones.migration.js';
 import { initializeWorkSyncDatabase } from './work.sync.migration.js';
 import { createWorkGalpon, createWorkPoza, updateWorkGalpon, updateWorkPoza } from './work.outbox.js';
+import * as domainRepo from './work.domain.repository.js';
 import { normalizeGalpon, normalizePoza, validateGalpon, validatePoza } from './galpones.validation.js';
 
 // Base de prueba del paso 1 (poc.db) — no se modifica aquí.
@@ -46,7 +47,7 @@ function makeAdapter(db) {
 class SqlitePoc {
   static __capacitorElectronPlugin = {
     name: 'SqlitePoc',
-    methods: ['saveValue', 'readValue', 'initializeDatabase', 'listGalpones', 'listPozasByGalpon', 'createGalpon', 'createPoza', 'updateGalpon', 'updatePoza', 'initializeWorkDatabase', 'getWorkDatabaseStatus', 'closeWorkDatabase', 'listWorkGalpones', 'listWorkPozasByGalpon', 'createWorkGalpon', 'createWorkPoza', 'updateWorkGalpon', 'updateWorkPoza'],
+    methods: ['saveValue', 'readValue', 'initializeDatabase', 'listGalpones', 'listPozasByGalpon', 'createGalpon', 'createPoza', 'updateGalpon', 'updatePoza', 'initializeWorkDatabase', 'getWorkDatabaseStatus', 'closeWorkDatabase', 'listWorkGalpones', 'listWorkPozasByGalpon', 'createWorkGalpon', 'createWorkPoza', 'updateWorkGalpon', 'updateWorkPoza', 'listDomainCuyesByPoza', 'listDomainPozas', 'listDomainConflicts', 'listDomainCuyes', 'getDomainCuyo', 'listDomainPartos', 'listDomainPesajes', 'listDomainEventos', 'listDomainCrias', 'getDomainParto', 'getDomainPesaje', 'getDomainEvento', 'createDomainCuyo', 'updateDomainCuyo', 'createDomainParto', 'updateDomainParto', 'createDomainPesaje', 'updateDomainPesaje', 'createDomainEvento', 'updateDomainEvento'],
   };
 
   async load() {}
@@ -299,6 +300,186 @@ class SqlitePoc {
     const db = openDb(WORK_DB_PATH);
     try {
       return await updateWorkPoza(makeAdapter(db), galponId, id, { codigo, tipo, capacidadMaxima });
+    } finally {
+      db.close();
+    }
+  }
+
+  async listDomainCuyesByPoza({ pozaId }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return { cuyes: await domainRepo.listCuyesByPoza(makeAdapter(db), pozaId) };
+    } finally {
+      db.close();
+    }
+  }
+
+  async listDomainPozas() {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return { pozas: await domainRepo.listPozas(makeAdapter(db)) };
+    } finally {
+      db.close();
+    }
+  }
+
+  async listDomainConflicts() {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return { conflicts: await domainRepo.listConflictKeys(makeAdapter(db)) };
+    } finally {
+      db.close();
+    }
+  }
+
+  async listDomainCuyes() {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return { cuyes: await domainRepo.listAllCuyes(makeAdapter(db)) };
+    } finally {
+      db.close();
+    }
+  }
+
+  async getDomainCuyo({ id }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return { cuyo: await domainRepo.getCuyo(makeAdapter(db), id) };
+    } finally {
+      db.close();
+    }
+  }
+
+  async listDomainPartos({ cuyId }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return { partos: await domainRepo.listPartosByCuyo(makeAdapter(db), cuyId) };
+    } finally {
+      db.close();
+    }
+  }
+
+  async listDomainPesajes({ cuyId }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return { pesajes: await domainRepo.listPesajesByCuyo(makeAdapter(db), cuyId) };
+    } finally {
+      db.close();
+    }
+  }
+
+  async listDomainEventos({ cuyId }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return { eventos: await domainRepo.listEventosByCuyo(makeAdapter(db), cuyId) };
+    } finally {
+      db.close();
+    }
+  }
+
+  async listDomainCrias({ partoId }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return { cuyes: await domainRepo.listCriasByParto(makeAdapter(db), partoId) };
+    } finally {
+      db.close();
+    }
+  }
+
+  async getDomainParto({ id }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return { parto: await domainRepo.getParto(makeAdapter(db), id) };
+    } finally {
+      db.close();
+    }
+  }
+
+  async getDomainPesaje({ id }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return { pesaje: await domainRepo.getPesaje(makeAdapter(db), id) };
+    } finally {
+      db.close();
+    }
+  }
+
+  async getDomainEvento({ id }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return { evento: await domainRepo.getEvento(makeAdapter(db), id) };
+    } finally {
+      db.close();
+    }
+  }
+
+  async createDomainCuyo({ input }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return await domainRepo.createCuyo(makeAdapter(db), input);
+    } finally {
+      db.close();
+    }
+  }
+
+  async updateDomainCuyo({ id, input }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return await domainRepo.updateCuyo(makeAdapter(db), id, input);
+    } finally {
+      db.close();
+    }
+  }
+
+  async createDomainParto({ input }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return await domainRepo.createParto(makeAdapter(db), input);
+    } finally {
+      db.close();
+    }
+  }
+
+  async updateDomainParto({ id, input }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return await domainRepo.updateParto(makeAdapter(db), id, input);
+    } finally {
+      db.close();
+    }
+  }
+
+  async createDomainPesaje({ input }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return await domainRepo.createPesaje(makeAdapter(db), input);
+    } finally {
+      db.close();
+    }
+  }
+
+  async updateDomainPesaje({ id, input }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return await domainRepo.updatePesaje(makeAdapter(db), id, input);
+    } finally {
+      db.close();
+    }
+  }
+
+  async createDomainEvento({ input }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return await domainRepo.createEvento(makeAdapter(db), input);
+    } finally {
+      db.close();
+    }
+  }
+
+  async updateDomainEvento({ id, input }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return await domainRepo.updateEvento(makeAdapter(db), id, input);
     } finally {
       db.close();
     }
