@@ -174,6 +174,11 @@ const GalponDetalle: React.FC<GalponDetalleProps> = ({ mode = 'demo' }) => {
                 <IonButton slot="end" routerLink={`${basePath}/${id}/pozas/${poza.id}/editar`}>
                   Editar
                 </IonButton>
+                {workMode && (
+                  <IonButton slot="end" fill="outline" routerLink={`${basePath}/${id}/pozas/${poza.id}/animales`}>
+                    Animales
+                  </IonButton>
+                )}
               </IonItem>
             ))}
           </IonList>
