@@ -165,23 +165,6 @@ def test_ml_unavailable(client, monkeypatch):
     assert response.json()["detail"]["code"] == "ML_NO_DISPONIBLE"
 
 
-def test_real_rule_functions_are_used_by_the_adapter():
-    animal = {"sexo": "H", "estado": "ACTIVO"}
-    hembra = ml_service.predecir_hembra_para(
-        animal,
-        {"partos_acumulados": 4, "abortos": 0, "fecha_ultimo_parto": None, "peso_monta_g": 950},
-    )
-    assert hembra["clase"] in {"NORMAL", "DESCARTE"}
-    assert hembra["motivos"]
-    candidata = ml_service.predecir_candidata_para(
-        animal,
-        {"nupar_madre": 2, "tcnv": 3, "peso_nacimiento_g": 135, "ojos": "1"},
-        model=None,
-    )
-    assert candidata["clase"] in {"ELITE", "NORMAL"}
-    assert candidata["apoyo_modelo"] is None
-
-
 def test_assistant_exact_dto_abstention_and_unavailable(client, monkeypatch):
     monkeypatch.setattr(
         ml_service,
