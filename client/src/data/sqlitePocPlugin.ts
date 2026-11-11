@@ -1,5 +1,16 @@
 import { registerPlugin } from '@capacitor/core';
 
+import type {
+  Cuyo,
+  CuyoInput,
+  Evento,
+  EventoInput,
+  Parto,
+  PartoInput,
+  Pesaje,
+  PesajeInput,
+} from './work.domain.validation';
+
 export interface SqlitePocPlugin {
   saveValue(options: { value: string }): Promise<{ ok: boolean }>;
   readValue(): Promise<{ value: string | null }>;
@@ -48,6 +59,26 @@ export interface SqlitePocPlugin {
     tipo: string;
     capacidadMaxima: number;
   }): Promise<LocalWriteResult>;
+  listDomainCuyesByPoza(options: { pozaId: string }): Promise<{ cuyes: Cuyo[] }>;
+  listDomainPozas(): Promise<{ pozas: { id: string; galponId: string; codigo: string; tipo: string }[] }>;
+  listDomainConflicts(): Promise<{ conflicts: { entity: string; recordId: string }[] }>;
+  listDomainCuyes(): Promise<{ cuyes: Cuyo[] }>;
+  getDomainCuyo(options: { id: string }): Promise<{ cuyo: Cuyo | null }>;
+  listDomainPartos(options: { cuyId: string }): Promise<{ partos: Parto[] }>;
+  listDomainPesajes(options: { cuyId: string }): Promise<{ pesajes: Pesaje[] }>;
+  listDomainEventos(options: { cuyId: string }): Promise<{ eventos: Evento[] }>;
+  listDomainCrias(options: { partoId: string }): Promise<{ cuyes: Cuyo[] }>;
+  getDomainParto(options: { id: string }): Promise<{ parto: Parto | null }>;
+  getDomainPesaje(options: { id: string }): Promise<{ pesaje: Pesaje | null }>;
+  getDomainEvento(options: { id: string }): Promise<{ evento: Evento | null }>;
+  createDomainCuyo(options: { input: CuyoInput }): Promise<LocalWriteResult>;
+  updateDomainCuyo(options: { id: string; input: CuyoInput }): Promise<LocalWriteResult>;
+  createDomainParto(options: { input: PartoInput }): Promise<LocalWriteResult>;
+  updateDomainParto(options: { id: string; input: PartoInput }): Promise<LocalWriteResult>;
+  createDomainPesaje(options: { input: PesajeInput }): Promise<LocalWriteResult>;
+  updateDomainPesaje(options: { id: string; input: PesajeInput }): Promise<LocalWriteResult>;
+  createDomainEvento(options: { input: EventoInput }): Promise<LocalWriteResult>;
+  updateDomainEvento(options: { id: string; input: EventoInput }): Promise<LocalWriteResult>;
 }
 
 export interface LocalWriteResult {
