@@ -81,6 +81,7 @@ const Animales: React.FC<AnimalesProps> = () => {
           </IonButtons>
           <IonTitle>Animales</IonTitle>
           <IonButtons slot="end">
+            <IonButton routerLink="/trabajo/asistente">Asistente</IonButton>
             <IonButton routerLink={`${base}/${galponId}/pozas/${pozaId}/animales/nuevo`}>Nuevo animal</IonButton>
           </IonButtons>
         </IonToolbar>
