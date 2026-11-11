@@ -90,6 +90,8 @@ def test_assistant_failures_are_not_user_validation():
 
 
 def test_real_rule_functions_are_used_by_the_adapter():
+    pytest.importorskip("numpy")
+    pytest.importorskip("pandas")
     animal = {"sexo": "H", "estado": "ACTIVO"}
     hembra = ml_service.predecir_hembra_para(
         animal,
