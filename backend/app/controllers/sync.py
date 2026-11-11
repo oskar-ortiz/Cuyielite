@@ -96,6 +96,10 @@ def pull(
         raise
     except InvalidSyncCursor:
         raise HTTPException(status_code=400, detail="CURSOR_INVALID") from None
+    except service.UnsupportedPullEntity:
+        # Dato de historial irrecuperable para este protocolo: no se entrega una
+        # pagina parcial ni se adelanta el cursor.
+        raise HTTPException(status_code=500, detail="HISTORIAL_NO_SOPORTADO") from None
     except Exception:
         raise HTTPException(status_code=503, detail="Servicio no disponible") from None
     return SyncPullResponse(**response)

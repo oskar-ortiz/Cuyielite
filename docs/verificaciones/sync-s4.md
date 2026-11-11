@@ -60,4 +60,5 @@ Una recarga directa del WebView en `/trabajo/conflictos` reveló `CreateConnecti
 - La app demo continuó mostrando sus cuatro galpones en Android; la base de trabajo conservó el galpón y las 51 pozas sintéticas.
 - El harness Android se usó solo en el APK del laboratorio. `main.tsx` y los assets normales se restauraron; no hay ruta ni código de harness en Git.
 - La verificación se limita a galpones y pozas del protocolo de laboratorio, con backend en loopback. Autenticación de producción, otros tipos de entidad, datos reales, despliegue y S5 quedan fuera de esta entrega.
+- Posteriormente, D2 ([d2-pull-dominio](d2-pull-dominio.md)) amplió la descarga del backend a `cuyes`, `partos`, `pesajes`, `eventos` y `parto_crias`. Esta nota conserva lo verificado en S4; no reescribe ese recorrido nativo.
 - Los tokens de laboratorio, perfiles, AVD, base central y procesos temporales se eliminan al cerrar el recorrido; no forman parte de los commits.

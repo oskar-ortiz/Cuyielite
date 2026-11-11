@@ -117,7 +117,7 @@ python -m pytest backend tools/db_migrate/tests -q
 Resultado real de la corrida final sobre la rama:
 
 - `backend/tests/test_publication.py`: **16 passed**.
-- `backend/tests/test_sync.py::test_pull_v1_no_filtra_entidad_nueva_y_api_falla_actualmente`: prueba específica del comportamiento v1.
+- `backend/tests/test_sync.py::test_pull_entrega_entidad_de_dominio`: prueba específica del comportamiento v1 en D1, ampliada en D2.
 - Suite completa `backend` + `tools/db_migrate/tests`: **102 passed** (82 backend + 20 migraciones).
 - Migración `0004` aplicada correctamente sobre bootstrap + `0001`–`0003`.
 - Base temporal y contenedor eliminados al terminar; no se usaron bases existentes ni datos reales.
@@ -134,27 +134,23 @@ Resultado real de la corrida final sobre la rama:
 8. La función no confirma ni cierra; el llamador puede hacer rollback y luego commit.
 9. Dos escritores concurrentes con bloqueo de ámbito: secuencias 1 y 2, sin duplicados.
 10. Histórico sin ámbito permanece sin publicar.
-11. Las cinco entidades D1 publican; sync v1 sigue rechazando entidades nuevas.
+11. Las cinco entidades D1 publican; el push v1 sigue rechazando entidades nuevas.
 12. Pesaje con dos vínculos rechazado.
 13. Pesaje con parto/evento de otro animal y madre vinculada como cría rechazados.
 14. UUID, fecha y decimal aportados como strings se normalizan.
-15. Pull v1 no filtra la entidad nueva; la API falla antes de entregar cursor.
+15. Pull v1 no filtraba la entidad nueva; D2 amplió la respuesta y hoy la entrega (ver [d2-pull-dominio](d2-pull-dominio.md)).
 
-## Comportamiento actual de pull v1
+## Pull v1 ante entidades de dominio (histórico D1, resuelto en D2)
 
-`pull_changes` **no filtra** entidades desconocidas. Si `sync_changes` contiene una fila con `entity='cuyes'`, el servicio la devuelve en `items` y calcula un `next_cursor`; no avanza el cursor por filtrado.
+En D1 se comprobó que `pull_changes` **no filtra** entidades desconocidas: si `sync_changes` contenía una fila con `entity='cuyes'`, el servicio devolvía el ítem y calculaba un `next_cursor`. La API fallaba con `500` antes de entregar cursor porque `SyncPullItem.entity` aceptaba solo `galpon|poza`.
 
-La API v1 no puede representar esa página: `SyncPullItem.entity` acepta solo `galpon|poza`. La prueba `test_pull_v1_no_filtra_entidad_nueva_y_api_falla_actualmente` demuestra que:
+No se implementó un filtro de entidades en `pull_changes`: filtrar y avanzar el cursor habría perdido cambios para la descarga futura. **La publicación de dominio no tenía llamador operativo en D1**; solo la invocaban pruebas y un orquestador sintético.
 
-- la llamada directa a `pull_changes` devuelve el ítem `cuyes` y un cursor;
-- la API `/sync/pull` responde `500` antes de entregar cursor;
-- por tanto, publicar dominio nuevo sin D2 deja a los clientes v1 sin descarga válida.
-
-No se implementó un filtro de entidades en `pull_changes`: filtrar y avanzar el cursor perdería cambios para una futura descarga. La entrega D2 debe resolver la negociación/descarga de entidades nuevas. **La publicación de dominio no tiene llamador operativo hasta D2**; D1 solo se invoca en pruebas y desde un orquestador sintético.
+D2 resolvió la descarga: el esquema de respuesta acepta `galpon`, `poza`, `cuyes`, `partos`, `pesajes`, `eventos` y `parto_crias`, y `GET /sync/pull` entrega esas entidades sin transformar snapshots. La prueba se conserva como `test_pull_entrega_entidad_de_dominio`. Evidencia en [d2-pull-dominio](d2-pull-dominio.md).
 
 ## Pendientes reales
 
 - Incorporar y verificar la migración independiente `0005_*` del CHECK de pesajes cuando Diery la publique. No forma parte de D1.
 - No se implementó backfill de históricos; requiere procedimiento revisado y separado.
-- No se implementó sync v2, endpoints, UI ni D1B.
+- D2 habilitó la descarga de dominio; el push v2, la aplicación en SQLite y la UI siguen pendientes.
 - No se abrió PR ni se hizo commit/push en esta fase.

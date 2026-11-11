@@ -8,13 +8,17 @@ from fastapi import HTTPException
 
 from backend.app.database import get_connection
 from backend.app.repositories import sync as repo
-from backend.app.schemas.sync import SyncOperationResult
+from backend.app.schemas.sync import PULL_ENTITY_NAMES, SyncOperationResult
 from backend.app.sync_cursor import (
     InvalidSyncCursor,
     cursor_key,
     decode_cursor,
     encode_cursor,
 )
+
+
+class UnsupportedPullEntity(RuntimeError):
+    """El historial contiene una entidad que este protocolo de pull no representa."""
 
 
 def authenticate(token: str) -> dict | None:
@@ -320,6 +324,11 @@ def pull_changes(token: str, cursor: str | None, limit: int) -> dict:
     page = rows[:limit]
     items = []
     for row in page:
+        entity = row["entity"]
+        if entity not in PULL_ENTITY_NAMES:
+            # Falla determinista: nunca se omite ni se avanza el cursor sobre un
+            # cambio que esta version del protocolo no puede entregar.
+            raise UnsupportedPullEntity(f"entidad no soportada en pull: {entity}")
         snapshot = row["snapshot"]
         if not isinstance(snapshot, dict):
             raise RuntimeError("Snapshot histórico inválido")
@@ -345,7 +354,7 @@ def pull_changes(token: str, cursor: str | None, limit: int) -> dict:
             raise RuntimeError("Snapshot histórico no coincide con su secuencia")
         items.append({
             "seq": str(row["sequence"]),
-            "entity": row["entity"],
+            "entity": entity,
             "record": record,
         })
 
