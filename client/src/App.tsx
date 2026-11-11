@@ -4,6 +4,7 @@ import { Route } from 'react-router-dom';
 
 import AnimalDetalle from './pages/AnimalDetalle';
 import Animales from './pages/Animales';
+import AsistenteTrabajo from './pages/AsistenteTrabajo';
 import ConflictosTrabajo from './pages/ConflictosTrabajo';
 import CrearGalpon from './pages/CrearGalpon';
 import CrearPoza from './pages/CrearPoza';
@@ -16,6 +17,7 @@ import FormularioPesaje from './pages/FormularioPesaje';
 import GalponDetalle from './pages/GalponDetalle';
 import Galpones from './pages/Galpones';
 import ModoInicio from './pages/ModoInicio';
+import PrediccionesAnimal from './pages/PrediccionesAnimal';
 import SincronizacionTrabajo from './pages/SincronizacionTrabajo';
 import SqlitePoc from './pages/SqlitePoc';
 
@@ -71,6 +73,8 @@ const App: React.FC = () => (
         <Route path="/trabajo/animales/:animalId/pesajes/:pesajeId/editar" element={<FormularioPesaje />} />
         <Route path="/trabajo/animales/:animalId/eventos/nuevo" element={<FormularioEvento />} />
         <Route path="/trabajo/animales/:animalId/eventos/:eventoId/editar" element={<FormularioEvento />} />
+        <Route path="/trabajo/animales/:animalId/predicciones" element={<PrediccionesAnimal />} />
+        <Route path="/trabajo/asistente" element={<AsistenteTrabajo />} />
         <Route path="/galpones/nuevo" element={<CrearGalpon />} />
         <Route path="/galpones/:id" element={<GalponDetalle />} />
         <Route path="/trabajo/galpones/:id" element={<GalponDetalle mode="trabajo" />} />

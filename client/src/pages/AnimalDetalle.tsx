@@ -95,6 +95,7 @@ const AnimalDetalle: React.FC = () => {
           <IonTitle>{cuyo?.codigoIdentificacion ?? 'Animal'}</IonTitle>
           {cuyo && (
             <IonButtons slot="end">
+              <IonButton routerLink={`/trabajo/animales/${animalId}/predicciones`}>Predicciones</IonButton>
               <IonButton routerLink={`/trabajo/animales/${animalId}/editar`}>Editar</IonButton>
             </IonButtons>
           )}

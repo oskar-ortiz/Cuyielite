@@ -41,6 +41,9 @@ interface SyncLabPlugin {
   listConflicts(): Promise<{ cases: ConflictCase[] }>;
   keepCentral(options: { review: ConflictReview }): Promise<ConflictResolutionResult>;
   retryConflict(options: { review: ConflictReview; input: Record<string, unknown> }): Promise<ConflictResolutionResult>;
+  predictHembra(options: { token: string; body: unknown }): Promise<unknown>;
+  predictCandidata(options: { token: string; body: unknown }): Promise<unknown>;
+  assistantQuery(options: { token: string; body: unknown }): Promise<unknown>;
 }
 
 // Plugin Electron registrado en el manifest de Capawesome. El proceso principal
