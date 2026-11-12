@@ -47,7 +47,7 @@ Limpieza: contenedor PostgreSQL, backend, perfiles temporales, scripts y token s
 
 ## Límites vigentes
 
-1. Push v2 de dominio (`cuyes`, `partos`, `pesajes`, `eventos`, `parto_crias`): backend implementado y verificado el 2026-11-12 ([evidencia](sync-domain-push-v2-backend.md)); el cliente v2 y la verificación nativa del push siguen pendientes. La sincronización nativa recorrida en D7 fue solo descarga + escritura local.
+1. Push v2 de dominio (`cuyes`, `partos`, `pesajes`, `eventos`, `parto_crias`): backend implementado y verificado el 2026-11-12 ([evidencia](sync-domain-push-v2-backend.md)); el cliente v2 se integró en una entrega posterior ([evidencia](sync-domain-push-v2-cliente.md)). El recorrido nativo del push y el recorrido nativo D7 siguen pendientes. La sincronización nativa recorrida en D7 fue solo descarga + escritura local.
 2. Persistencia de `categoria_ml` y alertas: pendiente de política de calidad, idempotencia, deduplicación y código/identidad de episodio.
 3. Recorrido nativo integral Windows/Android y reapertura real: pendiente por memoria/entorno.
 4. RAG real y artefacto RF real: dependencias/corpus no disponibles.

@@ -2,6 +2,8 @@
 
 Estado: **IMPLEMENTADO Y VERIFICADO EN PRUEBAS Y BUILDS**. Falta la verificación en ejecución nativa (Android/Windows), que no se ejecutó en este entorno.
 
+Actualización 2026-11-12: las entidades de dominio de la UI se envían por el protocolo v2 con outbox y cursor independiente. Ver [sync-domain-push-v2-cliente](sync-domain-push-v2-cliente.md). El recorrido nativo y la revisión de conflictos de dominio en la UI siguen pendientes.
+
 Rama de trabajo: `feat/d4-trabajo-dominio`, desde `dev` `a91a30a` (D3 completo).
 
 ## Alcance
