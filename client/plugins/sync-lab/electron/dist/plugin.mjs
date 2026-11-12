@@ -20,6 +20,9 @@ const ROUTES = Object.freeze({
   context: '/sync/context',
   push: '/sync/push',
   pull: '/sync/pull',
+  contextV2: '/sync/v2/context',
+  pushV2: '/sync/v2/push',
+  pullV2: '/sync/v2/pull',
   hembra: '/ml/predict/hembra',
   candidata: '/ml/predict/candidata',
   assistant: '/assistant/query',
@@ -91,7 +94,7 @@ async function request(route, token, init) {
 class SyncLab {
   static __capacitorElectronPlugin = {
     name: 'SyncLab',
-    methods: ['context', 'push', 'pull', 'bind', 'prepare', 'send', 'sync', 'status', 'listConflicts', 'keepCentral', 'retryConflict', 'predictHembra', 'predictCandidata', 'assistantQuery'],
+    methods: ['context', 'push', 'pull', 'contextV2', 'pushV2', 'pullV2', 'bind', 'prepare', 'send', 'sync', 'status', 'listConflicts', 'keepCentral', 'retryConflict', 'predictHembra', 'predictCandidata', 'assistantQuery'],
   };
 
   async load() {}
@@ -117,6 +120,29 @@ class SyncLab {
     const params = new URLSearchParams({ limit: String(limit) });
     if (cursor !== null) params.set('cursor', cursor);
     return request(`${ROUTES.pull}?${params.toString()}`, token, { method: 'GET' });
+  }
+
+  async contextV2({ token }) {
+    return request(ROUTES.contextV2, token, { method: 'GET' });
+  }
+
+  async pushV2({ token, body }) {
+    if (body === null || typeof body !== 'object') {
+      throw new Error('Solicitud de sincronizacion v2 invalida');
+    }
+    return request(ROUTES.pushV2, token, { method: 'POST', body: JSON.stringify(body) });
+  }
+
+  async pullV2({ token, cursor, limit }) {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      throw new Error('Limite pull v2 invalido');
+    }
+    if (cursor !== null && (typeof cursor !== 'string' || cursor.length > 4096)) {
+      throw new Error('Cursor pull v2 invalido');
+    }
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor !== null) params.set('cursor', cursor);
+    return request(`${ROUTES.pullV2}?${params.toString()}`, token, { method: 'GET' });
   }
 
   async bind({ token }) {
@@ -151,7 +177,9 @@ class SyncLab {
     try {
       const adapter = makeAdapter(db);
       await initializeWorkSyncDatabase(adapter);
-      return await sendPrepared(adapter, (frozen) => this.push({ token, body: frozen }));
+      return await sendPrepared(adapter, (frozen) =>
+        frozen.protocol_version === 2 ? this.pushV2({ token, body: frozen }) : this.push({ token, body: frozen }),
+      );
     } finally {
       db.close();
     }
@@ -165,6 +193,9 @@ class SyncLab {
         context: (value) => this.context({ token: value }),
         push: (value, body) => this.push({ token: value, body }),
         pull: (value, cursor, limit) => this.pull({ token: value, cursor, limit }),
+        contextV2: (value) => this.contextV2({ token: value }),
+        pushV2: (value, body) => this.pushV2({ token: value, body }),
+        pullV2: (value, cursor, limit) => this.pullV2({ token: value, cursor, limit }),
       }, token);
     } finally {
       db.close();

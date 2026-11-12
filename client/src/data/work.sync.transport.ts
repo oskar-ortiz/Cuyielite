@@ -26,16 +26,26 @@ export interface SyncContext {
   limits: Record<string, number>;
 }
 
+export interface SyncContextV2 extends SyncContext {
+  supported_entities: string[];
+}
+
 export interface SyncTransport {
   context(token: string): Promise<SyncContext>;
   push(token: string, req: unknown): Promise<SyncPushResponse>;
   pull(token: string, cursor: string | null, limit: number): Promise<unknown>;
+  contextV2?(token: string): Promise<SyncContextV2>;
+  pushV2?(token: string, req: unknown): Promise<SyncPushResponse>;
+  pullV2?(token: string, cursor: string | null, limit: number): Promise<unknown>;
 }
 
 interface SyncLabPlugin {
   context(options: { token: string }): Promise<SyncContext>;
   push(options: { token: string; body: unknown }): Promise<unknown>;
   pull(options: { token: string; cursor: string | null; limit: number }): Promise<unknown>;
+  contextV2(options: { token: string }): Promise<SyncContextV2>;
+  pushV2(options: { token: string; body: unknown }): Promise<unknown>;
+  pullV2(options: { token: string; cursor: string | null; limit: number }): Promise<unknown>;
   sync(options: { token: string }): Promise<unknown>;
   status(): Promise<WorkSyncStatus>;
   listConflicts(): Promise<{ cases: ConflictCase[] }>;
@@ -79,6 +89,9 @@ export function createFetchTransport(): SyncTransport {
       context: (token) => SyncLab.context({ token }),
       push: (token, req) => SyncLab.push({ token, body: req }) as Promise<SyncPushResponse>,
       pull: (token, cursor, limit) => SyncLab.pull({ token, cursor, limit }),
+      contextV2: (token) => SyncLab.contextV2({ token }),
+      pushV2: (token, req) => SyncLab.pushV2({ token, body: req }) as Promise<SyncPushResponse>,
+      pullV2: (token, cursor, limit) => SyncLab.pullV2({ token, cursor, limit }),
     };
   }
   if (platform === 'android') {
@@ -93,6 +106,18 @@ export function createFetchTransport(): SyncTransport {
           params.set('cursor', cursor);
         }
         return capRequest(`/sync/pull?${params.toString()}`, token);
+      },
+      contextV2: (token) => capRequest('/sync/v2/context', token) as Promise<SyncContextV2>,
+      pushV2: (token, req) =>
+        capRequest('/sync/v2/push', token, { method: 'POST', body: req }) as Promise<SyncPushResponse>,
+      pullV2: (token, cursor, limit) => {
+        if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new RangeError('limit pull fuera de rango');
+        const params = new URLSearchParams({ limit: String(limit) });
+        if (cursor !== null) {
+          if (cursor.length > 4096) throw new Error('Cursor local invalido');
+          params.set('cursor', cursor);
+        }
+        return capRequest(`/sync/v2/pull?${params.toString()}`, token);
       },
     };
   }
