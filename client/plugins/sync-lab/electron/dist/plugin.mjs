@@ -20,6 +20,9 @@ const ROUTES = Object.freeze({
   context: '/sync/context',
   push: '/sync/push',
   pull: '/sync/pull',
+  hembra: '/ml/predict/hembra',
+  candidata: '/ml/predict/candidata',
+  assistant: '/assistant/query',
 });
 
 const WORK_DB_DIR = path.join(app.getPath('userData'), 'cuyielite-work');
@@ -88,7 +91,7 @@ async function request(route, token, init) {
 class SyncLab {
   static __capacitorElectronPlugin = {
     name: 'SyncLab',
-    methods: ['context', 'push', 'pull', 'bind', 'prepare', 'send', 'sync', 'status', 'listConflicts', 'keepCentral', 'retryConflict'],
+    methods: ['context', 'push', 'pull', 'bind', 'prepare', 'send', 'sync', 'status', 'listConflicts', 'keepCentral', 'retryConflict', 'predictHembra', 'predictCandidata', 'assistantQuery'],
   };
 
   async load() {}
@@ -202,6 +205,18 @@ class SyncLab {
     } finally {
       db.close();
     }
+  }
+
+  async predictHembra({ token, body }) {
+    return request(ROUTES.hembra, token, { method: 'POST', body: JSON.stringify(body) });
+  }
+
+  async predictCandidata({ token, body }) {
+    return request(ROUTES.candidata, token, { method: 'POST', body: JSON.stringify(body) });
+  }
+
+  async assistantQuery({ token, body }) {
+    return request(ROUTES.assistant, token, { method: 'POST', body: JSON.stringify(body) });
   }
 }
 
