@@ -1,7 +1,10 @@
-/* Strict pull-v1 contract validation. */
+/* Strict pull-v1/v2 contract validation. */
 import { WORK_ENTITY_NAMES } from './work.sync.schema.js';
 
 export type Entity = (typeof WORK_ENTITY_NAMES)[number];
+export type SyncProtocol = 1 | 2;
+
+const DOMAIN_ENTITIES: ReadonlySet<Entity> = new Set<Entity>(['cuyes', 'partos', 'pesajes', 'eventos', 'parto_crias']);
 
 export interface PullRecord {
   id: string;
@@ -210,12 +213,17 @@ function validateRecord(entity: Entity, value: unknown): value is PullRecord {
   return exactKeys(data, DATA_KEYS[entity]) && DATA_VALIDATORS[entity](data);
 }
 
-export function validatePullPage(value: unknown, expectedScopeId: string, limit: number): SyncPullPage {
+export function validatePullPage(
+  value: unknown,
+  expectedScopeId: string,
+  limit: number,
+  protocol: SyncProtocol = 1,
+): SyncPullPage {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new SyncPullError('respuesta pull inválida');
   const page = value as Record<string, unknown>;
   if (
     !exactKeys(page, ['protocol_version', 'scope_id', 'items', 'next_cursor', 'has_more']) ||
-    page.protocol_version !== 1 ||
+    page.protocol_version !== protocol ||
     page.scope_id !== expectedScopeId ||
     !Array.isArray(page.items) ||
     page.items.length > limit ||
@@ -223,7 +231,8 @@ export function validatePullPage(value: unknown, expectedScopeId: string, limit:
     page.next_cursor.length === 0 ||
     page.next_cursor.length > 4096 ||
     typeof page.has_more !== 'boolean' ||
-    (page.has_more && page.items.length !== limit)
+    (protocol === 1 && page.has_more && page.items.length !== limit) ||
+    (protocol === 1 && page.has_more && page.items.length === 0)
   ) {
     throw new SyncPullError('respuesta pull incompatible con protocolo/ámbito');
   }
@@ -238,6 +247,7 @@ export function validatePullPage(value: unknown, expectedScopeId: string, limit:
       typeof item.seq !== 'string' ||
       !SEQUENCE.test(item.seq) ||
       !WORK_ENTITY_NAMES.includes(item.entity as Entity) ||
+      (protocol === 2 && !DOMAIN_ENTITIES.has(item.entity as Entity)) ||
       !validateRecord(item.entity as Entity, item.record) ||
       (item.record as PullRecord).id.length === 0
     ) {
@@ -247,6 +257,6 @@ export function validatePullPage(value: unknown, expectedScopeId: string, limit:
     if (sequence <= previous) throw new SyncPullError('secuencia pull fuera de orden');
     previous = sequence;
   }
-  if (page.has_more && page.items.length === 0) throw new SyncPullError('pull sin avance de cursor');
+  if (protocol === 1 && page.has_more && page.items.length === 0) throw new SyncPullError('pull sin avance de cursor');
   return page as unknown as SyncPullPage;
 }

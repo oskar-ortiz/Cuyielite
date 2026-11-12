@@ -1,8 +1,41 @@
 import type { MigrationDb } from './work.migration.js';
 import { initializeWorkSyncDatabase } from './work.sync.migration.js';
 
-type Entity = 'galpon' | 'poza';
+export type SyncEntity = 'galpon' | 'poza' | 'cuyes' | 'partos' | 'pesajes' | 'eventos' | 'parto_crias';
+export type SyncProtocol = 1 | 2;
 type Row = Record<string, unknown>;
+
+const V1_ENTITIES: ReadonlySet<SyncEntity> = new Set<SyncEntity>(['galpon', 'poza']);
+const V2_FIELDS: Record<Exclude<SyncEntity, 'galpon' | 'poza'>, string[]> = {
+  cuyes: [
+    'poza_id',
+    'galpon_origen_id',
+    'codigo_identificacion',
+    'sexo',
+    'fecha_nacimiento',
+    'color_codigo',
+    'ojos_codigo',
+    'pelaje_original',
+    'padre_id',
+    'madre_id',
+    'estado',
+  ],
+  partos: ['madre_id', 'fecha_parto', 'numero_parto', 'nacidos_vivos', 'nacidos_muertos', 'tamano_camada_nacida'],
+  pesajes: ['cuy_id', 'fecha_pesaje', 'peso_gramos', 'etapa', 'parto_id', 'evento_id'],
+  eventos: ['cuy_id', 'tipo', 'fecha', 'macho_id', 'poza_origen_id', 'poza_destino_id', 'detalle'],
+  parto_crias: ['parto_id', 'cuy_id', 'rol'],
+};
+
+export function protocolForEntity(entity: SyncEntity): SyncProtocol {
+  return V1_ENTITIES.has(entity) ? 1 : 2;
+}
+
+export function freezePayload(entity: SyncEntity, snapshot: Record<string, unknown>): Record<string, unknown> {
+  if (V1_ENTITIES.has(entity)) return snapshot;
+  const fields = V2_FIELDS[entity as Exclude<SyncEntity, 'galpon' | 'poza'>];
+  if (!fields) throw new Error(`Entidad v2 desconocida: ${entity}`);
+  return Object.fromEntries(fields.map((field) => [field, snapshot[field] ?? null]));
+}
 
 async function one(db: MigrationDb, sql: string, params: unknown[] = []): Promise<Row | null> {
   const res = await db.query(sql, params);
@@ -29,11 +62,11 @@ async function tx<T>(db: MigrationDb, work: () => Promise<T>): Promise<T> {
 }
 
 export interface FrozenRequest {
-  protocol_version: number;
+  protocol_version: SyncProtocol;
   device_id: string;
   operations: {
     operation_id: string;
-    entity: Entity;
+    entity: SyncEntity;
     record_id: string;
     action: 'create' | 'update';
     base_version: string | null;
@@ -55,7 +88,7 @@ export interface SyncRecord {
 
 export interface SyncOperationResult {
   operation_id: string;
-  entity: Entity;
+  entity: SyncEntity;
   record_id: string;
   status: 'accepted' | 'conflict' | 'rejected';
   changed: boolean;
@@ -131,10 +164,19 @@ export function validateReceipt(request: FrozenRequest, response: SyncPushRespon
   if (received.size !== expected.size) throw new SyncReceiptError('missing result operation_id');
 }
 
-export async function prepareOperation(db: MigrationDb, localSeq: number, deviceId: string): Promise<boolean> {
+export async function prepareOperation(
+  db: MigrationDb,
+  localSeq: number,
+  deviceId: string,
+  protocols: ReadonlySet<SyncProtocol> = new Set<SyncProtocol>([1, 2]),
+): Promise<boolean> {
   return tx(db, async () => {
     const op = await one(db, 'SELECT * FROM sync_outbox WHERE local_seq=?', [localSeq]);
     if (!op || op.state !== 'queued') return false;
+
+    const entity = op.entity as SyncEntity;
+    const protocol = protocolForEntity(entity);
+    if (!protocols.has(protocol)) return false;
 
     const predecessorId = op.predecessor_id as string | null;
     let acceptedPredecessorVersion: string | null = null;
@@ -164,7 +206,6 @@ export async function prepareOperation(db: MigrationDb, localSeq: number, device
       if (!parent || parent.state !== 'accepted') return false;
     }
 
-    const entity = op.entity as Entity;
     const recordId = op.record_id as string;
     const action = op.action as string;
     if (action !== 'create' && action !== 'update') return false;
@@ -173,9 +214,9 @@ export async function prepareOperation(db: MigrationDb, localSeq: number, device
       action === 'create' ? null : (acceptedPredecessorVersion ?? (op.base_anchor as string | null) ?? null);
     if (action === 'update' && (!baseVersion || !/^[1-9][0-9]*$/.test(baseVersion))) return false;
 
-    const snapshot = JSON.parse(op.business_snapshot as string);
+    const snapshot = JSON.parse(op.business_snapshot as string) as Record<string, unknown>;
     const frozen: FrozenRequest = {
-      protocol_version: 1,
+      protocol_version: protocol,
       device_id: deviceId,
       operations: [
         {
@@ -186,7 +227,7 @@ export async function prepareOperation(db: MigrationDb, localSeq: number, device
           base_version: baseVersion,
           client_created_at: action === 'create' ? (op.created_at as string) : null,
           client_edited_at: op.created_at as string,
-          data: snapshot,
+          data: freezePayload(entity, snapshot),
         },
       ],
     };
@@ -202,6 +243,7 @@ export async function prepareEligible(
   db: MigrationDb,
   deviceId: string,
   maxLocalSeq = Number.MAX_SAFE_INTEGER,
+  protocols: ReadonlySet<SyncProtocol> = new Set<SyncProtocol>([1, 2]),
 ): Promise<number> {
   await initializeWorkSyncDatabase(db);
   const queued = await all(
@@ -211,14 +253,58 @@ export async function prepareEligible(
   );
   let prepared = 0;
   for (const row of queued) {
-    if (await prepareOperation(db, row.local_seq as number, deviceId)) prepared++;
+    if (await prepareOperation(db, row.local_seq as number, deviceId, protocols)) prepared++;
   }
   return prepared;
+}
+
+function isRetryableDependency(result: SyncOperationResult): boolean {
+  return (
+    result.status === 'rejected' && (result.code === 'DEPENDENCY_PENDING' || result.code === 'DEPENDENCY_REJECTED')
+  );
+}
+
+async function requeueDependency(db: MigrationDb, result: SyncOperationResult): Promise<void> {
+  const operation = await one(db, 'SELECT * FROM sync_outbox WHERE operation_id=?', [result.operation_id]);
+  if (!operation) throw new Error('La operación con dependencia ya no existe');
+  const newOperationId = crypto.randomUUID();
+  await db.run("UPDATE sync_outbox SET state='superseded', result_json=? WHERE operation_id=? AND state='prepared'", [
+    JSON.stringify(result),
+    result.operation_id,
+  ]);
+  await db.run(
+    'INSERT INTO sync_outbox(operation_id,entity,record_id,action,business_snapshot,base_anchor,predecessor_id,' +
+      'parent_create_id,state,created_at) VALUES(?,?,?,?,?,?,?,?,?,?)',
+    [
+      newOperationId,
+      operation.entity,
+      operation.record_id,
+      operation.action,
+      operation.business_snapshot,
+      operation.base_anchor ?? null,
+      operation.predecessor_id ?? null,
+      operation.parent_create_id ?? null,
+      'queued',
+      operation.created_at,
+    ],
+  );
+  // Las ediciones posteriores del mismo registro y las altas hijas deben
+  // encadenarse a la operación reintentada, no a la supersedida.
+  await db.run('UPDATE sync_outbox SET predecessor_id=? WHERE predecessor_id=?', [newOperationId, result.operation_id]);
+  await db.run('UPDATE sync_outbox SET parent_create_id=? WHERE parent_create_id=?', [
+    newOperationId,
+    result.operation_id,
+  ]);
+  await db.run(
+    'UPDATE sync_record_state SET local_head_operation_id=? WHERE entity=? AND record_id=? AND local_head_operation_id=?',
+    [newOperationId, operation.entity, operation.record_id, operation.operation_id],
+  );
 }
 
 export async function sendPrepared(
   db: MigrationDb,
   send: SendFn,
+  protocols: ReadonlySet<SyncProtocol> = new Set<SyncProtocol>([1, 2]),
 ): Promise<{ sent: number; failed: number; errors: string[] }> {
   await initializeWorkSyncDatabase(db);
   const prepared = await all(
@@ -232,6 +318,7 @@ export async function sendPrepared(
   for (const row of prepared) {
     try {
       const frozen = JSON.parse(String(row.frozen_request)) as FrozenRequest;
+      if (!protocols.has(frozen.protocol_version)) continue;
       const response = await send(frozen);
       validateReceipt(frozen, response);
 
@@ -241,9 +328,13 @@ export async function sendPrepared(
           if (!outbox || outbox.state !== 'prepared') {
             throw new Error('La operaciÃ³n preparada cambiÃ³ antes de aplicar el recibo');
           }
-          const newState = result.status;
+          const retryableDependency = isRetryableDependency(result);
+          if (retryableDependency) {
+            await requeueDependency(db, result);
+            continue;
+          }
           await db.run("UPDATE sync_outbox SET state=?, result_json=? WHERE operation_id=? AND state='prepared'", [
-            newState,
+            result.status,
             JSON.stringify(result),
             result.operation_id,
           ]);

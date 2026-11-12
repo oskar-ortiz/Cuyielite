@@ -2,6 +2,8 @@
 
 Estado: **IMPLEMENTADO Y VERIFICADO EN PRUEBAS, BUILDS Y EJECUCIÓN NATIVA (WINDOWS/ELECTRON Y ANDROID)**. Migración v3→v4, staging durable y aplicación de las cinco entidades de dominio, ejercitados en runtime con datos sintéticos. Sin UI D4, push v2 ni ETL.
 
+Actualización 2026-11-12: el cliente ya integra push/pull v2 y usa una migración v4→v5 que agrega el cursor v2. Ver [sync-domain-push-v2-cliente](sync-domain-push-v2-cliente.md). El recorrido nativo de esa integración sigue pendiente.
+
 Rama: `feat/sync-d3-sqlite-apply`, desde `origin/dev` `4e8585e` (D1 y D2 integrados).
 
 ## Alcance
