@@ -50,14 +50,14 @@ def cursor_key() -> bytes:
     return key
 
 
-def encode_cursor(scope_id: UUID | str, after: int, through: int | None, key: bytes) -> str:
+def encode_cursor(scope_id: UUID | str, after: int, through: int | None, key: bytes, protocol: int = 1) -> str:
     scope = str(UUID(str(scope_id)))
     if after < 0 or after > MAX_SEQUENCE:
         raise ValueError("after fuera de rango")
     if through is not None and (through < after or through > MAX_SEQUENCE):
         raise ValueError("through fuera de rango")
     payload = {
-        "protocol_version": 1,
+        "protocol_version": protocol,
         "scope_id": scope,
         "after": str(after),
         "through": None if through is None else str(through),
@@ -68,7 +68,7 @@ def encode_cursor(scope_id: UUID | str, after: int, through: int | None, key: by
     return f"{encoded}.{signature}"
 
 
-def decode_cursor(token: str, expected_scope_id: UUID | str, key: bytes) -> CursorPosition:
+def decode_cursor(token: str, expected_scope_id: UUID | str, key: bytes, protocol: int = 1) -> CursorPosition:
     if not isinstance(token, str) or len(token) > MAX_CURSOR_LENGTH:
         raise InvalidSyncCursor("CURSOR_INVALID")
     parts = token.split(".")
@@ -85,7 +85,7 @@ def decode_cursor(token: str, expected_scope_id: UUID | str, key: bytes) -> Curs
         raise InvalidSyncCursor("CURSOR_INVALID") from None
     if not isinstance(payload, dict) or set(payload) != {"protocol_version", "scope_id", "after", "through"}:
         raise InvalidSyncCursor("CURSOR_INVALID")
-    if payload["protocol_version"] != 1:
+    if payload["protocol_version"] != protocol:
         raise InvalidSyncCursor("CURSOR_INVALID")
     try:
         token_scope = str(UUID(payload["scope_id"]))

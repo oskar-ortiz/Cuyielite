@@ -8,7 +8,7 @@ from fastapi import HTTPException
 
 from backend.app.database import get_connection
 from backend.app.repositories import sync as repo
-from backend.app.schemas.sync import PULL_ENTITY_NAMES, SyncOperationResult
+from backend.app.schemas.sync import DOMAIN_ENTITY_NAMES, PULL_ENTITY_NAMES, SyncOperationResult
 from backend.app.sync_cursor import (
     InvalidSyncCursor,
     cursor_key,
@@ -291,7 +291,7 @@ def _process_one(scope_id, device_id, op) -> dict:
             raise
 
 
-def pull_changes(token: str, cursor: str | None, limit: int) -> dict:
+def pull_changes(token: str, cursor: str | None, limit: int, protocol: int = 1) -> dict:
     """Return one bounded, scope-authorized page from immutable history."""
     auth = authenticate(token)
     if auth is None:
@@ -307,7 +307,7 @@ def pull_changes(token: str, cursor: str | None, limit: int) -> dict:
         after = 0
         through = None
     else:
-        position = decode_cursor(cursor, scope_id, signing_key)
+        position = decode_cursor(cursor, scope_id, signing_key, protocol)
         after = position.after
         through = position.through
 
@@ -322,6 +322,9 @@ def pull_changes(token: str, cursor: str | None, limit: int) -> dict:
     rows = repo.list_changes(scope_id, after, through, limit + 1)
     has_more = len(rows) > limit
     page = rows[:limit]
+    # v2 entrega únicamente las entidades de dominio. galpon|poza pertenecen
+    # al contrato v1 y se omiten de forma explícita, sin frenar el cursor.
+    v2_entities = set(DOMAIN_ENTITY_NAMES) if protocol == 2 else set(PULL_ENTITY_NAMES)
     items = []
     for row in page:
         entity = row["entity"]
@@ -329,6 +332,8 @@ def pull_changes(token: str, cursor: str | None, limit: int) -> dict:
             # Falla determinista: nunca se omite ni se avanza el cursor sobre un
             # cambio que esta version del protocolo no puede entregar.
             raise UnsupportedPullEntity(f"entidad no soportada en pull: {entity}")
+        if entity not in v2_entities:
+            continue
         snapshot = row["snapshot"]
         if not isinstance(snapshot, dict):
             raise RuntimeError("Snapshot histórico inválido")
@@ -365,10 +370,10 @@ def pull_changes(token: str, cursor: str | None, limit: int) -> dict:
         next_after = through
         next_through = None
     return {
-        "protocol_version": 1,
+        "protocol_version": protocol,
         "scope_id": str(scope_id),
         "items": items,
-        "next_cursor": encode_cursor(scope_id, next_after, next_through, signing_key),
+        "next_cursor": encode_cursor(scope_id, next_after, next_through, signing_key, protocol),
         "has_more": has_more,
     }
 
