@@ -39,11 +39,11 @@ npx tsc --noEmit → 0
 - Predicciones: REVISAR + apoyo `null`, explicación de 404 local, no consulta sin token, mapeo de errores 401/503/red.
 - Asistente: respuesta y fuentes, HTML no ejecutado, mapeo de errores, no envío sin token.
 
-La suite completa y el build quedaron interrumpidos por fallos de memoria del entorno tras ejecutar pruebas; no se declaran verificados. `tsc` y las pruebas dirigidas sí finalizaron.
+La suite completa y el build que D6 dejó pendientes se ejecutaron en D7 con workers limitados: `vitest run --maxWorkers=1` → **36 archivos, 188 pruebas passed**; `npm run build` → OK; `npm run lint` → OK. `tsc` y las pruebas dirigidas ya habían finalizado.
 
 ## Límites
 
-- **Ejecución nativa pendiente** (Windows empaquetado y Android): exige backend D5b en ejecución, token de laboratorio y animal sintético publicado; no completada por el entorno.
+- **Ejecución nativa pendiente** (Windows empaquetado y Android): exige backend D5b en ejecución, token de laboratorio y animal sintético publicado; no completada por el entorno (detalle en `integracion-plataforma-d7.md`).
 - RAG real no ejecutado; los casos usan dobles.
 - Sin persistencia de predicciones/alertas ni cambios de estado productivo.
-- La rama depende de D5b: primero #123 a `dev`, luego este PR.
+- D6 se consolidó en `dev` desde una rama apilada; ver PR de consolidación.
