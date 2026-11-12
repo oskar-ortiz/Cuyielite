@@ -25,13 +25,13 @@ describe('upgrade de SQLite trabajo a sync v3', () => {
   it('crea v2 y luego v3 sin seed en una instalación nueva', async () => {
     const db = new DatabaseSync(':memory:');
     const result = await initializeWorkSyncDatabase(adapterFor(db));
-    expect(result.schemaVersion).toBe(4);
+    expect(result.schemaVersion).toBe(5);
     expect(result.deviceId).toMatch(/^[0-9a-f-]{36}$/i);
     expect(result.datasetId).toBe(meta(db, 'dataset_id'));
     expect(meta(db, 'schema_checksum')).toBe(result.checksum);
     expect(meta(db, 'sync_schema_checksum')).toBe(result.syncChecksum);
     expect(meta(db, 'sync_migration_id')).toBe('0003_work_domain_sync');
-    expect((db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version).toBe(4);
+    expect((db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version).toBe(5);
     expect(db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='sync_inbox'").get()).toBeDefined();
     expect((db.prepare('SELECT COUNT(*) AS n FROM galpones').get() as { n: number }).n).toBe(0);
     expect(db.prepare('PRAGMA foreign_key_check').all()).toHaveLength(0);
@@ -100,7 +100,7 @@ describe('upgrade de SQLite trabajo a sync v3', () => {
     expect(meta(db, 'schema_checksum')).toBe(old.checksum);
     expect(meta(db, 'schema_version')).toBe('2');
     expect(db.prepare("SELECT 1 FROM sqlite_master WHERE name='sync_context'").get()).toBeUndefined();
-    expect((await initializeWorkSyncDatabase(original)).schemaVersion).toBe(4);
+    expect((await initializeWorkSyncDatabase(original)).schemaVersion).toBe(5);
     db.close();
   });
 

@@ -11,6 +11,8 @@ import {
   WORK_DOMAIN_SYNC_VERSION,
   WORK_ENTITY_NAMES,
   WORK_SYNC_SQL,
+  WORK_SYNC_V2_SQL,
+  WORK_SYNC_V2_VERSION,
   WORK_SYNC_VERSION,
 } from './work.sync.schema.js';
 
@@ -65,6 +67,13 @@ export async function computeSyncChecksum(): Promise<string> {
 export async function computeDomainSyncChecksum(): Promise<string> {
   if (!crypto?.subtle) throw new WorkMigrationError('SHA-256 no disponible para esquema de dominio');
   const bytes = new TextEncoder().encode(WORK_DOMAIN_SYNC_SQL);
+  const hash = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+export async function computeSyncV2Checksum(): Promise<string> {
+  if (!crypto?.subtle) throw new WorkMigrationError('SHA-256 no disponible para migración sync v2');
+  const bytes = new TextEncoder().encode(WORK_SYNC_V2_SQL);
   const hash = await crypto.subtle.digest('SHA-256', bytes);
   return Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
@@ -292,6 +301,62 @@ async function validateV4(db: MigrationDb): Promise<WorkSyncIdentity> {
   };
 }
 
+async function validateV5(db: MigrationDb): Promise<WorkSyncIdentity> {
+  if ((await userVersion(db)) !== WORK_SYNC_V2_VERSION) throw new WorkMigrationError('Versión de sync v2 incoherente');
+  if ((await meta(db, 'schema_family')) !== 'cuyielite-work')
+    throw new WorkMigrationError('Familia de base de trabajo incoherente');
+  if ((await meta(db, 'schema_version')) !== String(WORK_SYNC_V2_VERSION))
+    throw new WorkMigrationError('Meta.schema_version incoherente');
+  const checksum = await computeSchemaChecksum();
+  if ((await meta(db, 'schema_checksum')) !== checksum)
+    throw new WorkMigrationError('Checksum histórico de C2 alterado');
+  const syncChecksum = await computeDomainSyncChecksum();
+  if ((await meta(db, 'sync_schema_checksum')) !== syncChecksum)
+    throw new WorkMigrationError('Checksum de dominio sync alterado');
+  if ((await meta(db, 'sync_migration_id')) !== '0003_work_domain_sync')
+    throw new WorkMigrationError('Migración de dominio sync desconocida');
+  if ((await meta(db, 'sync_v2_schema_checksum')) !== (await computeSyncV2Checksum()))
+    throw new WorkMigrationError('Checksum de migración sync v2 alterado');
+  if ((await meta(db, 'sync_v2_migration_id')) !== '0004_work_sync_v2')
+    throw new WorkMigrationError('Migración de sync v2 desconocida');
+  const datasetId = await meta(db, 'dataset_id');
+  if (!datasetId || !UUID_V4.test(datasetId)) throw new WorkMigrationError('dataset_id inválido');
+  await validateDomainSyncSchema(db);
+  const columns = ((await db.query('PRAGMA table_info(sync_context)')).values ?? []).map((row: any) =>
+    String(row.name ?? row[1]),
+  );
+  if (!columns.includes('cursor_v2'))
+    throw new WorkMigrationError('Esquema sync v2 incompleto: falta sync_context.cursor_v2');
+  const rows =
+    (
+      await db.query(
+        'SELECT singleton, dataset_id, device_id, scope_id, protocol_version, cursor, cursor_v2 FROM sync_context',
+      )
+    ).values ?? [];
+  if (rows.length !== 1) throw new WorkMigrationError('Contexto sync ausente o duplicado');
+  const context = rows[0] as Record<string, unknown>;
+  if (
+    context.singleton !== 1 ||
+    context.dataset_id !== datasetId ||
+    !UUID_V4.test(String(context.device_id)) ||
+    context.protocol_version !== 1 ||
+    (context.cursor !== null && typeof context.cursor !== 'string') ||
+    (context.cursor_v2 !== null && typeof context.cursor_v2 !== 'string')
+  ) {
+    throw new WorkMigrationError('Identidad de contexto sync v2 incoherente');
+  }
+  return {
+    schemaFamily: 'cuyielite-work',
+    schemaVersion: WORK_SYNC_V2_VERSION,
+    datasetId,
+    checksum,
+    deviceId: String(context.device_id),
+    scopeId: context.scope_id as string | null,
+    cursor: context.cursor as string | null,
+    syncChecksum,
+  };
+}
+
 // Migración v2 -> v3. Exportada para pruebas y para reutilizar la cadena histórica.
 export async function migrateWorkSyncV2ToV3(db: MigrationDb): Promise<void> {
   await initializeWorkDatabase(db); // valida identidad, checksum y esquema C2 antes de cambiarlo
@@ -388,11 +453,44 @@ export async function migrateWorkSyncV3ToV4(db: MigrationDb): Promise<void> {
   }
 }
 
+// Migración v4 -> v5: agrega el cursor v2. Conserva cursor v1, outbox, inbox,
+// conflictos y todos los datos; no reescribe checksums históricos.
+export async function migrateWorkSyncV4ToV5(db: MigrationDb): Promise<void> {
+  await validateV4(db);
+  await db.exec('BEGIN IMMEDIATE');
+  try {
+    if ((await userVersion(db)) !== WORK_DOMAIN_SYNC_VERSION) {
+      throw new WorkMigrationError('La base cambió durante el upgrade a sync v2');
+    }
+    await validateV4(db);
+    await db.exec(WORK_SYNC_V2_SQL);
+    const columns = ((await db.query('PRAGMA table_info(sync_context)')).values ?? []).map((row: any) =>
+      String(row.name ?? row[1]),
+    );
+    if (!columns.includes('cursor_v2')) throw new WorkMigrationError('No se agregó sync_context.cursor_v2');
+    await db.run("UPDATE meta SET value=? WHERE key='schema_version'", [String(WORK_SYNC_V2_VERSION)]);
+    await db.run(
+      "INSERT INTO meta(key,value) VALUES('sync_v2_schema_checksum',?) " +
+        'ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+      [await computeSyncV2Checksum()],
+    );
+    await db.run(
+      "INSERT INTO meta(key,value) VALUES('sync_v2_migration_id','0004_work_sync_v2') " +
+        'ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+    );
+    await db.exec(`PRAGMA user_version = ${WORK_SYNC_V2_VERSION}`);
+    await db.exec('COMMIT');
+  } catch (error) {
+    await db.exec('ROLLBACK');
+    throw error;
+  }
+}
+
 export async function initializeWorkSyncDatabase(db: MigrationDb): Promise<WorkSyncIdentity> {
   await db.exec('PRAGMA foreign_keys = ON');
   let version = await userVersion(db);
-  if (version > WORK_DOMAIN_SYNC_VERSION) throw new WorkMigrationError(`Versión futura de trabajo: ${version}`);
-  if (version === WORK_DOMAIN_SYNC_VERSION) return validateV4(db);
+  if (version > WORK_SYNC_V2_VERSION) throw new WorkMigrationError(`Versión futura de trabajo: ${version}`);
+  if (version === WORK_SYNC_V2_VERSION) return validateV5(db);
   if (version === 0) {
     await initializeWorkDatabase(db);
     version = await userVersion(db);
@@ -401,7 +499,14 @@ export async function initializeWorkSyncDatabase(db: MigrationDb): Promise<WorkS
     await migrateWorkSyncV2ToV3(db);
     version = await userVersion(db);
   }
-  if (version !== WORK_SYNC_VERSION) throw new WorkMigrationError(`Base no reconocida como trabajo v3: ${version}`);
-  await migrateWorkSyncV3ToV4(db);
-  return validateV4(db);
+  if (version === WORK_SYNC_VERSION) {
+    await migrateWorkSyncV3ToV4(db);
+    version = await userVersion(db);
+  }
+  if (version === WORK_DOMAIN_SYNC_VERSION) {
+    await migrateWorkSyncV4ToV5(db);
+    version = await userVersion(db);
+  }
+  if (version !== WORK_SYNC_V2_VERSION) throw new WorkMigrationError(`Base no reconocida como trabajo v5: ${version}`);
+  return validateV5(db);
 }

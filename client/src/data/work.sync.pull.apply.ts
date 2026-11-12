@@ -1,4 +1,5 @@
 import type { MigrationDb } from './work.migration.js';
+import { readSyncCursor, writeSyncCursor, type SyncProtocol } from './work.sync.cursor.js';
 import { initializeWorkSyncDatabase, type WorkSyncIdentity } from './work.sync.migration.js';
 import {
   ENTITY_PULL_ORDER,
@@ -13,6 +14,17 @@ import {
 type Row = Record<string, unknown>;
 
 const DOMAIN_ENTITIES: ReadonlySet<Entity> = new Set<Entity>(['cuyes', 'partos', 'pesajes', 'eventos', 'parto_crias']);
+const SERVER_OWNED_FIELDS: Partial<Record<Entity, string[]>> = {
+  cuyes: ['categoria_ml', 'ultimo_peso_g'],
+};
+
+function comparableSnapshot(entity: Entity, record: PullRecord): string {
+  const fields = SERVER_OWNED_FIELDS[entity];
+  if (!fields) return stableJson(record);
+  const data = { ...record.data };
+  for (const field of fields) delete data[field];
+  return stableJson({ ...record, data });
+}
 
 const ENTITY_TABLE: Record<Entity, string> = {
   galpon: 'galpones',
@@ -284,8 +296,13 @@ async function applyItem(
   }
   if (currentVersion && BigInt(currentVersion) === BigInt(record.version)) {
     const existingSnapshot = current?.server_snapshot ? JSON.parse(String(current.server_snapshot)) : null;
-    if (!existingSnapshot || stableJson(existingSnapshot) !== stableJson(record)) {
+    if (!existingSnapshot || comparableSnapshot(entity, existingSnapshot) !== comparableSnapshot(entity, record)) {
       throw new SyncPullError('misma versión central con snapshots diferentes');
+    }
+    // Un recibo de push v2 no incluye campos del servidor; el pull sí. Al
+    // coincidir el negocio, se enriquece el snapshot sin crear conflicto.
+    if (DOMAIN_ENTITIES.has(entity) && stableJson(existingSnapshot) !== stableJson(record)) {
+      await storeServerState(db, entity, record, (current?.local_head_operation_id as string | null) ?? null);
     }
     return;
   }
@@ -454,13 +471,14 @@ export async function applyPullPage(
   expectedCursor: string | null,
   response: unknown,
   limit: number,
+  protocol: SyncProtocol = 1,
 ): Promise<ApplyPageResult> {
-  const page = validatePullPage(response, expectedScopeId, limit);
+  const page = validatePullPage(response, expectedScopeId, limit, protocol);
   return transaction(db, async () => {
     const identity = await initializeWorkSyncDatabase(db);
-    const context = await one(db, 'SELECT scope_id,cursor FROM sync_context WHERE singleton=1');
+    const context = await one(db, 'SELECT scope_id FROM sync_context WHERE singleton=1');
     if (!context || context.scope_id !== expectedScopeId) throw new SyncPullError('scope local no coincide');
-    const storedCursor = (context.cursor as string | null) ?? null;
+    const storedCursor = await readSyncCursor(db, protocol);
     if (storedCursor !== expectedCursor) {
       // Reintento de una página ya confirmada: no duplica ni altera nada.
       if (storedCursor === page.next_cursor) {
@@ -498,13 +516,7 @@ export async function applyPullPage(
     counts.reconciled = reconciled.applied;
     counts.conflicts += reconciled.conflicts;
 
-    await db.run('UPDATE sync_context SET cursor=? WHERE singleton=1 AND scope_id=? AND cursor IS ?', [
-      page.next_cursor,
-      expectedScopeId,
-      expectedCursor,
-    ]);
-    const check = await one(db, 'SELECT cursor FROM sync_context WHERE singleton=1');
-    if (check?.cursor !== page.next_cursor) throw new SyncPullError('no se pudo confirmar cursor pull');
+    await writeSyncCursor(db, protocol, expectedScopeId, expectedCursor, page.next_cursor);
     return counts;
   });
 }

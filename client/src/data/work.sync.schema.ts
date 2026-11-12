@@ -104,3 +104,11 @@ CREATE TABLE sync_inbox (
 
 CREATE INDEX sync_inbox_pending ON sync_inbox(state, seq);
 `;
+
+// Upgrade incremental de dominio sync v4 a protocolo v2. Solo agrega el cursor
+// v2; no toca el cursor v1, outbox, inbox ni conflictos existentes.
+export const WORK_SYNC_V2_VERSION = 5;
+
+export const WORK_SYNC_V2_SQL = `
+ALTER TABLE sync_context ADD COLUMN cursor_v2 TEXT;
+`;

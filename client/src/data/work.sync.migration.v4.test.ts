@@ -3,7 +3,12 @@ import { describe, expect, it } from 'vitest';
 
 import { migrateAndSeed } from './galpones.migration';
 import { initializeWorkDatabase, type MigrationDb } from './work.migration';
-import { migrateWorkSyncV2ToV3, initializeWorkSyncDatabase, computeSyncChecksum } from './work.sync.migration';
+import {
+  migrateWorkSyncV2ToV3,
+  migrateWorkSyncV3ToV4,
+  initializeWorkSyncDatabase,
+  computeSyncChecksum,
+} from './work.sync.migration';
 
 const CREATED = '2026-11-06T10:00:00.000Z';
 
@@ -72,12 +77,13 @@ describe('upgrade de SQLite sync v3 a dominio v4', () => {
 
     const identity = await initializeWorkSyncDatabase(adapter);
 
-    expect(identity.schemaVersion).toBe(4);
-    expect(userVersion(db)).toBe(4);
+    expect(identity.schemaVersion).toBe(5);
+    expect(userVersion(db)).toBe(5);
     expect(meta(db, 'schema_checksum')).toBe(c2Checksum);
     expect(meta(db, 'previous_sync_checksum')).toBe(v3Checksum);
     expect(meta(db, 'sync_migration_id')).toBe('0003_work_domain_sync');
     expect(meta(db, 'previous_sync_migration_id')).toBe('0002_work_sync');
+    expect(meta(db, 'sync_v2_migration_id')).toBe('0004_work_sync_v2');
     expect(identity.datasetId).toBe(meta(db, 'dataset_id'));
     expect(db.prepare('SELECT nombre FROM galpones WHERE id=?').get(galpon)).toMatchObject({ nombre: 'Sintético v3' });
     expect(
@@ -95,8 +101,9 @@ describe('upgrade de SQLite sync v3 a dominio v4', () => {
         .prepare('SELECT server_version,local_head_operation_id FROM sync_record_state WHERE entity=? AND record_id=?')
         .get('galpon', galpon),
     ).toMatchObject({ server_version: '2', local_head_operation_id: operation });
-    expect(db.prepare('SELECT cursor FROM sync_context WHERE singleton=1').get()).toMatchObject({
+    expect(db.prepare('SELECT cursor,cursor_v2 FROM sync_context WHERE singleton=1').get()).toMatchObject({
       cursor: 'cursor-v3',
+      cursor_v2: null,
     });
     expect(db.prepare('PRAGMA foreign_key_check').all()).toHaveLength(0);
 
@@ -116,7 +123,7 @@ describe('upgrade de SQLite sync v3 a dominio v4', () => {
     const second = await initializeWorkSyncDatabase(adapter);
     expect(second).toEqual(first);
     expect(meta(db, 'sync_schema_checksum')).toBe(checksum);
-    expect(userVersion(db)).toBe(4);
+    expect(userVersion(db)).toBe(5);
     db.close();
   });
 
@@ -144,8 +151,8 @@ describe('upgrade de SQLite sync v3 a dominio v4', () => {
     });
     expect(db.prepare('SELECT nombre FROM galpones WHERE id=?').get(galpon)).toMatchObject({ nombre: 'Sintético v3' });
 
-    expect((await initializeWorkSyncDatabase(adapter)).schemaVersion).toBe(4);
-    expect(userVersion(db)).toBe(4);
+    expect((await initializeWorkSyncDatabase(adapter)).schemaVersion).toBe(5);
+    expect(userVersion(db)).toBe(5);
     db.close();
   });
 
@@ -156,7 +163,40 @@ describe('upgrade de SQLite sync v3 a dominio v4', () => {
     db.exec('DROP INDEX sync_inbox_pending');
     db.exec('DROP TABLE sync_inbox');
     await expect(initializeWorkSyncDatabase(adapter)).rejects.toThrow('sync_inbox');
-    expect(userVersion(db)).toBe(4);
+    expect(userVersion(db)).toBe(5);
+    db.close();
+  });
+
+  it('v4 a v5 conserva cursor v1, outbox, inbox y conflicto sin tocarlos', async () => {
+    const db = new DatabaseSync(':memory:');
+    const adapter = adapterFor(db);
+    await initializeWorkDatabase(adapter);
+    await migrateWorkSyncV2ToV3(adapter);
+    await migrateWorkSyncV3ToV4(adapter);
+    const scope = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+    const operation = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    db.prepare('UPDATE sync_context SET scope_id=?, cursor=? WHERE singleton=1').run(scope, 'v1-cursor');
+    db.prepare(
+      'INSERT INTO sync_outbox(operation_id,entity,record_id,action,business_snapshot,state,result_json,created_at) ' +
+        'VALUES(?,?,?,?,?,?,?,?)',
+    ).run(operation, 'galpon', crypto.randomUUID(), 'update', '{}', 'conflict', '{"status":"conflict"}', CREATED);
+    db.prepare(
+      'INSERT INTO sync_inbox(dataset_id,scope_id,seq,entity,record_id,server_version,payload,missing_refs,state,received_at) ' +
+        "VALUES(?,?,'1','galpon',?,'1','{}','[]','staged',?)",
+    ).run(meta(db, 'dataset_id'), scope, crypto.randomUUID(), CREATED);
+
+    const identity = await initializeWorkSyncDatabase(adapter);
+    expect(identity.schemaVersion).toBe(5);
+    expect(userVersion(db)).toBe(5);
+    expect(db.prepare('SELECT cursor,cursor_v2 FROM sync_context WHERE singleton=1').get()).toMatchObject({
+      cursor: 'v1-cursor',
+      cursor_v2: null,
+    });
+    expect(db.prepare('SELECT state FROM sync_outbox WHERE operation_id=?').get(operation)).toMatchObject({
+      state: 'conflict',
+    });
+    expect(db.prepare('SELECT state,code FROM sync_inbox').get()).toMatchObject({ state: 'staged' });
+    expect(meta(db, 'sync_v2_migration_id')).toBe('0004_work_sync_v2');
     db.close();
   });
 

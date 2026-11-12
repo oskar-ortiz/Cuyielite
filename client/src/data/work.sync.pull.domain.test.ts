@@ -386,7 +386,7 @@ describe('aplicación transaccional de dominio (D3)', () => {
       const reopened = new DatabaseSync(file);
       const reopenedAdapter = adapterFor(reopened);
       const identity = await initializeWorkSyncDatabase(reopenedAdapter);
-      expect(identity.schemaVersion).toBe(4);
+      expect(identity.schemaVersion).toBe(5);
       expect(cursorOf(reopened)).toBe('c1');
       expect(await listInboxEntries(reopenedAdapter, 'staged')).toHaveLength(1);
       expect(await reconcileInbox(reopenedAdapter)).toMatchObject({ applied: 0, staged: 1 });

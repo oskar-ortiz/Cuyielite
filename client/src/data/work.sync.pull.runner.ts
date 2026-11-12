@@ -1,4 +1,5 @@
 import type { MigrationDb } from './work.migration.js';
+import { readSyncCursor, type SyncProtocol } from './work.sync.cursor.js';
 import { initializeWorkSyncDatabase } from './work.sync.migration.js';
 import { applyPullPage, reconcileInbox } from './work.sync.pull.apply.js';
 import { validatePullPage, SyncPullError } from './work.sync.pull.validation.js';
@@ -16,6 +17,7 @@ export async function pullUntilCheckpoint(
   scopeId: string,
   receive: PullPageFn,
   limit = 50,
+  protocol: SyncProtocol = 1,
 ): Promise<{
   pages: number;
   applied: number;
@@ -29,9 +31,9 @@ export async function pullUntilCheckpoint(
   await initializeWorkSyncDatabase(db);
   // Reintenta staging persistido antes de pedir páginas nuevas (reapertura).
   await reconcileInbox(db);
-  const cursorRow = await one(db, 'SELECT scope_id,cursor FROM sync_context WHERE singleton=1');
-  if (!cursorRow || cursorRow.scope_id !== scopeId) throw new SyncPullError('scope local no coincide');
-  let cursor = (cursorRow.cursor as string | null) ?? null;
+  const context = await one(db, 'SELECT scope_id FROM sync_context WHERE singleton=1');
+  if (!context || context.scope_id !== scopeId) throw new SyncPullError('scope local no coincide');
+  let cursor = await readSyncCursor(db, protocol);
   const seen = new Set<string>();
   let pages = 0;
   let applied = 0;
@@ -41,12 +43,12 @@ export async function pullUntilCheckpoint(
   let reconciled = 0;
   let conflicts = 0;
   while (true) {
-    const page = validatePullPage(await receive(cursor, limit), scopeId, limit);
+    const page = validatePullPage(await receive(cursor, limit), scopeId, limit, protocol);
     if (seen.has(page.next_cursor) || (page.has_more && page.next_cursor === cursor)) {
       throw new SyncPullError('cursor pull repetido sin avance');
     }
     seen.add(page.next_cursor);
-    const result = await applyPullPage(db, scopeId, cursor, page, limit);
+    const result = await applyPullPage(db, scopeId, cursor, page, limit, protocol);
     cursor = result.cursor;
     pages++;
     applied += result.applied;
