@@ -39,7 +39,7 @@ npx tsc --noEmit → 0
 - Predicciones: REVISAR + apoyo `null`, explicación de 404 local, no consulta sin token, mapeo de errores 401/503/red.
 - Asistente: respuesta y fuentes, HTML no ejecutado, mapeo de errores, no envío sin token.
 
-La suite completa y el build quedaron interrumpidos por fallos de memoria del entorno tras ejecutar pruebas; no se declaran verificados. `tsc` y las pruebas dirigidas sí finalizaron.
+La suite completa, el build y el lint que D6 dejó pendientes se ejecutaron en D7 con workers limitados: 36 archivos/188 pruebas, build OK y lint OK. La ejecución nativa de la app sigue pendiente (detalle en `integracion-plataforma-d7.md`).
 
 ## Límites
 
