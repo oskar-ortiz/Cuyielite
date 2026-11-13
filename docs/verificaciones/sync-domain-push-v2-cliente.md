@@ -194,6 +194,17 @@ Evidencia recogida:
 
 Conclusión: el reintento no reproduce un defecto de código; reproduce **agotamiento de memoria del host/emulador**, coherente con el spinner y la pantalla blanca de la corrida anterior. No se modificó código ni se simuló la UI con SQL. Android sigue **no verificado** y D7 **no completo**.
 
+### Intento con emulador visible (2026-11-13)
+
+El PR #131 seguía abierto, así que se continuó en `fix/android-sync-v2-runtime`. Antes de iniciar el AVD se midió la memoria del host:
+
+- **0.72 GB libres de 7.19 GB totales**.
+- Umbral indicado para esta verificación: 3 GB libres.
+- No se inició Pixel_36 ni Android Studio Device Manager; no se abrió ninguna UI Android.
+- No se borró, reinstaló ni modificó Pixel_36. No se abrió Electron.
+
+Por la regla de seguridad del encargo, no se forzó el emulador. No se ejecutó contexto, pull, push, recibo, reapertura ni comprobación Demo en esta sesión. Android y D7 siguen incompletos.
+
 ### Límites de esta corrida
 
 - RAG real y artefacto RF real no se ejecutaron: no hay corpus/embeddings/modelo en el entorno. No se sustituyeron por mocks como evidencia real.
@@ -203,7 +214,7 @@ Conclusión: el reintento no reproduce un defecto de código; reproduce **agotam
 
 ## Límites
 
-- **Recorrido nativo:** Windows empaquetado verificado de extremo a extremo. Android verificado en pull, persistencia y Demo; su último push quedó confirmado en SQLite/PostgreSQL, pero la UI no alcanzó el estado final. El reintento Android-only del 2026-11-13 quedó bloqueado por ~15 MB libres, `System UI isn't responding` y `lowmemorykiller`; no se reprodujo un defecto de código. Android no se marca completo.
+- **Recorrido nativo:** Windows empaquetado verificado de extremo a extremo. Android verificado en pull, persistencia y Demo; su último push quedó confirmado en SQLite/PostgreSQL, pero la UI no alcanzó el estado final. El reintento Android-only del 2026-11-13 quedó bloqueado por ~15 MB libres, `System UI isn't responding` y `lowmemorykiller`. El intento con emulador visible del 2026-11-13 no se inició: **0.72 GB libres** frente al mínimo de 3 GB. Android no se marca completo.
 - **D7 nativo pendiente:** Windows ya completó el recorrido; Android no. Por eso D7 no se declara completo.
 - `categoria_ml` y `ultimo_peso_g` ya no son editables en el formulario ni se publican; la ficha los muestra como derivados del servidor.
 - La revisión/resolución de conflictos de dominio sigue limitada a la outbox y a la lectura; la UI de resolución es de v1 (`galpon|poza`).

@@ -73,6 +73,14 @@ Se ejecutó secuencialmente Windows y Android con PostgreSQL temporal, backend `
 - Logcat: `lowmemorykiller` mató `keychain`, `printspooler` y `localtransport` por `low watermark is breached`. No se llegó a la pantalla de sincronización ni se capturó un error JavaScript/WebView del cliente.
 - No se reprodujo un defecto de código; el bloqueo es de memoria del entorno. No se cambió código ni se simuló la UI con SQL. Android y D7 siguen sin completarse.
 
+### Intento con emulador visible (2026-11-13)
+
+- PR #131 abierto; se continuó en `fix/android-sync-v2-runtime`.
+- Medición previa: **0.72 GB libres de 7.19 GB**; mínimo requerido 3 GB.
+- No se inició Pixel_36 ni Android Studio Device Manager; no se abrió UI Android.
+- Pixel_36 quedó intacto. No se ejecutó contexto, pull, push, reapertura ni Demo en esta sesión.
+- Android y D7 siguen incompletos.
+
 ### Límites de la corrida
 
 - RAG real y artefacto RF real no se ejecutaron por falta de corpus/embeddings/modelo; no se usaron mocks como evidencia real.
