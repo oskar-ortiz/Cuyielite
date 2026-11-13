@@ -18,7 +18,7 @@ import { useParams } from 'react-router-dom';
 
 import { getDomainRepository } from '../data/work.domain.factory';
 import type { ConflictKey } from '../data/work.domain.repository';
-import type { Cuyo, Evento, Parto, Pesaje } from '../data/work.domain.validation';
+import type { Cuyo, Evento, PartoCria, Parto, Pesaje } from '../data/work.domain.validation';
 import { getWorkSyncRepository } from '../data/work.sync.repository';
 import './galpones.css';
 
@@ -34,6 +34,7 @@ const AnimalDetalle: React.FC = () => {
   const [partos, setPartos] = useState<PartoConCrias[]>([]);
   const [pesajes, setPesajes] = useState<Pesaje[]>([]);
   const [eventos, setEventos] = useState<Evento[]>([]);
+  const [vinculos, setVinculos] = useState<PartoCria[]>([]);
   const [conflicts, setConflicts] = useState<ConflictKey[]>([]);
   const [backHref, setBackHref] = useState('/trabajo/galpones');
   const [loading, setLoading] = useState(true);
@@ -45,15 +46,17 @@ const AnimalDetalle: React.FC = () => {
     Promise.resolve()
       .then(() => getDomainRepository())
       .then(async (repo) => {
-        const [animal, todos, partosData, pesajesData, eventosData, pozas, conflictos] = await Promise.all([
-          repo.getCuyo(animalId),
-          repo.listAllCuyes(),
-          repo.listPartosByCuyo(animalId),
-          repo.listPesajesByCuyo(animalId),
-          repo.listEventosByCuyo(animalId),
-          repo.listPozas(),
-          repo.listConflictKeys(),
-        ]);
+        const [animal, todos, partosData, pesajesData, eventosData, vinculosData, pozas, conflictos] =
+          await Promise.all([
+            repo.getCuyo(animalId),
+            repo.listAllCuyes(),
+            repo.listPartosByCuyo(animalId),
+            repo.listPesajesByCuyo(animalId),
+            repo.listEventosByCuyo(animalId),
+            repo.listVinculosByCuyo(animalId),
+            repo.listPozas(),
+            repo.listConflictKeys(),
+          ]);
         const conCrias = await Promise.all(
           partosData.map(async (parto) => ({ parto, crias: await repo.listCriasByParto(parto.id) })),
         );
@@ -63,6 +66,7 @@ const AnimalDetalle: React.FC = () => {
         setPartos(conCrias);
         setPesajes(pesajesData);
         setEventos(eventosData);
+        setVinculos(vinculosData);
         setConflicts(conflictos);
         if (poza) setBackHref(`/trabajo/galpones/${poza.galponId}`);
         // El estado de sincronización se consulta aparte para no bloquear la lectura local.
@@ -82,8 +86,23 @@ const AnimalDetalle: React.FC = () => {
 
   const conflicto = (entity: string, id: string) =>
     conflicts.some((item) => item.entity === entity && item.recordId === id);
-  const nameOf = (id: string | null) =>
-    id ? (allCuyes.find((item) => item.id === id)?.codigoIdentificacion ?? 'Referencia pendiente') : null;
+  const conflictHref = (entity: string, id: string) => `/trabajo/conflictos/${entity}/${id}`;
+  const animalLabel = (id: string) => {
+    const animal = allCuyes.find((item) => item.id === id);
+    return animal ? `${animal.codigoIdentificacion} · ${animal.id.slice(0, 8)}` : `Referencia ${id.slice(0, 8)}`;
+  };
+  const nameOf = (id: string | null) => (id ? animalLabel(id) : null);
+  const conflictChip = (entity: string, id: string) =>
+    conflicto(entity, id) ? (
+      <IonButton
+        fill="clear"
+        size="small"
+        routerLink={conflictHref(entity, id)}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <IonChip color="danger">Conflicto</IonChip>
+      </IonButton>
+    ) : null;
 
   return (
     <IonPage>
@@ -115,7 +134,7 @@ const AnimalDetalle: React.FC = () => {
                 <IonChip color="warning">Dato incompleto</IonChip>
               )}
               {conflicto('cuyes', cuyo.id) && (
-                <IonButton fill="clear" size="small" routerLink="/trabajo/conflictos">
+                <IonButton fill="clear" size="small" routerLink={conflictHref('cuyes', cuyo.id)}>
                   <IonChip color="danger">Conflicto pendiente</IonChip>
                 </IonButton>
               )}
@@ -193,7 +212,7 @@ const AnimalDetalle: React.FC = () => {
                       Crias: {crias.length > 0 ? crias.map((c) => c.codigoIdentificacion).join(', ') : 'sin vínculos'}
                     </p>
                   </IonLabel>
-                  {conflicto('partos', parto.id) && <IonChip color="danger">Conflicto</IonChip>}
+                  {conflictChip('partos', parto.id)}
                 </IonItem>
               ))}
             </IonList>
@@ -217,7 +236,7 @@ const AnimalDetalle: React.FC = () => {
                       {pesaje.fechaPesaje ?? 'Fecha sin registrar'} · {pesaje.etapa ?? 'Etapa sin registrar'}
                     </p>
                   </IonLabel>
-                  {conflicto('pesajes', pesaje.id) && <IonChip color="danger">Conflicto</IonChip>}
+                  {conflictChip('pesajes', pesaje.id)}
                 </IonItem>
               ))}
             </IonList>
@@ -242,9 +261,38 @@ const AnimalDetalle: React.FC = () => {
                       {evento.detalle ? ` · ${evento.detalle}` : ''}
                     </p>
                   </IonLabel>
-                  {conflicto('eventos', evento.id) && <IonChip color="danger">Conflicto</IonChip>}
+                  {conflictChip('eventos', evento.id)}
                 </IonItem>
               ))}
+            </IonList>
+
+            <IonList>
+              <IonItem lines="full">
+                <IonLabel>
+                  <h2>Vínculos cría–parto</h2>
+                </IonLabel>
+              </IonItem>
+              {vinculos.length === 0 && (
+                <IonItem>
+                  <IonLabel className="estado-vacio">Sin vínculos registrados.</IonLabel>
+                </IonItem>
+              )}
+              {vinculos.map((vinculo) => {
+                const parto = partos.find((item) => item.parto.id === vinculo.partoId)?.parto;
+                return (
+                  <IonItem key={vinculo.id}>
+                    <IonLabel>
+                      <h2>{vinculo.rol}</h2>
+                      <p>
+                        {parto
+                          ? `Parto ${parto.fechaParto ?? 'sin fecha'} · ${parto.id.slice(0, 8)}`
+                          : `Parto ${vinculo.partoId.slice(0, 8)}`}
+                      </p>
+                    </IonLabel>
+                    {conflictChip('parto_crias', vinculo.id)}
+                  </IonItem>
+                );
+              })}
             </IonList>
           </>
         )}

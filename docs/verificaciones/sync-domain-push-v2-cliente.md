@@ -245,13 +245,13 @@ Conclusión: el recorrido Android de push/pull v2 quedó verificado de extremo a
 - La clave original del cursor v1 no era recuperable. Se re-firmó el mismo payload (`after=8`) con una clave temporal; la posición y la identidad se conservaron, pero el cursor no se puede validar con la clave histórica.
 - RAG real y artefacto RF real no se ejecutaron: no hay corpus/embeddings/modelo en el entorno. No se sustituyeron por mocks como evidencia real.
 - No se probó ML nativo en esta corrida; las reglas reales ya estaban cubiertas por las pruebas de D5.
-- La autenticación de producción, la rotación de tokens y la UI de resolución de conflictos de dominio siguen pendientes.
+- La autenticación de producción y la rotación de tokens siguen pendientes. La UI de resolución de conflictos de dominio se completó en [conflictos-dominio-ui](conflictos-dominio-ui.md).
 
 ## Límites
 
 - **Recorrido nativo:** Windows empaquetado y Android sobre Pixel_36 verificados de extremo a extremo para pull, push, no-op, reapertura, token no persistido y Demo separada. Android conservó la identidad sintética y los datos previos; la clave original del cursor v1 no era recuperable y se re-firmó el mismo payload con una clave temporal.
 - **D7 global pendiente:** el recorrido nativo Windows/Android quedó completo, pero RAG real, artefacto RF real, autenticación de producción y otros criterios no ejecutados siguen pendientes.
 - `categoria_ml` y `ultimo_peso_g` ya no son editables en el formulario ni se publican; la ficha los muestra como derivados del servidor.
-- La revisión/resolución de conflictos de dominio sigue limitada a la outbox y a la lectura; la UI de resolución es de v1 (`galpon|poza`).
+- La revisión/resolución de conflictos de dominio se extendió a las cinco entidades en [conflictos-dominio-ui](conflictos-dominio-ui.md); la UI v1 de `galpon|poza` se conserva.
 - No hay autenticación de producción, rotación de tokens ni retención/purga de historial.
 - El cliente envía una operación por solicitud; no agrupa lotes. El backend soporta lotes y resultados parciales, pero el cliente conserva la atomicidad por operación.

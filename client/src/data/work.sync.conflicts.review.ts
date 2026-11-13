@@ -1,13 +1,20 @@
 import type { MigrationDb } from './work.migration.js';
+import {
+  conflictConfig,
+  isConflictEntity,
+  normalizeConflictRecord,
+  type ConflictEntity,
+  type ReferenceCatalog,
+} from './work.sync.conflicts.config.js';
+import { buildConflictView, loadReferenceCatalog } from './work.sync.conflicts.presentation.js';
 import { initializeWorkSyncDatabase } from './work.sync.migration.js';
-import { validatePullPage, type PullRecord } from './work.sync.pull.js';
+import { validatePullPage, type PullRecord } from './work.sync.pull.validation.js';
 
-type Entity = 'galpon' | 'poza';
 type Row = Record<string, unknown>;
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export interface ConflictReview {
-  entity: Entity;
+  entity: ConflictEntity;
   recordId: string;
   conflictOperationId: string;
   expectedHeadOperationId: string;
@@ -18,13 +25,16 @@ export interface ConflictCase {
   review: ConflictReview;
   central: PullRecord;
   local: Record<string, unknown>;
+  summary: string;
+  references: ReferenceCatalog;
+  missingServerFields: string[];
 }
 
 export type ConflictResolutionResult = { operationId: string | null; discarded: number };
 
 function validateReview(review: ConflictReview): void {
   if (
-    (review.entity !== 'galpon' && review.entity !== 'poza') ||
+    !isConflictEntity(review.entity) ||
     !UUID_V4.test(review.recordId) ||
     !UUID_V4.test(review.conflictOperationId) ||
     !UUID_V4.test(review.expectedHeadOperationId) ||
@@ -41,9 +51,8 @@ async function one(db: MigrationDb, sql: string, params: unknown[] = []): Promis
 export async function readConflictReview(
   db: MigrationDb,
   review: ConflictReview,
-): Promise<{ scopeId: string; record: PullRecord; chain: Row[] }> {
+): Promise<{ scopeId: string; record: PullRecord; chain: Row[]; missingServerFields: string[] }> {
   validateReview(review);
-  if (!/^[1-9][0-9]*$/.test(review.expectedServerVersion)) throw new Error('Versión revisada inválida');
   const context = await one(db, 'SELECT scope_id FROM sync_context WHERE singleton=1');
   if (!context?.scope_id) throw new Error('Base de trabajo sin scope vinculado');
   const state = await one(
@@ -88,22 +97,30 @@ export async function readConflictReview(
     throw new Error('La cadena de conflicto contiene operaciones no resolubles');
   }
   const raw = state.server_snapshot ? JSON.parse(String(state.server_snapshot)) : null;
+  const rawData = raw && typeof raw === 'object' ? (raw as Record<string, unknown>).data : null;
+  const missingServerFields =
+    review.entity === 'cuyes' && rawData && typeof rawData === 'object' && !Array.isArray(rawData)
+      ? ['categoria_ml', 'ultimo_peso_g'].filter((field) => !(field in rawData))
+      : [];
+  const record = normalizeConflictRecord(review.entity, raw);
+  const protocol = conflictConfig(review.entity).protocol;
   const validated = validatePullPage(
     {
-      protocol_version: 1,
+      protocol_version: protocol,
       scope_id: String(context.scope_id),
-      items: [{ seq: '1', entity: review.entity, record: raw }],
+      items: [{ seq: '1', entity: review.entity, record }],
       next_cursor: 'conflict-review',
       has_more: false,
     },
     String(context.scope_id),
     1,
+    protocol,
   );
-  const record = validated.items[0].record;
-  if (record.id !== review.recordId || record.version !== review.expectedServerVersion) {
+  const central = validated.items[0].record;
+  if (central.id !== review.recordId || central.version !== review.expectedServerVersion) {
     throw new Error('Snapshot central no coincide con la revisión');
   }
-  return { scopeId: String(context.scope_id), record, chain: operations };
+  return { scopeId: String(context.scope_id), record: central, chain: operations, missingServerFields };
 }
 
 export async function listConflictCases(db: MigrationDb): Promise<ConflictCase[]> {
@@ -114,28 +131,31 @@ export async function listConflictCases(db: MigrationDb): Promise<ConflictCase[]
         `SELECT o.entity,o.record_id,o.operation_id,s.local_head_operation_id,s.server_version
        FROM sync_outbox o JOIN sync_record_state s
          ON s.entity=o.entity AND s.record_id=o.record_id
-      WHERE o.state='conflict' AND o.entity IN ('galpon','poza') ORDER BY o.local_seq`,
+       WHERE o.state='conflict' ORDER BY o.local_seq`,
       )
     ).values ?? [];
+  const references = await loadReferenceCatalog(db);
   const cases: ConflictCase[] = [];
   for (const row of rows as Row[]) {
+    const entity = row.entity as ConflictEntity;
+    if (!isConflictEntity(entity)) throw new Error('Entidad de conflicto desconocida');
     const review: ConflictReview = {
-      entity: row.entity as Entity,
+      entity,
       recordId: String(row.record_id),
       conflictOperationId: String(row.operation_id),
       expectedHeadOperationId: String(row.local_head_operation_id),
       expectedServerVersion: String(row.server_version),
     };
-    const { record } = await readConflictReview(db, review);
-    const local = await one(
-      db,
-      review.entity === 'galpon'
-        ? 'SELECT nombre,ubicacion FROM galpones WHERE id=?'
-        : 'SELECT galpon_id,codigo,tipo,capacidad_maxima FROM pozas WHERE id=?',
-      [review.recordId],
-    );
-    if (!local) throw new Error('El registro local del conflicto no existe');
-    cases.push({ review, central: record, local });
+    const { record, missingServerFields } = await readConflictReview(db, review);
+    const view = await buildConflictView(db, entity, review.recordId, record, references);
+    cases.push({
+      review,
+      central: record,
+      local: view.local,
+      summary: view.summary,
+      references: view.references,
+      missingServerFields,
+    });
   }
   return cases;
 }

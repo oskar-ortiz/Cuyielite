@@ -5,6 +5,7 @@ import type {
   Evento,
   EventoInput,
   Parto,
+  PartoCria,
   PartoInput,
   Pesaje,
   PesajeInput,
@@ -19,6 +20,7 @@ export interface DomainRepository {
   listPartosByCuyo(cuyId: string): Promise<Parto[]>;
   listPesajesByCuyo(cuyId: string): Promise<Pesaje[]>;
   listEventosByCuyo(cuyId: string): Promise<Evento[]>;
+  listVinculosByCuyo(cuyId: string): Promise<PartoCria[]>;
   listCriasByParto(partoId: string): Promise<Cuyo[]>;
   getParto(id: string): Promise<Parto | null>;
   getPesaje(id: string): Promise<Pesaje | null>;

@@ -6,6 +6,7 @@ import type {
   Evento,
   EventoInput,
   Parto,
+  PartoCria,
   PartoInput,
   Pesaje,
   PesajeInput,
@@ -67,6 +68,7 @@ export interface SqlitePocPlugin {
   listDomainPartos(options: { cuyId: string }): Promise<{ partos: Parto[] }>;
   listDomainPesajes(options: { cuyId: string }): Promise<{ pesajes: Pesaje[] }>;
   listDomainEventos(options: { cuyId: string }): Promise<{ eventos: Evento[] }>;
+  listDomainVinculos(options: { cuyId: string }): Promise<{ vinculos: PartoCria[] }>;
   listDomainCrias(options: { partoId: string }): Promise<{ cuyes: Cuyo[] }>;
   getDomainParto(options: { id: string }): Promise<{ parto: Parto | null }>;
   getDomainPesaje(options: { id: string }): Promise<{ pesaje: Pesaje | null }>;
