@@ -47,7 +47,7 @@ function makeAdapter(db) {
 class SqlitePoc {
   static __capacitorElectronPlugin = {
     name: 'SqlitePoc',
-    methods: ['saveValue', 'readValue', 'initializeDatabase', 'listGalpones', 'listPozasByGalpon', 'createGalpon', 'createPoza', 'updateGalpon', 'updatePoza', 'initializeWorkDatabase', 'getWorkDatabaseStatus', 'closeWorkDatabase', 'listWorkGalpones', 'listWorkPozasByGalpon', 'createWorkGalpon', 'createWorkPoza', 'updateWorkGalpon', 'updateWorkPoza', 'listDomainCuyesByPoza', 'listDomainPozas', 'listDomainConflicts', 'listDomainCuyes', 'getDomainCuyo', 'listDomainPartos', 'listDomainPesajes', 'listDomainEventos', 'listDomainCrias', 'getDomainParto', 'getDomainPesaje', 'getDomainEvento', 'createDomainCuyo', 'updateDomainCuyo', 'createDomainParto', 'updateDomainParto', 'createDomainPesaje', 'updateDomainPesaje', 'createDomainEvento', 'updateDomainEvento'],
+    methods: ['saveValue', 'readValue', 'initializeDatabase', 'listGalpones', 'listPozasByGalpon', 'createGalpon', 'createPoza', 'updateGalpon', 'updatePoza', 'initializeWorkDatabase', 'getWorkDatabaseStatus', 'closeWorkDatabase', 'listWorkGalpones', 'listWorkPozasByGalpon', 'createWorkGalpon', 'createWorkPoza', 'updateWorkGalpon', 'updateWorkPoza', 'listDomainCuyesByPoza', 'listDomainPozas', 'listDomainConflicts', 'listDomainCuyes', 'getDomainCuyo', 'listDomainPartos', 'listDomainPesajes', 'listDomainEventos', 'listDomainVinculos', 'listDomainCrias', 'getDomainParto', 'getDomainPesaje', 'getDomainEvento', 'createDomainCuyo', 'updateDomainCuyo', 'createDomainParto', 'updateDomainParto', 'createDomainPesaje', 'updateDomainPesaje', 'createDomainEvento', 'updateDomainEvento'],
   };
 
   async load() {}
@@ -372,6 +372,15 @@ class SqlitePoc {
     const db = openDb(WORK_DB_PATH);
     try {
       return { eventos: await domainRepo.listEventosByCuyo(makeAdapter(db), cuyId) };
+    } finally {
+      db.close();
+    }
+  }
+
+  async listDomainVinculos({ cuyId }) {
+    const db = openDb(WORK_DB_PATH);
+    try {
+      return { vinculos: await domainRepo.listVinculosByCuyo(makeAdapter(db), cuyId) };
     } finally {
       db.close();
     }

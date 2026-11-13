@@ -10,6 +10,7 @@ export const electronDomainRepository: DomainRepository = {
   listPartosByCuyo: async (cuyId) => (await SqlitePoc.listDomainPartos({ cuyId })).partos,
   listPesajesByCuyo: async (cuyId) => (await SqlitePoc.listDomainPesajes({ cuyId })).pesajes,
   listEventosByCuyo: async (cuyId) => (await SqlitePoc.listDomainEventos({ cuyId })).eventos,
+  listVinculosByCuyo: async (cuyId) => (await SqlitePoc.listDomainVinculos({ cuyId })).vinculos,
   listCriasByParto: async (partoId) => (await SqlitePoc.listDomainCrias({ partoId })).cuyes,
   getParto: async (id) => (await SqlitePoc.getDomainParto({ id })).parto,
   getPesaje: async (id) => (await SqlitePoc.getDomainPesaje({ id })).pesaje,

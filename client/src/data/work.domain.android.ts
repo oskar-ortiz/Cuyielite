@@ -15,6 +15,7 @@ export const androidDomainRepository: DomainRepository = {
   listPartosByCuyo: async (cuyId) => repo.listPartosByCuyo(await db(), cuyId),
   listPesajesByCuyo: async (cuyId) => repo.listPesajesByCuyo(await db(), cuyId),
   listEventosByCuyo: async (cuyId) => repo.listEventosByCuyo(await db(), cuyId),
+  listVinculosByCuyo: async (cuyId) => repo.listVinculosByCuyo(await db(), cuyId),
   listCriasByParto: async (partoId) => repo.listCriasByParto(await db(), partoId),
   getParto: async (id) => repo.getParto(await db(), id),
   getPesaje: async (id) => repo.getPesaje(await db(), id),

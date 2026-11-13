@@ -63,6 +63,7 @@ const App: React.FC = () => (
         <Route path="/trabajo/galpones/nuevo" element={<CrearGalpon mode="trabajo" />} />
         <Route path="/trabajo/sincronizacion" element={<SincronizacionTrabajo />} />
         <Route path="/trabajo/conflictos" element={<ConflictosTrabajo />} />
+        <Route path="/trabajo/conflictos/:entity/:recordId" element={<ConflictosTrabajo />} />
         <Route path="/trabajo/galpones/:galponId/pozas/:pozaId/animales" element={<Animales mode="trabajo" />} />
         <Route path="/trabajo/galpones/:galponId/pozas/:pozaId/animales/nuevo" element={<FormularioCuyo />} />
         <Route path="/trabajo/animales/:animalId" element={<AnimalDetalle />} />
