@@ -1,7 +1,7 @@
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it, vi } from 'vitest';
 
-import { createCuyo } from './work.domain.repository';
+import { createCuyo, createParto } from './work.domain.repository';
 import type { MigrationDb } from './work.migration';
 import { createWorkGalpon, createWorkPoza } from './work.outbox';
 import {
@@ -152,6 +152,58 @@ describe('integración de dominio v2', () => {
     expect(protocolForEntity('cuyes')).toBe(2);
     expect(protocolForEntity('poza')).toBe(1);
     expect(freezePayload('galpon', { nombre: 'G' })).toEqual({ nombre: 'G' });
+    db.close();
+  });
+
+  it('no prepara un parto hasta que la madre pendiente esté aceptada', async () => {
+    const db = new DatabaseSync(':memory:');
+    const adapter = adapterFor(db);
+    const identity = await initializeWorkSyncDatabase(adapter);
+    const galpon = crypto.randomUUID();
+    const poza = crypto.randomUUID();
+    db.prepare('INSERT INTO galpones(id,nombre,ubicacion,created_at,updated_at) VALUES(?,?,NULL,?,?)').run(
+      galpon,
+      'G',
+      CREATED,
+      CREATED,
+    );
+    db.prepare(
+      'INSERT INTO pozas(id,galpon_id,codigo,tipo,capacidad_maxima,created_at,updated_at) VALUES(?,?,?,?,?,?,?)',
+    ).run(poza, galpon, 'P', 'cría', 10, CREATED, CREATED);
+    const madre = await createCuyo(adapter, {
+      pozaId: poza,
+      galponOrigenId: null,
+      codigoIdentificacion: 'MADRE-DEP',
+      sexo: 'H',
+      fechaNacimiento: null,
+      colorCodigo: null,
+      ojosCodigo: null,
+      pelajeOriginal: null,
+      padreId: null,
+      madreId: null,
+      categoriaMl: null,
+      ultimoPesoG: null,
+      estado: 'ACTIVO',
+    });
+    const parto = await createParto(adapter, {
+      madreId: madre.id,
+      fechaParto: '2026-02-01',
+      numeroParto: 1,
+      nacidosVivos: 1,
+      nacidosMuertos: 0,
+      tamanoCamadaNacida: 1,
+      crias: [],
+    });
+
+    expect(await prepareEligible(adapter, identity.deviceId)).toBe(1);
+    expect(db.prepare('SELECT state FROM sync_outbox WHERE operation_id=?').get(parto.operationId)).toMatchObject({
+      state: 'queued',
+    });
+    await sendPrepared(adapter, async (request) => accepted(request));
+    expect(await prepareEligible(adapter, identity.deviceId)).toBe(1);
+    expect(db.prepare('SELECT state FROM sync_outbox WHERE operation_id=?').get(parto.operationId)).toMatchObject({
+      state: 'prepared',
+    });
     db.close();
   });
 
