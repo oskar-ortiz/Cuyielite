@@ -66,6 +66,13 @@ Se ejecutó secuencialmente Windows y Android con PostgreSQL temporal, backend `
 - La UI quedó en “Sincronizando…” y el equipo llegó a **~38 MB de memoria libre**; una reapertura posterior mostró pantalla blanca. Se detuvo el emulador y se eliminó el AVD de prueba.
 - **Android no se marca completo** por ese bloqueo; D7 no se declara completo.
 
+### Reintento Android-only (2026-11-13)
+
+- AVD temporal `CuyiElite_Android_Verify` (API 36, 1024 MB, 720×1280, sin ventana, GMS deshabilitado), PostgreSQL/backend temporales y `adb reverse`.
+- Memoria libre del host: **~15 MB**; `Memory Compression` >3.8 GB. La app mostró `System UI isn't responding`; `MainActivity` tardó 18 s en mostrarse.
+- Logcat: `lowmemorykiller` mató `keychain`, `printspooler` y `localtransport` por `low watermark is breached`. No se llegó a la pantalla de sincronización ni se capturó un error JavaScript/WebView del cliente.
+- No se reprodujo un defecto de código; el bloqueo es de memoria del entorno. No se cambió código ni se simuló la UI con SQL. Android y D7 siguen sin completarse.
+
 ### Límites de la corrida
 
 - RAG real y artefacto RF real no se ejecutaron por falta de corpus/embeddings/modelo; no se usaron mocks como evidencia real.

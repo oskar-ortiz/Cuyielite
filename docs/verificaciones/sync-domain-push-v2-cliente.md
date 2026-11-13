@@ -180,6 +180,20 @@ Android push: se creó desde la UI un segundo pesaje `1000.25` (`2026-11-26`, `D
 - La UI quedó mostrando “Sincronizando…” y el entorno llegó a **~38 MB de memoria libre**; un `force-stop`/reapertura posterior mostró una pantalla blanca. Se detuvo el emulador y se eliminó el AVD de prueba.
 - Por ese bloqueo, **Android no se marca como completamente verificado** y **D7 nativo no se declara completo**, aunque el pull y el push quedaron confirmados en SQLite y PostgreSQL.
 
+### Reintento Android-only (2026-11-13)
+
+Se intentó aislar Android sin Electron, con AVD temporal `CuyiElite_Android_Verify` (API 36, `google_apis`, x86_64), 1024 MB de RAM, pantalla 720×1280, sin ventana y con GMS deshabilitado después del arranque. PostgreSQL/backend temporales y `adb reverse tcp:8000 tcp:8000` se prepararon de nuevo.
+
+Evidencia recogida:
+
+- Memoria libre del host: **~15 MB** al iniciar la app; `Memory Compression` superaba 3.8 GB.
+- La app mostró `System UI isn't responding` antes de poder navegar; `MainActivity` tardó 18 s en mostrarse.
+- Logcat: `lowmemorykiller: Kill 'com.android.keychain' ... reason: low watermark is breached`, seguido de `printspooler` y `localtransport`.
+- `dumpsys meminfo co.ucc.cuyielite` mostró el proceso vivo, pero el entorno no permitió llegar a la pantalla de sincronización.
+- No se capturó un error JavaScript/WebView propio del cliente ni una respuesta fallida del backend porque la app no llegó a iniciar el ciclo.
+
+Conclusión: el reintento no reproduce un defecto de código; reproduce **agotamiento de memoria del host/emulador**, coherente con el spinner y la pantalla blanca de la corrida anterior. No se modificó código ni se simuló la UI con SQL. Android sigue **no verificado** y D7 **no completo**.
+
 ### Límites de esta corrida
 
 - RAG real y artefacto RF real no se ejecutaron: no hay corpus/embeddings/modelo en el entorno. No se sustituyeron por mocks como evidencia real.
@@ -189,7 +203,7 @@ Android push: se creó desde la UI un segundo pesaje `1000.25` (`2026-11-26`, `D
 
 ## Límites
 
-- **Recorrido nativo:** Windows empaquetado verificado de extremo a extremo. Android verificado en pull, persistencia y Demo; su último push quedó confirmado en SQLite/PostgreSQL, pero la UI no alcanzó el estado final por falta de memoria. Android no se marca completo.
+- **Recorrido nativo:** Windows empaquetado verificado de extremo a extremo. Android verificado en pull, persistencia y Demo; su último push quedó confirmado en SQLite/PostgreSQL, pero la UI no alcanzó el estado final. El reintento Android-only del 2026-11-13 quedó bloqueado por ~15 MB libres, `System UI isn't responding` y `lowmemorykiller`; no se reprodujo un defecto de código. Android no se marca completo.
 - **D7 nativo pendiente:** Windows ya completó el recorrido; Android no. Por eso D7 no se declara completo.
 - `categoria_ml` y `ultimo_peso_g` ya no son editables en el formulario ni se publican; la ficha los muestra como derivados del servidor.
 - La revisión/resolución de conflictos de dominio sigue limitada a la outbox y a la lectura; la UI de resolución es de v1 (`galpon|poza`).
