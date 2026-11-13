@@ -2,7 +2,7 @@
 
 Estado: **IMPLEMENTADO Y VERIFICADO EN LABORATORIO** sobre PostgreSQL temporal con datos sintéticos. Sin commit, push ni PR. No agrega DDL ni backfill; la migración `0004` de D1 se conserva y `0005_pesajes_check.sql` sigue siendo de Diery.
 
-Actualización 2026-11-12: el push v2 de dominio ya está implementado en backend con cursor independiente. Ver [sync-domain-push-v2-backend](sync-domain-push-v2-backend.md). El cliente v2 sigue pendiente.
+Actualización 2026-11-12: el push v2 de dominio ya está implementado en backend con cursor independiente. Ver [sync-domain-push-v2-backend](sync-domain-push-v2-backend.md). El cliente v2 ya integra ese contrato y el recorrido nativo Windows/Android quedó verificado.
 
 Rama: `feat/d2-pull-dominio`, desde el HEAD de D1 (`2377411`), que parte de `origin/dev` `8496b29`.
 

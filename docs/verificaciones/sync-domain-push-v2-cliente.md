@@ -1,8 +1,8 @@
 # D2: integración del cliente con sync de dominio v2
 
-Estado: **CORRECCIÓN DE CAMPOS DERIVADOS Y RECORRIDO NATIVO WINDOWS VERIFICADOS; ANDROID VERIFICADO PARCIALMENTE; D7 NATIVO SIGUE PENDIENTE**. El push/pull v2 funciona desde la UI empaquetada de Windows y desde un emulador Android aislado; la memoria del entorno impidió completar el cierre visual de Android tras su último push.
+Estado: **RECORRIDOS NATIVOS WINDOWS Y ANDROID VERIFICADOS; D7 GLOBAL SIGUE PENDIENTE POR RAG REAL, RF REAL Y CRITERIOS NO EJECUTADOS**. El push/pull v2 funciona desde la UI empaquetada de Windows y desde Pixel_36, con identidad y datos preservados, no-op, cierre/reapertura, token no persistido y Demo separada.
 
-Rama de integración: `feat/client-sync-domain-v2`, desde `origin/dev` (`b4e9398`, merge del PR #128). Validación nativa: `test/sync-domain-v2-nativo`, desde `origin/dev` (`e977054`, merge del PR #129).
+Rama de integración: `feat/client-sync-domain-v2`, desde `origin/dev` (`b4e9398`, merge del PR #128). Validación nativa: `test/sync-domain-v2-nativo`, desde `origin/dev` (`e977054`, merge del PR #129). Evidencia Android visible: `fix/android-sync-v2-runtime` (PR #131).
 
 ## Alcance
 
@@ -163,7 +163,7 @@ Resultado del primer ciclo:
 - Cierre y reapertura: datos y cursores persistieron; el token quedó vacío.
 - Demo mostró sus 4 galpones y ningún registro de Trabajo.
 
-### Android (parcial)
+### Android (intento previo, parcial)
 
 AVD nuevo, Trabajo vacío y token provisionado en el mismo `scope_id` del cliente Windows.
 
@@ -178,9 +178,9 @@ Android push: se creó desde la UI un segundo pesaje `1000.25` (`2026-11-26`, `D
 - Outbox local: operación `accepted`; cursor v1/v2 en `after=9`.
 - Central: pesaje en versión 1; 9 recibos y 9 cambios.
 - La UI quedó mostrando “Sincronizando…” y el entorno llegó a **~38 MB de memoria libre**; un `force-stop`/reapertura posterior mostró una pantalla blanca. Se detuvo el emulador y se eliminó el AVD de prueba.
-- Por ese bloqueo, **Android no se marca como completamente verificado** y **D7 nativo no se declara completo**, aunque el pull y el push quedaron confirmados en SQLite y PostgreSQL.
+- Por ese bloqueo, en ese intento **Android no se marcó como completamente verificado** y **D7 nativo no se declaró completo**, aunque el pull y el push quedaron confirmados en SQLite y PostgreSQL.
 
-### Reintento Android-only (2026-11-13)
+### Reintento Android-only previo (2026-11-13)
 
 Se intentó aislar Android sin Electron, con AVD temporal `CuyiElite_Android_Verify` (API 36, `google_apis`, x86_64), 1024 MB de RAM, pantalla 720×1280, sin ventana y con GMS deshabilitado después del arranque. PostgreSQL/backend temporales y `adb reverse tcp:8000 tcp:8000` se prepararon de nuevo.
 
@@ -192,9 +192,9 @@ Evidencia recogida:
 - `dumpsys meminfo co.ucc.cuyielite` mostró el proceso vivo, pero el entorno no permitió llegar a la pantalla de sincronización.
 - No se capturó un error JavaScript/WebView propio del cliente ni una respuesta fallida del backend porque la app no llegó a iniciar el ciclo.
 
-Conclusión: el reintento no reproduce un defecto de código; reproduce **agotamiento de memoria del host/emulador**, coherente con el spinner y la pantalla blanca de la corrida anterior. No se modificó código ni se simuló la UI con SQL. Android sigue **no verificado** y D7 **no completo**.
+Conclusión: el reintento no reproduce un defecto de código; reproduce **agotamiento de memoria del host/emulador**, coherente con el spinner y la pantalla blanca de la corrida anterior. No se modificó código ni se simuló la UI con SQL. En ese intento, Android seguía **no verificado** y D7 **no completo**.
 
-### Intento con emulador visible (2026-11-13)
+### Intento previo con emulador visible (2026-11-13, no ejecutado)
 
 El PR #131 seguía abierto, así que se continuó en `fix/android-sync-v2-runtime`. Antes de iniciar el AVD se midió la memoria del host:
 
@@ -205,19 +205,52 @@ El PR #131 seguía abierto, así que se continuó en `fix/android-sync-v2-runtim
 - Auditoría de recursos propios: no quedaban emuladores, backends ni contenedores iniciados por esta tarea. El contenedor `cuyielite-s3-test` (~35 MB) pertenece a una tarea anterior y no se detuvo.
 - Consumidores externos observados: Memory Compression ~1.32 GB, `opencode-cli` ~309 MB, `vmmemWSL` ~266 MB, `studio64` ~242 MB, OpenCode ~212 MB, Docker backend ~134 MB, antivirus ~132 MB, ChatGPT ~169 MB, Docker Desktop ~79 MB, `codex` ~65 MB. No se cerró ninguna aplicación del usuario.
 
-Por la regla de seguridad del encargo, no se forzó el emulador. No se ejecutó contexto, pull, push, recibo, reapertura ni comprobación Demo en esta sesión. Android y D7 siguen incompletos.
+Por la regla de seguridad del encargo, no se forzó el emulador. No se ejecutó contexto, pull, push, recibo, reapertura ni comprobación Demo en esa sesión. En ese intento, Android y D7 seguían incompletos.
+
+### Recorrido Android visible sobre Pixel_36 (2026-11-13)
+
+Se retomó la sesión ya abierta de Pixel_36 (API 36, 1080×2400), sin crear, clonar ni reiniciar el AVD. La app instalada era `co.ucc.cuyielite` debug, versionCode 1, con una base de Trabajo v3 ya vinculada al ámbito sintético `1fa8fd97-1aee-4b07-94fd-41428ef87ea6` y al dispositivo `3720974e-7df5-4b3e-bd9e-7dd50cae2aa5`; se conservaron ambos.
+
+- Se actualizó el APK con `adb install -r` reutilizando el debug existente. La migración v3→v5 conservó `scope_id`, `device_id`, el cursor v1, 2 galpones, 2 pozas y 4 operaciones `accepted` de la outbox.
+- La clave con la que se firmó el cursor v1 original no estaba disponible. Para no reiniciar la identidad ni el cursor, se volvió a firmar el mismo payload (`after=8`, mismo ámbito y protocolo 1) con la clave temporal del laboratorio. Fue el único acceso de escritura directa a SQLite y no alteró posición, identidad ni datos de negocio.
+- Laboratorio: PostgreSQL temporal con nombre único, migraciones `0001`–`0004`, backend `uvicorn` en `127.0.0.1:8000` y `adb reverse tcp:8000 tcp:8000`. Se provisionaron el ámbito y el dispositivo preservados y un dispositivo semilla; no se conectaron datos reales.
+- Se publicaron 5 registros sintéticos por HTTP: galpón `Galpón Android V2`, poza `P-AND-V2`, cuy `C-AND-V2`, parto del `2026-02-01` y evento `DESTETE` del `2026-03-01`.
+
+Pull y visualización:
+
+- Ciclo desde la UI: **5 recibidos, 0 enviados**; la pantalla salió de “Sincronizando…” y mostró “Sincronización completada”.
+- Cursores v1 y v2 independientes, ambos en `after=13`.
+- Tras el pull se vieron en la UI el galpón, la poza, el animal `C-AND-V2`, el parto y el evento; SQLite local quedó con 3 galpones, 3 pozas, 1 cuy, 1 parto, 1 evento y 0 pesajes.
+
+Push y recibo:
+
+- Se creó desde el formulario real un pesaje de `1234.50` g, etapa `DESTETE`, fecha nula, para `C-AND-V2`.
+- Ciclo: **0 recibidos, 1 enviado**; la UI mostró el resultado final y la outbox local guardó la operación `accepted`.
+- Cursores v1 y v2 en `after=14`.
+- Central: pesaje en versión 1, 6 recibos y 6 cambios para el ámbito; local: 5 operaciones `accepted` (4 previas + pesaje).
+
+No-op y reapertura:
+
+- Segundo ciclo: **0 recibidos, 0 enviados**; no se duplicaron filas ni recibos. Central siguió con 6 recibos y 6 cambios; local con un solo pesaje.
+- `force-stop` + relanzamiento sin borrar datos: la primera captura a los 8 s mostró el WebView en blanco; a los ~10 s renderizó “Elegir modo”. El proceso estaba vivo (`PSS` ~103 MB), sin `ANR`, `FATAL` ni `lowmemorykiller` en Logcat; se trató del arranque del WebView, no de un cierre.
+- Tras reabrir: los 3 galpones, la poza `P-AND-V2`, el animal, el parto, el pesaje `1234.50` y el evento persistieron; cursores v1/v2 en `after=14`; identidad intacta; 5 operaciones `accepted`.
+- El campo de token quedó vacío y el botón deshabilitado con “Ingresa el token de laboratorio para habilitar la sincronización”; el token no se persistió.
+- Demo abrió con sus 4 galpones (`Galpón AndEdit`, `Galpón Sur`, `Galpón Occidente`, `Galpón Este`) y el distintivo “Datos de demostración”, sin registros de Trabajo.
+
+Conclusión: el recorrido Android de push/pull v2 quedó verificado de extremo a extremo sobre Pixel_36, con identidad y datos preservados y sin cambios de código.
 
 ### Límites de esta corrida
 
+- El recorrido Android se ejecutó sobre Pixel_36 ya iniciado y con `adb install -r`; no se creó, reinició ni borró el AVD. La pantalla blanca de ~10 s al relanzar se documentó como arranque del WebView, sin `ANR` ni `lowmemorykiller`.
+- La clave original del cursor v1 no era recuperable. Se re-firmó el mismo payload (`after=8`) con una clave temporal; la posición y la identidad se conservaron, pero el cursor no se puede validar con la clave histórica.
 - RAG real y artefacto RF real no se ejecutaron: no hay corpus/embeddings/modelo en el entorno. No se sustituyeron por mocks como evidencia real.
 - No se probó ML nativo en esta corrida; las reglas reales ya estaban cubiertas por las pruebas de D5.
 - La autenticación de producción, la rotación de tokens y la UI de resolución de conflictos de dominio siguen pendientes.
-- Android no se marca completo por el bloqueo de memoria descrito.
 
 ## Límites
 
-- **Recorrido nativo:** Windows empaquetado verificado de extremo a extremo. Android verificado en pull, persistencia y Demo; su último push quedó confirmado en SQLite/PostgreSQL, pero la UI no alcanzó el estado final. El reintento Android-only del 2026-11-13 quedó bloqueado por ~15 MB libres, `System UI isn't responding` y `lowmemorykiller`. El intento con emulador visible del 2026-11-13 no se inició: **0.72 GB libres** frente al mínimo de 3 GB. Android no se marca completo.
-- **D7 nativo pendiente:** Windows ya completó el recorrido; Android no. Por eso D7 no se declara completo.
+- **Recorrido nativo:** Windows empaquetado y Android sobre Pixel_36 verificados de extremo a extremo para pull, push, no-op, reapertura, token no persistido y Demo separada. Android conservó la identidad sintética y los datos previos; la clave original del cursor v1 no era recuperable y se re-firmó el mismo payload con una clave temporal.
+- **D7 global pendiente:** el recorrido nativo Windows/Android quedó completo, pero RAG real, artefacto RF real, autenticación de producción y otros criterios no ejecutados siguen pendientes.
 - `categoria_ml` y `ultimo_peso_g` ya no son editables en el formulario ni se publican; la ficha los muestra como derivados del servidor.
 - La revisión/resolución de conflictos de dominio sigue limitada a la outbox y a la lectura; la UI de resolución es de v1 (`galpon|poza`).
 - No hay autenticación de producción, rotación de tokens ni retención/purga de historial.
