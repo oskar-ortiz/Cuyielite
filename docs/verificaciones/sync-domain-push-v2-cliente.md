@@ -1,8 +1,8 @@
 # D2: integración del cliente con sync de dominio v2
 
-Estado: **IMPLEMENTADO Y VERIFICADO EN PRUEBAS, LINT, BUILDS E INTEGRACIÓN HTTP CON POSTGRESQL TEMPORAL**. El recorrido nativo Windows/Android y el recorrido nativo de D7 siguen pendientes.
+Estado: **CORRECCIÓN DE CAMPOS DERIVADOS Y RECORRIDO NATIVO WINDOWS VERIFICADOS; ANDROID VERIFICADO PARCIALMENTE; D7 NATIVO SIGUE PENDIENTE**. El push/pull v2 funciona desde la UI empaquetada de Windows y desde un emulador Android aislado; la memoria del entorno impidió completar el cierre visual de Android tras su último push.
 
-Rama: `feat/client-sync-domain-v2`, desde `origin/dev` (`b4e9398`, merge del PR #128).
+Rama de integración: `feat/client-sync-domain-v2`, desde `origin/dev` (`b4e9398`, merge del PR #128). Validación nativa: `test/sync-domain-v2-nativo`, desde `origin/dev` (`e977054`, merge del PR #129).
 
 ## Alcance
 
@@ -15,6 +15,12 @@ El cliente ya usa las rutas v2 del backend fusionado:
 `galpon` y `poza` siguen por v1 (`/sync/context`, `/sync/push`, `/sync/pull`). Las cinco entidades de dominio (`cuyes`, `partos`, `pesajes`, `eventos`, `parto_crias`) se congelan, envían y descargan por v2.
 
 No se implementaron ETL, importación de Excel, autenticación de producción, persistencia de `categoria_ml`/alertas ni cambios de ML/RAG.
+
+## Corrección de campos derivados
+
+`categoria_ml` y `ultimo_peso_g` dejaron de ser editables en el formulario de animal. La ficha los muestra como **derivados del servidor**, en solo lectura. El repositorio tampoco los escribe en `cuyes` al crear o actualizar, ni los incluye en `business_snapshot`; por tanto no llegan a la outbox ni al cuerpo v2. El peso autoritativo sigue siendo `pesajes`.
+
+Se agregaron pruebas de UI (`FormularioCuyo.test.tsx`) y de repositorio para demostrar que no se renderizan como campos editables y que no se publican.
 
 ## Contrato conectado
 
@@ -94,6 +100,8 @@ npx vitest run --maxWorkers=1
 
 Incluye 10 pruebas nuevas: 7 de `work.sync.v2.test.ts`, 2 de rutas v2 en `work.sync.transport.test.ts` y 1 de preservación v4→v5 en `work.sync.migration.v4.test.ts`.
 
+Tras la corrección de campos derivados y el chequeo de dependencias locales se ejecutaron 32 pruebas dirigidas sobre `work.domain.repository.test.ts`, `work.sync.v2.test.ts`, `FormularioCuyo.test.tsx`, `Animales.test.tsx`, `work.sync.client.test.ts` y `work.sync.coordinator.test.ts`: **32 passed**. No se repitió la suite completa porque el entorno ya estaba limitado de memoria; lint, typecheck y builds sí se repitieron.
+
 Cubren:
 
 - congelado v2 sin campos del servidor;
@@ -131,11 +139,59 @@ Resultado con datos sintéticos:
 - todas las operaciones v2 terminaron `accepted` salvo el conflicto intencional;
 - recursos temporales eliminados al cierre: contenedor, base, backend, perfiles y archivos de trabajo.
 
+## Recorrido nativo sintético (2026-11-12)
+
+### Entorno y aislamiento
+
+- PostgreSQL temporal con nombre único, bootstrap + migraciones `0001`–`0004`.
+- Backend `uvicorn` en `127.0.0.1:8000`, con `CUYIELITE_SYNC_LAB_ENABLED=1` y firma de cursor sintética.
+- Windows: app empaquetada `win-unpacked`, perfil de Trabajo aislado mediante copia + junction; el perfil real se restauró al terminar.
+- Android: AVD nuevo `CuyiElite_V2_Verify` (API 36, `google_apis`, x86_64), `adb reverse tcp:8000 tcp:8000`, APK debug. Pixel_36 no se modificó.
+- La comprobación inicial de arranque en Windows usó el perfil real y migró un `trabajo.db` **vacío** de v4 a v5; no había filas. Después se trabajó con la copia aislada y se restauró el perfil real.
+
+### Windows (verificado)
+
+Flujo desde la UI real: crear galpón `Galpón Nativo V2`, poza `P-NAT-1`, madre `C-NAT-MADRE`, cría `C-NAT-CRIA`, parto con vínculo `parto_crias`, pesaje `995.50` y evento `DESTETE`.
+
+Resultado del primer ciclo:
+
+- `Se recibieron 0 registro(s) y se enviaron 8 cambio(s)`.
+- Pendientes, conflictos y rechazados: `0`.
+- Outbox: 8 operaciones `accepted` (galpón, poza, 2 cuyes, parto, parto_crias, pesaje, evento).
+- Central: 8 cambios, 8 recibos, todas las entidades en versión 1.
+- Cursores v1 y v2 independientes, ambos en `after=8`.
+- Cierre y reapertura: datos y cursores persistieron; el token quedó vacío.
+- Demo mostró sus 4 galpones y ningún registro de Trabajo.
+
+### Android (parcial)
+
+AVD nuevo, Trabajo vacío y token provisionado en el mismo `scope_id` del cliente Windows.
+
+- Pull inicial v2 + v1: `Se recibieron 8 registro(s) y se enviaron 0 cambio(s)`.
+- Datos visibles: galpón, 2 animales, parto con `C-NAT-CRIA`, pesaje `995.50` y evento.
+- SQLite local: 1 galpón, 1 poza, 2 cuyes, 1 parto, 1 `parto_crias`, 1 pesaje, 1 evento; outbox/inbox vacíos.
+- Cursores v1 y v2 en `after=8`; token vacío tras `force-stop` y reapertura.
+- Demo mostró sus 4 galpones, separada de Trabajo.
+
+Android push: se creó desde la UI un segundo pesaje `1000.25` (`2026-11-26`, `DESTETE`) y se sincronizó.
+
+- Outbox local: operación `accepted`; cursor v1/v2 en `after=9`.
+- Central: pesaje en versión 1; 9 recibos y 9 cambios.
+- La UI quedó mostrando “Sincronizando…” y el entorno llegó a **~38 MB de memoria libre**; un `force-stop`/reapertura posterior mostró una pantalla blanca. Se detuvo el emulador y se eliminó el AVD de prueba.
+- Por ese bloqueo, **Android no se marca como completamente verificado** y **D7 nativo no se declara completo**, aunque el pull y el push quedaron confirmados en SQLite y PostgreSQL.
+
+### Límites de esta corrida
+
+- RAG real y artefacto RF real no se ejecutaron: no hay corpus/embeddings/modelo en el entorno. No se sustituyeron por mocks como evidencia real.
+- No se probó ML nativo en esta corrida; las reglas reales ya estaban cubiertas por las pruebas de D5.
+- La autenticación de producción, la rotación de tokens y la UI de resolución de conflictos de dominio siguen pendientes.
+- Android no se marca completo por el bloqueo de memoria descrito.
+
 ## Límites
 
-- **Recorrido nativo pendiente:** no se ejecutó la UI en Windows empaquetado ni en Android. La integración anterior es Node/HTTP, no un recorrido nativo.
-- **D7 nativo pendiente:** Windows solo alcanzó `GET /sync/context` en la verificación previa; Android no se ejecutó. Esta entrega no cierra ese recorrido.
-- La UI de dominio todavía expone `categoria_ml` y `ultimo_peso_g` como campos editables locales; el push v2 no los envía y el pull central los reemplaza. No se implementó persistencia de esos campos.
+- **Recorrido nativo:** Windows empaquetado verificado de extremo a extremo. Android verificado en pull, persistencia y Demo; su último push quedó confirmado en SQLite/PostgreSQL, pero la UI no alcanzó el estado final por falta de memoria. Android no se marca completo.
+- **D7 nativo pendiente:** Windows ya completó el recorrido; Android no. Por eso D7 no se declara completo.
+- `categoria_ml` y `ultimo_peso_g` ya no son editables en el formulario ni se publican; la ficha los muestra como derivados del servidor.
 - La revisión/resolución de conflictos de dominio sigue limitada a la outbox y a la lectura; la UI de resolución es de v1 (`galpon|poza`).
 - No hay autenticación de producción, rotación de tokens ni retención/purga de historial.
 - El cliente envía una operación por solicitud; no agrupa lotes. El backend soporta lotes y resultados parciales, pero el cliente conserva la atomicidad por operación.

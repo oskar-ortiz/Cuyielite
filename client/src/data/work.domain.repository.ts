@@ -32,8 +32,6 @@ const CUYO_FIELDS = [
   'pelaje_original',
   'padre_id',
   'madre_id',
-  'categoria_ml',
-  'ultimo_peso_g',
   'estado',
 ] as const;
 const PARTO_FIELDS = [
@@ -354,8 +352,6 @@ function cuyoSnapshot(input: CuyoInput) {
     pelaje_original: input.pelajeOriginal,
     padre_id: input.padreId,
     madre_id: input.madreId,
-    categoria_ml: input.categoriaMl,
-    ultimo_peso_g: input.ultimoPesoG,
     estado: input.estado,
   };
 }
@@ -369,8 +365,8 @@ export async function createCuyo(db: MigrationDb, input: CuyoInput): Promise<Dom
     const now = nowIso();
     const snapshot = cuyoSnapshot(input);
     await db.run(
-      'INSERT INTO cuyes(id,poza_id,galpon_origen_id,codigo_identificacion,sexo,fecha_nacimiento,color_codigo,ojos_codigo,pelaje_original,padre_id,madre_id,categoria_ml,ultimo_peso_g,estado,created_at,updated_at,deleted_at) ' +
-        'VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL)',
+      'INSERT INTO cuyes(id,poza_id,galpon_origen_id,codigo_identificacion,sexo,fecha_nacimiento,color_codigo,ojos_codigo,pelaje_original,padre_id,madre_id,estado,created_at,updated_at,deleted_at) ' +
+        'VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL)',
       [
         id,
         snapshot.poza_id,
@@ -383,8 +379,6 @@ export async function createCuyo(db: MigrationDb, input: CuyoInput): Promise<Dom
         snapshot.pelaje_original,
         snapshot.padre_id,
         snapshot.madre_id,
-        snapshot.categoria_ml,
-        snapshot.ultimo_peso_g,
         snapshot.estado,
         now,
         now,
@@ -406,7 +400,7 @@ export async function updateCuyo(db: MigrationDb, id: string, input: CuyoInput):
     const previous = await predecessor(db, 'cuyes', id);
     const now = nowIso();
     await db.run(
-      'UPDATE cuyes SET poza_id=?,galpon_origen_id=?,codigo_identificacion=?,sexo=?,fecha_nacimiento=?,color_codigo=?,ojos_codigo=?,pelaje_original=?,padre_id=?,madre_id=?,categoria_ml=?,ultimo_peso_g=?,estado=?,updated_at=? WHERE id=?',
+      'UPDATE cuyes SET poza_id=?,galpon_origen_id=?,codigo_identificacion=?,sexo=?,fecha_nacimiento=?,color_codigo=?,ojos_codigo=?,pelaje_original=?,padre_id=?,madre_id=?,estado=?,updated_at=? WHERE id=?',
       [
         snapshot.poza_id,
         snapshot.galpon_origen_id,
@@ -418,8 +412,6 @@ export async function updateCuyo(db: MigrationDb, id: string, input: CuyoInput):
         snapshot.pelaje_original,
         snapshot.padre_id,
         snapshot.madre_id,
-        snapshot.categoria_ml,
-        snapshot.ultimo_peso_g,
         snapshot.estado,
         now,
         id,

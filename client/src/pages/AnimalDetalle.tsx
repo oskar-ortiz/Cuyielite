@@ -141,11 +141,11 @@ const AnimalDetalle: React.FC = () => {
                 <IonLabel slot="end">{cuyo.estado ?? 'Sin registrar'}</IonLabel>
               </IonItem>
               <IonItem>
-                <IonLabel>Último peso</IonLabel>
+                <IonLabel>Último peso (derivado del servidor)</IonLabel>
                 <IonLabel slot="end">{cuyo.ultimoPesoG ? `${cuyo.ultimoPesoG} g` : 'Sin registrar'}</IonLabel>
               </IonItem>
               <IonItem>
-                <IonLabel>Categoría</IonLabel>
+                <IonLabel>Categoría (derivada del servidor)</IonLabel>
                 <IonLabel slot="end">{cuyo.categoriaMl ?? 'Sin registrar'}</IonLabel>
               </IonItem>
               <IonItem>

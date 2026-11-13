@@ -2,7 +2,7 @@
 
 Estado: **IMPLEMENTADO Y VERIFICADO EN PRUEBAS Y BUILDS**. Falta la verificación en ejecución nativa (Android/Windows), que no se ejecutó en este entorno.
 
-Actualización 2026-11-12: las entidades de dominio de la UI se envían por el protocolo v2 con outbox y cursor independiente. Ver [sync-domain-push-v2-cliente](sync-domain-push-v2-cliente.md). El recorrido nativo y la revisión de conflictos de dominio en la UI siguen pendientes.
+Actualización 2026-11-12: las entidades de dominio de la UI se envían por el protocolo v2 con outbox y cursor independiente. Ver [sync-domain-push-v2-cliente](sync-domain-push-v2-cliente.md). Además, `categoria_ml` y `ultimo_peso_g` se retiraron de los formularios de edición y la ficha los muestra como derivados del servidor. El recorrido nativo Windows quedó verificado; Android quedó parcial por memoria y la revisión de conflictos de dominio en la UI sigue pendiente.
 
 Rama de trabajo: `feat/d4-trabajo-dominio`, desde `dev` `a91a30a` (D3 completo).
 

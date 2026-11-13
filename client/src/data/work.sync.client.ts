@@ -6,6 +6,15 @@ export type SyncProtocol = 1 | 2;
 type Row = Record<string, unknown>;
 
 const V1_ENTITIES: ReadonlySet<SyncEntity> = new Set<SyncEntity>(['galpon', 'poza']);
+const REFERENCES: Partial<Record<SyncEntity, Record<string, SyncEntity>>> = {
+  galpon: {},
+  poza: { galpon_id: 'galpon' },
+  cuyes: { poza_id: 'poza', galpon_origen_id: 'galpon', padre_id: 'cuyes', madre_id: 'cuyes' },
+  partos: { madre_id: 'cuyes' },
+  pesajes: { cuy_id: 'cuyes', parto_id: 'partos', evento_id: 'eventos' },
+  eventos: { cuy_id: 'cuyes', macho_id: 'cuyes', poza_origen_id: 'poza', poza_destino_id: 'poza' },
+  parto_crias: { parto_id: 'partos', cuy_id: 'cuyes' },
+};
 const V2_FIELDS: Record<Exclude<SyncEntity, 'galpon' | 'poza'>, string[]> = {
   cuyes: [
     'poza_id',
@@ -35,6 +44,29 @@ export function freezePayload(entity: SyncEntity, snapshot: Record<string, unkno
   const fields = V2_FIELDS[entity as Exclude<SyncEntity, 'galpon' | 'poza'>];
   if (!fields) throw new Error(`Entidad v2 desconocida: ${entity}`);
   return Object.fromEntries(fields.map((field) => [field, snapshot[field] ?? null]));
+}
+
+async function hasPendingCreate(db: MigrationDb, entity: SyncEntity, recordId: unknown): Promise<boolean> {
+  if (typeof recordId !== 'string' || recordId.length === 0) return false;
+  const rows = await all(
+    db,
+    "SELECT state FROM sync_outbox WHERE entity=? AND record_id=? AND action='create' ORDER BY local_seq",
+    [entity, recordId],
+  );
+  return rows.some((row) => row.state === 'queued' || row.state === 'prepared');
+}
+
+async function hasPendingReference(
+  db: MigrationDb,
+  entity: SyncEntity,
+  snapshot: Record<string, unknown>,
+): Promise<boolean> {
+  const references = REFERENCES[entity];
+  if (!references) return false;
+  for (const [field, target] of Object.entries(references)) {
+    if (await hasPendingCreate(db, target, snapshot[field])) return true;
+  }
+  return false;
 }
 
 async function one(db: MigrationDb, sql: string, params: unknown[] = []): Promise<Row | null> {
@@ -215,6 +247,7 @@ export async function prepareOperation(
     if (action === 'update' && (!baseVersion || !/^[1-9][0-9]*$/.test(baseVersion))) return false;
 
     const snapshot = JSON.parse(op.business_snapshot as string) as Record<string, unknown>;
+    if (await hasPendingReference(db, entity, snapshot)) return false;
     const frozen: FrozenRequest = {
       protocol_version: protocol,
       device_id: deviceId,

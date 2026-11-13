@@ -1,6 +1,6 @@
 # D7: verificación integral de la plataforma
 
-Estado: **verificación automatizada ejecutada; recorrido nativo Windows/Android no verificado**. No se declara la plataforma completa ni la sincronización bidireccional de dominio.
+Estado: **verificación automatizada ejecutada; Windows nativo verificado; Android verificado parcialmente por bloqueo de memoria. D7 no se declara completo.**
 
 ## Checks automatizados (2026-11-11, ejecutados en D7)
 
@@ -45,11 +45,38 @@ Android no se intentó: Pixel_36 requiere ~2.5 GB y el entorno no tenía memoria
 
 Limpieza: contenedor PostgreSQL, backend, perfiles temporales, scripts y token sintético eliminados; no se tocaron AVD, instalaciones ni bases preexistentes.
 
+## Recorrido nativo v2 (2026-11-12)
+
+Se ejecutó secuencialmente Windows y Android con PostgreSQL temporal, backend `uvicorn`, scope/tokens sintéticos y perfiles aislados.
+
+### Windows (completo)
+
+- App `win-unpacked`, perfil de Trabajo aislado. Flujo UI: galpón `Galpón Nativo V2`, poza `P-NAT-1`, madre `C-NAT-MADRE`, cría `C-NAT-CRIA`, parto con `parto_crias`, pesaje `995.50` y evento `DESTETE`.
+- Primer ciclo: **8 cambios enviados, 0 recibidos**, 0 pendientes/conflictos/rechazados; outbox 8/8 `accepted`.
+- Central: 8 cambios y 8 recibos, todas las entidades en versión 1.
+- Cursores v1 y v2 independientes en `after=8`.
+- Cierre/reapertura: datos y cursores persistieron; token vacío. Demo con 4 galpones, separada.
+
+### Android (parcial)
+
+- AVD nuevo `CuyiElite_V2_Verify` (API 36), APK debug, `adb reverse tcp:8000 tcp:8000`; Pixel_36 no se modificó.
+- Pull: **8 registros recibidos, 0 enviados**; galpón, animales, parto/cría, pesaje y evento visibles; SQLite con las 7 tablas y cursores v1/v2 en `after=8`.
+- Cierre/reapertura: datos y cursores persistieron; token vacío. Demo con 4 galpones, separada.
+- Push: segundo pesaje `1000.25` creado desde la UI y enviado; outbox `accepted`, cursor v1/v2 en `after=9`, central con pesaje versión 1 y 9 recibos/cambios.
+- La UI quedó en “Sincronizando…” y el equipo llegó a **~38 MB de memoria libre**; una reapertura posterior mostró pantalla blanca. Se detuvo el emulador y se eliminó el AVD de prueba.
+- **Android no se marca completo** por ese bloqueo; D7 no se declara completo.
+
+### Límites de la corrida
+
+- RAG real y artefacto RF real no se ejecutaron por falta de corpus/embeddings/modelo; no se usaron mocks como evidencia real.
+- No se probó ML nativo; las reglas reales ya estaban cubiertas por D5.
+- La autenticación de producción, la rotación de tokens y la UI de resolución de conflictos de dominio siguen pendientes.
+
 ## Límites vigentes
 
-1. Push v2 de dominio (`cuyes`, `partos`, `pesajes`, `eventos`, `parto_crias`): backend implementado y verificado el 2026-11-12 ([evidencia](sync-domain-push-v2-backend.md)); el cliente v2 se integró en una entrega posterior ([evidencia](sync-domain-push-v2-cliente.md)). El recorrido nativo del push y el recorrido nativo D7 siguen pendientes. La sincronización nativa recorrida en D7 fue solo descarga + escritura local.
-2. Persistencia de `categoria_ml` y alertas: pendiente de política de calidad, idempotencia, deduplicación y código/identidad de episodio.
-3. Recorrido nativo integral Windows/Android y reapertura real: pendiente por memoria/entorno.
+1. Push v2 de dominio (`cuyes`, `partos`, `pesajes`, `eventos`, `parto_crias`): backend y cliente integrados ([backend](sync-domain-push-v2-backend.md), [cliente](sync-domain-push-v2-cliente.md)). Windows nativo verificado; Android confirmó pull/push en SQLite/PostgreSQL, pero no cerró la UI por memoria. D7 sigue pendiente.
+2. `categoria_ml` y `ultimo_peso_g`: ya no son editables ni se publican; la ficha los muestra como derivados del servidor. Persistencia de `categoria_ml` y alertas sigue pendiente de política.
+3. Recorrido nativo integral Windows/Android: Windows completo; Android parcial por bloqueo de memoria.
 4. RAG real y artefacto RF real: dependencias/corpus no disponibles.
 5. Autenticación de producción/rotación: no implementada.
 6. Carga real/ETL: fuera de alcance; el orquestador de Diery no se probó aquí.
