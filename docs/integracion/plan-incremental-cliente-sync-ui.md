@@ -376,6 +376,8 @@ La idempotencia completa de la herramienta de Diery se demuestra conjuntamente e
 
 **Estado D5 (2026-11-11, rama `feat/backend-ml-rag-d5`):** endpoints `POST /ml/predict/hembra`, `POST /ml/predict/candidata` y `POST /assistant/query` con autenticación de laboratorio y ámbito desde el token. El servidor valida existencia, sexo y supervivencia del animal; la clase principal es la de reglas, el RF es opcional y RAG devuelve solo `{respuesta, fuentes}`. Sin escrituras de `categoria_ml` ni alertas. Verificado con funciones ML reales y dobles HTTP/RAG; la persistencia y el pipeline RAG real quedan pendientes de política/entorno. Evidencia en [d5-ml-rag](../verificaciones/d5-ml-rag.md).
 
+**Estado auth piloto (2026-11-13, rama `docs/auth-piloto-propuesta`, PROPUESTA):** [ADR 0007](../decisiones/0007-autenticacion-piloto.md) propone autenticación propia en FastAPI para el piloto: usuarios Argon2id, roles por ámbito, access JWT de 10–15 min, refresh opaco rotatorio, dispositivos ligados a usuario/ámbito, revocación por versión, TLS, almacenamiento seguro Android/Electron y recuperación asistida. Producción queda abierta a OIDC gestionado/autogestionado. No implementa código, migraciones ni credenciales; requiere revisión de Oskar y Diery.
+
 ## 11. Riesgos y decisiones abiertas
 
 1. Congelar la forma interna before/after/versión esperada y el backfill de históricos sin ámbito; la propiedad del orquestador ya la definió Diery.
@@ -385,7 +387,7 @@ La idempotencia completa de la herramienta de Diery se demuestra conjuntamente e
 5. Envelope ETL e idempotencia durable del lote/origen en D1B.
 6. Persistencia de categoria_ml incompleta, alerta/código/deduplicación y contrato de lectura/sync de alertas.
 7. Inputs/procedencia y errores HTTP ML; datos de modelo inválidos no son errores 4xx del usuario.
-8. Autorización de producción, rotación, respaldo y piloto posterior.
+8. Autorización de producción, rotación, respaldo y piloto posterior: propuesta inicial en [ADR 0007](../decisiones/0007-autenticacion-piloto.md); sin implementar. La decisión propia vs OIDC para producción sigue abierta.
 
 No quedan abiertas como antes: variantes del nombre animal, cría–parto embebida, segundo orquestador, exactamente un vínculo de pesaje, RF obligatorio, clase principal del RF ni RAG de cuatro campos. Las definiciones recibidas no se confunden con implementación.
 
