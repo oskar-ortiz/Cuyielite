@@ -57,7 +57,7 @@ El publicador central serializa `created_at`/`updated_at` con zona `+00:00` y mi
 - `client/src/data/work.sync.pull.apply.ts`: aplicación, inbox, conflictos, reconciliación y diagnóstico.
 - `client/src/data/work.sync.pull.runner.ts`: reconciliación al iniciar y contadores.
 - `client/src/data/work.sync.pull.ts`: exportaciones.
-- `client/src/data/work.sync.conflicts.review.ts`: la revisión v1 ignora conflictos de dominio hasta D4.
+- `client/src/data/work.sync.conflicts.review.ts`: en D3 la revisión v1 ignoraba conflictos de dominio; la extensión posterior se documenta en [conflictos-dominio-ui](conflictos-dominio-ui.md).
 - Pruebas: `work.sync.migration.v4.test.ts` (5), `work.sync.pull.domain.test.ts` (8), `work.sync.pull.validation.test.ts` (+1), `work.sync.migration.test.ts` (expectativas v4).
 
 ## Verificación ejecutada
@@ -147,7 +147,7 @@ Validación: acepta entidades de dominio y timestamps con offset; rechaza entida
 ## Límites y pendientes
 
 - La ejecución nativa se hizo con arneses de laboratorio sobre la capa de datos, no recorriendo la UI de dominio: D4 no existe todavía. La app empaquetada se verificó solo como arranque.
-- No hay UI de dominio (D4); `listInboxEntries` es la API de diagnóstico actual y la revisión de conflictos de dominio aún no se muestra.
+- En esa entrega no había UI de dominio (D4); `listInboxEntries` era la API de diagnóstico y la revisión de conflictos de dominio aún no se mostraba. La revisión se completó después en [conflictos-dominio-ui](conflictos-dominio-ui.md).
 - No se compactan filas `applied` de `sync_inbox`.
 - Una dependencia que nunca llega permanece `staged`: es reintentable y visible, pero no se marca `incomplete` automáticamente por el fin de una ventana.
 - No hay push v2 ni creación de outbox para entidades de dominio; la outbox solo se amplió para el futuro y para registrar conflictos.

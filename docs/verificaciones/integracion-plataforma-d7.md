@@ -27,6 +27,7 @@ Tareas pesadas secuenciales y con un worker para evitar el bloqueo de memoria qu
 | Animal local no publicado | Cliente | Mapeo 404 y mensaje | Pasa en prueba | No observado en UI nativa |
 | Token inválido/backend caído | Cliente/Backend | Pruebas 401/503 y mapeo | Pasa con dobles | No ejecutado contra backend real en nativo |
 | Token no persistido y Demo separada | Cliente/Android | Reapertura real: token vacío; Demo con 4 galpones | Pasa | — |
+| Resolución de conflictos de dominio | Cliente/Android | Comparación, reintento y conservar central en Pixel_36; pruebas de las cinco entidades | Pasa | — |
 | RAG real | Backend | — | **No ejecutado** | Faltan `RAG_DATABASE_URL`, embeddings E5 y corpus |
 | RAG UI (respuesta/fuentes/abstención) | Cliente | Pruebas con dobles | Pasa | No es recuperación real |
 
@@ -103,7 +104,7 @@ Conclusión: el recorrido Android de D7 quedó verificado de extremo a extremo p
 - RAG real y artefacto RF real no se ejecutaron por falta de corpus/embeddings/modelo; no se usaron mocks como evidencia real.
 - No se probó ML nativo; las reglas reales ya estaban cubiertas por D5.
 - La clave original del cursor v1 no era recuperable. Se re-firmó el mismo payload (`after=8`) con una clave temporal; la posición y la identidad se conservaron, pero el cursor no se puede validar con la clave histórica.
-- La autenticación de producción, la rotación de tokens y la UI de resolución de conflictos de dominio siguen pendientes.
+- La autenticación de producción y la rotación de tokens siguen pendientes. La UI de resolución de conflictos de dominio se completó en [conflictos-dominio-ui](conflictos-dominio-ui.md).
 
 ## Límites vigentes
 

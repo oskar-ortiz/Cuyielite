@@ -2,7 +2,7 @@
 
 Estado: **IMPLEMENTADO Y VERIFICADO EN PRUEBAS, BUILDS Y RECORRIDO NATIVO WINDOWS/ANDROID**.
 
-Actualización 2026-11-12: las entidades de dominio de la UI se envían por el protocolo v2 con outbox y cursor independiente. Ver [sync-domain-push-v2-cliente](sync-domain-push-v2-cliente.md). Además, `categoria_ml` y `ultimo_peso_g` se retiraron de los formularios de edición y la ficha los muestra como derivados del servidor. El recorrido nativo quedó verificado en Windows y Android; la revisión de conflictos de dominio en la UI sigue pendiente.
+Actualización 2026-11-12: las entidades de dominio de la UI se envían por el protocolo v2 con outbox y cursor independiente. Ver [sync-domain-push-v2-cliente](sync-domain-push-v2-cliente.md). Además, `categoria_ml` y `ultimo_peso_g` se retiraron de los formularios de edición y la ficha los muestra como derivados del servidor. El recorrido nativo quedó verificado en Windows y Android; la revisión de conflictos de dominio se completó en [conflictos-dominio-ui](conflictos-dominio-ui.md).
 
 Rama de trabajo: `feat/d4-trabajo-dominio`, desde `dev` `a91a30a` (D3 completo).
 
@@ -77,6 +77,6 @@ Cobertura nueva:
 
 - **Ejecución nativa real pendiente:** no se recorrió la UI en emulador Android ni en la app instalada de Windows; los builds sí finalizaron.
 - No hay borrado ni eliminación de vínculos `parto_crias`; solo alta y corrección de `rol` (esta última sin pantalla propia todavía).
-- La revisión de conflictos de dominio sigue enlazando a la pantalla existente; sus casos aún no se listan allí (la revisión v1 cubre `galpon|poza`).
+- La revisión de conflictos de dominio se completó en [conflictos-dominio-ui](conflictos-dominio-ui.md); la ficha enlaza al conflicto de animal, parto, pesaje, evento y vínculo cría–parto.
 - La lista de pozas y animales se lee completa para los selectores; no hay paginación local.
 - Sin datos reales, Excel, tokens ni bases versionadas; las pruebas usan filas sintéticas en memoria.
