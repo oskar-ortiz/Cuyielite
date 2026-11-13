@@ -202,6 +202,8 @@ El PR #131 seguía abierto, así que se continuó en `fix/android-sync-v2-runtim
 - Umbral indicado para esta verificación: 3 GB libres.
 - No se inició Pixel_36 ni Android Studio Device Manager; no se abrió ninguna UI Android.
 - No se borró, reinstaló ni modificó Pixel_36. No se abrió Electron.
+- Auditoría de recursos propios: no quedaban emuladores, backends ni contenedores iniciados por esta tarea. El contenedor `cuyielite-s3-test` (~35 MB) pertenece a una tarea anterior y no se detuvo.
+- Consumidores externos observados: Memory Compression ~1.32 GB, `opencode-cli` ~309 MB, `vmmemWSL` ~266 MB, `studio64` ~242 MB, OpenCode ~212 MB, Docker backend ~134 MB, antivirus ~132 MB, ChatGPT ~169 MB, Docker Desktop ~79 MB, `codex` ~65 MB. No se cerró ninguna aplicación del usuario.
 
 Por la regla de seguridad del encargo, no se forzó el emulador. No se ejecutó contexto, pull, push, recibo, reapertura ni comprobación Demo en esta sesión. Android y D7 siguen incompletos.
 

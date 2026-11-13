@@ -79,6 +79,8 @@ Se ejecutó secuencialmente Windows y Android con PostgreSQL temporal, backend `
 - Medición previa: **0.72 GB libres de 7.19 GB**; mínimo requerido 3 GB.
 - No se inició Pixel_36 ni Android Studio Device Manager; no se abrió UI Android.
 - Pixel_36 quedó intacto. No se ejecutó contexto, pull, push, reapertura ni Demo en esta sesión.
+- Auditoría: no quedaban emuladores, backends ni contenedores de esta tarea. `cuyielite-s3-test` (~35 MB) es de una tarea anterior y no se detuvo.
+- Consumidores externos: Memory Compression ~1.32 GB, `opencode-cli` ~309 MB, `vmmemWSL` ~266 MB, `studio64` ~242 MB, OpenCode ~212 MB, Docker backend ~134 MB, antivirus ~132 MB, ChatGPT ~169 MB, Docker Desktop ~79 MB, `codex` ~65 MB. No se cerró ninguna app del usuario.
 - Android y D7 siguen incompletos.
 
 ### Límites de la corrida
