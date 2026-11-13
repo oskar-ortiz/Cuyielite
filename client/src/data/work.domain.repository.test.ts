@@ -155,6 +155,49 @@ describe('repositorio de dominio y outbox', () => {
     db.close();
   });
 
+  it('no publica ni deja editar categoria_ml ni ultimo_peso_g', async () => {
+    const { db, adapter } = await makeDb();
+    const created = await createCuyo(adapter, {
+      ...cuyInput('C-SERVIDOR'),
+      categoriaMl: 'ELITE',
+      ultimoPesoG: '900.00',
+    });
+    expect(db.prepare('SELECT categoria_ml,ultimo_peso_g FROM cuyes WHERE id=?').get(created.id)).toEqual({
+      categoria_ml: null,
+      ultimo_peso_g: null,
+    });
+    const createdSnapshot = JSON.parse(
+      String(
+        (db.prepare('SELECT business_snapshot FROM sync_outbox WHERE operation_id=?').get(created.operationId) as any)
+          .business_snapshot,
+      ),
+    ) as Record<string, unknown>;
+    expect(createdSnapshot).not.toHaveProperty('categoria_ml');
+    expect(createdSnapshot).not.toHaveProperty('ultimo_peso_g');
+
+    db.prepare('UPDATE cuyes SET categoria_ml=?, ultimo_peso_g=? WHERE id=?').run('ELITE', '900.00', created.id);
+    const updated = await updateCuyo(adapter, created.id, {
+      ...cuyInput('C-SERVIDOR'),
+      estado: 'VENDIDO',
+      categoriaMl: 'DESCARTE',
+      ultimoPesoG: '1.00',
+    });
+    expect(updated.changed).toBe(true);
+    expect(db.prepare('SELECT categoria_ml,ultimo_peso_g FROM cuyes WHERE id=?').get(created.id)).toEqual({
+      categoria_ml: 'ELITE',
+      ultimo_peso_g: '900.00',
+    });
+    const updateSnapshot = JSON.parse(
+      String(
+        (db.prepare('SELECT business_snapshot FROM sync_outbox WHERE operation_id=?').get(updated.operationId) as any)
+          .business_snapshot,
+      ),
+    ) as Record<string, unknown>;
+    expect(updateSnapshot).not.toHaveProperty('categoria_ml');
+    expect(updateSnapshot).not.toHaveProperty('ultimo_peso_g');
+    db.close();
+  });
+
   it('crea parto con parto_crias y conserva el vínculo padre/hijo', async () => {
     const { db, adapter } = await makeDb();
     const madre = await createCuyo(adapter, cuyInput('MADRE'));

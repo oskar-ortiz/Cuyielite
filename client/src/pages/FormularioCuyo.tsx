@@ -18,7 +18,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 
 import { getDomainRepository } from '../data/work.domain.factory';
 import type { PozaRef } from '../data/work.domain.repository';
-import { validateCuyo, type CategoriaMl, type Cuyo, type CuyoInput, type Sexo } from '../data/work.domain.validation';
+import { validateCuyo, type Cuyo, type CuyoInput, type Sexo } from '../data/work.domain.validation';
 import './galpones.css';
 
 const empty: CuyoInput = {
@@ -170,24 +170,12 @@ const FormularioCuyo: React.FC = () => {
             </IonSelectOption>
           ))}
         </IonSelect>
-        <IonSelect
-          label="Categoría"
-          labelPlacement="stacked"
-          value={input.categoriaMl ?? ''}
-          onIonChange={(e) => change({ categoriaMl: (e.detail.value || null) as CategoriaMl | null })}
-        >
-          <IonSelectOption value="">Sin registrar</IonSelectOption>
-          <IonSelectOption value="ELITE">Élite</IonSelectOption>
-          <IonSelectOption value="NORMAL">Normal</IonSelectOption>
-          <IonSelectOption value="DESCARTE">Descarte</IonSelectOption>
-        </IonSelect>
-        <IonInput
-          label="Último peso (g)"
-          labelPlacement="stacked"
-          inputmode="decimal"
-          value={input.ultimoPesoG ?? ''}
-          onIonInput={(e) => change({ ultimoPesoG: String(e.detail.value ?? '') || null })}
-        />
+        <IonItem lines="none">
+          <IonLabel className="ion-text-wrap">
+            La categoría y el último peso son valores derivados del servidor; el peso autoritativo se registra en
+            Pesajes.
+          </IonLabel>
+        </IonItem>
         <IonInput
           label="Estado"
           labelPlacement="stacked"
