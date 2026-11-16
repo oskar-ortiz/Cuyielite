@@ -49,8 +49,9 @@ import '@ionic/react/css/display.css';
 /* import '@ionic/react/css/palettes/dark.class.css'; */
 import '@ionic/react/css/palettes/dark.system.css';
 
-/* Theme variables */
+/* Theme variables and shared application patterns */
 import './theme/variables.css';
+import './theme/app.css';
 
 setupIonicReact();
 

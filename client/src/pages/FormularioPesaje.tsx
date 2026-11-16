@@ -1,6 +1,5 @@
 import {
   IonBackButton,
-  IonButton,
   IonButtons,
   IonContent,
   IonHeader,
@@ -11,12 +10,22 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import {
+  FieldErrors,
+  FormActions,
+  InlineNotice,
+  PageFrame,
+  PageIntro,
+  PageState,
+  SectionCard,
+} from '../components/AppUi';
 import { getDomainRepository } from '../data/work.domain.factory';
 import { validatePesaje, type Evento, type Parto, type PesajeInput } from '../data/work.domain.validation';
-import './galpones.css';
+
+const fieldHints = ['fecha', 'peso', 'etapa', 'parto', 'evento', 'animal'];
 
 const FormularioPesaje: React.FC = () => {
   const navigate = useNavigate();
@@ -34,6 +43,7 @@ const FormularioPesaje: React.FC = () => {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loading, setLoading] = useState(editing);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -64,12 +74,14 @@ const FormularioPesaje: React.FC = () => {
   const change = (patch: Partial<PesajeInput>) => setInput((prev) => ({ ...prev, ...patch }));
 
   const submit = async () => {
+    if (savingRef.current || loading) return;
     setNotice(null);
     const validation = validatePesaje(input);
     if (!validation.ok) {
       setErrors(validation.errors);
       return;
     }
+    savingRef.current = true;
     setSaving(true);
     setErrors([]);
     try {
@@ -85,6 +97,7 @@ const FormularioPesaje: React.FC = () => {
     } catch (e) {
       setErrors([e instanceof Error ? e.message : String(e)]);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -99,64 +112,118 @@ const FormularioPesaje: React.FC = () => {
           <IonTitle>{editing ? 'Editar pesaje' : 'Registrar pesaje'}</IonTitle>
         </IonToolbar>
       </IonHeader>
-      <IonContent className="ion-padding">
-        {loading && <p className="estado-vacio">Cargando…</p>}
-        <IonInput
-          label="Fecha de pesaje"
-          labelPlacement="stacked"
-          type="date"
-          value={input.fechaPesaje ?? ''}
-          onIonInput={(e) => change({ fechaPesaje: String(e.detail.value ?? '') || null })}
-        />
-        <IonInput
-          label="Peso en gramos"
-          labelPlacement="stacked"
-          inputmode="decimal"
-          value={input.pesoGramos}
-          onIonInput={(e) => change({ pesoGramos: String(e.detail.value ?? '') })}
-        />
-        <IonInput
-          label="Etapa"
-          labelPlacement="stacked"
-          value={input.etapa ?? ''}
-          onIonInput={(e) => change({ etapa: String(e.detail.value ?? '') || null })}
-          maxlength={20}
-        />
-        <IonSelect
-          label="Parto (opcional)"
-          labelPlacement="stacked"
-          value={input.partoId ?? ''}
-          onIonChange={(e) => change({ partoId: (e.detail.value || null) as string | null, eventoId: null })}
-        >
-          <IonSelectOption value="">Sin vínculo</IonSelectOption>
-          {partos.map((parto) => (
-            <IonSelectOption key={parto.id} value={parto.id}>
-              {parto.fechaParto ?? parto.id}
-            </IonSelectOption>
-          ))}
-        </IonSelect>
-        <IonSelect
-          label="Evento (opcional)"
-          labelPlacement="stacked"
-          value={input.eventoId ?? ''}
-          onIonChange={(e) => change({ eventoId: (e.detail.value || null) as string | null, partoId: null })}
-        >
-          <IonSelectOption value="">Sin vínculo</IonSelectOption>
-          {eventos.map((evento) => (
-            <IonSelectOption key={evento.id} value={evento.id}>
-              {evento.tipo} · {evento.fecha ?? 'sin fecha'}
-            </IonSelectOption>
-          ))}
-        </IonSelect>
-        {errors.map((err, index) => (
-          <p key={index} className="estado-vacio">
-            {err}
-          </p>
-        ))}
-        {notice && <p className="estado-vacio">{notice}</p>}
-        <IonButton expand="block" onClick={submit} disabled={saving || loading}>
-          {saving ? 'Guardando…' : 'Guardar'}
-        </IonButton>
+      <IonContent fullscreen className="app-content">
+        <PageFrame narrow>
+          <PageIntro
+            eyebrow="Base de trabajo"
+            title={editing ? 'Editar pesaje' : 'Registrar pesaje'}
+            description="Registra el peso y, si aplica, asócialo a un parto o evento. Un pesaje admite a lo sumo uno de esos vínculos."
+          />
+          {loading ? (
+            <PageState kind="loading" title="Cargando pesaje…" />
+          ) : (
+            <form
+              noValidate
+              onSubmit={(event) => {
+                event.preventDefault();
+                void submit();
+              }}
+            >
+              <SectionCard title="Datos del pesaje">
+                <div className="form-grid">
+                  <div className="form-grid__full">
+                    <IonInput
+                      label="Fecha de pesaje"
+                      labelPlacement="stacked"
+                      fill="outline"
+                      type="date"
+                      value={input.fechaPesaje ?? ''}
+                      onIonInput={(e) => change({ fechaPesaje: String(e.detail.value ?? '') || null })}
+                      disabled={saving}
+                    />
+                    <FieldErrors errors={errors.filter((error) => error.toLowerCase().includes('fecha'))} />
+                  </div>
+                  <div className="form-grid__full">
+                    <IonInput
+                      label="Peso en gramos"
+                      labelPlacement="stacked"
+                      fill="outline"
+                      inputmode="decimal"
+                      value={input.pesoGramos}
+                      onIonInput={(e) => change({ pesoGramos: String(e.detail.value ?? '') })}
+                      disabled={saving}
+                      required
+                    />
+                    <FieldErrors errors={errors.filter((error) => error.toLowerCase().includes('peso'))} />
+                  </div>
+                  <div className="form-grid__full">
+                    <IonInput
+                      label="Etapa"
+                      labelPlacement="stacked"
+                      fill="outline"
+                      value={input.etapa ?? ''}
+                      onIonInput={(e) => change({ etapa: String(e.detail.value ?? '') || null })}
+                      maxlength={20}
+                      disabled={saving}
+                    />
+                    <FieldErrors errors={errors.filter((error) => error.toLowerCase().includes('etapa'))} />
+                  </div>
+                </div>
+              </SectionCard>
+
+              <SectionCard title="Vínculo opcional">
+                <div className="form-grid">
+                  <div>
+                    <IonSelect
+                      label="Parto"
+                      labelPlacement="stacked"
+                      fill="outline"
+                      value={input.partoId ?? ''}
+                      onIonChange={(e) =>
+                        change({ partoId: (e.detail.value || null) as string | null, eventoId: null })
+                      }
+                      disabled={saving}
+                    >
+                      <IonSelectOption value="">Sin vínculo</IonSelectOption>
+                      {partos.map((parto) => (
+                        <IonSelectOption key={parto.id} value={parto.id}>
+                          {parto.fechaParto ?? parto.id}
+                        </IonSelectOption>
+                      ))}
+                    </IonSelect>
+                    <FieldErrors errors={errors.filter((error) => error.toLowerCase().includes('parto'))} />
+                  </div>
+                  <div>
+                    <IonSelect
+                      label="Evento"
+                      labelPlacement="stacked"
+                      fill="outline"
+                      value={input.eventoId ?? ''}
+                      onIonChange={(e) =>
+                        change({ eventoId: (e.detail.value || null) as string | null, partoId: null })
+                      }
+                      disabled={saving}
+                    >
+                      <IonSelectOption value="">Sin vínculo</IonSelectOption>
+                      {eventos.map((evento) => (
+                        <IonSelectOption key={evento.id} value={evento.id}>
+                          {evento.tipo} · {evento.fecha ?? 'sin fecha'}
+                        </IonSelectOption>
+                      ))}
+                    </IonSelect>
+                    <FieldErrors errors={errors.filter((error) => error.toLowerCase().includes('evento'))} />
+                  </div>
+                </div>
+              </SectionCard>
+
+              <FieldErrors
+                errors={errors.filter((error) => !fieldHints.some((hint) => error.toLocaleLowerCase().includes(hint)))}
+              />
+              {notice && <InlineNotice role="status">{notice}</InlineNotice>}
+              <FormActions saving={saving} />
+            </form>
+          )}
+        </PageFrame>
       </IonContent>
     </IonPage>
   );

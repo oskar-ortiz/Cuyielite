@@ -1,4 +1,7 @@
-import { IonButton, IonContent, IonHeader, IonPage, IonTitle, IonToolbar } from '@ionic/react';
+import { IonButton, IonHeader, IonIcon, IonPage, IonTitle, IonToolbar } from '@ionic/react';
+import { briefcaseOutline, flaskOutline, lockClosedOutline, pawOutline } from 'ionicons/icons';
+
+import { AppContent, PageFrame, PageIntro, SectionCard } from '../components/AppUi';
 
 const ModoInicio: React.FC = () => (
   <IonPage>
@@ -7,21 +10,45 @@ const ModoInicio: React.FC = () => (
         <IonTitle>CuyiElite</IonTitle>
       </IonToolbar>
     </IonHeader>
-    <IonContent className="ion-padding">
-      <h1>Elegir modo</h1>
-      <section aria-labelledby="modo-demo">
-        <h2 id="modo-demo">Demostración</h2>
-        <p>Explora y edita los datos de prueba. Esta base permanece separada del trabajo.</p>
-        <IonButton routerLink="/galpones">Entrar a demostración</IonButton>
-      </section>
-      <section aria-labelledby="modo-trabajo">
-        <h2 id="modo-trabajo">Trabajo</h2>
-        <p>Crea y edita galpones y pozas en la base de trabajo, y sincroniza cuando lo indiques.</p>
-        <IonButton routerLink="/trabajo/galpones" fill="outline">
-          Entrar a trabajo
-        </IonButton>
-      </section>
-    </IonContent>
+    <AppContent>
+      <PageFrame narrow>
+        <div className="brand-header" aria-label="CuyiElite, gestión productiva de cuyes">
+          <IonIcon className="brand-header__icon" icon={pawOutline} aria-hidden="true" />
+          <div>
+            <div className="brand-header__name">CuyiElite</div>
+            <div className="brand-header__subtitle">Gestión productiva de cuyes</div>
+          </div>
+        </div>
+        <PageIntro
+          title="Elegir modo"
+          description="Selecciona la base que vas a utilizar. Podrás cambiar de modo sin mezclar los registros."
+        />
+        <div className="mode-grid">
+          <SectionCard className="mode-card" ariaLabel="Modo demostración">
+            <IonIcon className="mode-card__icon" icon={flaskOutline} aria-hidden="true" />
+            <h2 id="modo-demo">Demostración</h2>
+            <p>Explora la aplicación y practica con registros de prueba. Esta base permanece separada del trabajo.</p>
+            <IonButton routerLink="/galpones" fill="outline" aria-describedby="modo-demo">
+              Entrar a demostración
+            </IonButton>
+          </SectionCard>
+          <SectionCard className="mode-card" ariaLabel="Modo trabajo">
+            <IonIcon className="mode-card__icon" icon={briefcaseOutline} aria-hidden="true" />
+            <h2 id="modo-trabajo">Trabajo</h2>
+            <p>
+              Registra galpones, animales y controles productivos. Consulta localmente y sincroniza cuando lo indiques.
+            </p>
+            <IonButton routerLink="/trabajo/galpones" aria-describedby="modo-trabajo">
+              Entrar a trabajo
+            </IonButton>
+          </SectionCard>
+        </div>
+        <p className="home-footnote">
+          <IonIcon icon={lockClosedOutline} aria-hidden="true" />
+          Cada modo conserva sus datos por separado.
+        </p>
+      </PageFrame>
+    </AppContent>
   </IonPage>
 );
 

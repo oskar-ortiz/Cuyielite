@@ -2,7 +2,6 @@ import {
   IonBackButton,
   IonButton,
   IonButtons,
-  IonChip,
   IonContent,
   IonHeader,
   IonInput,
@@ -20,6 +19,15 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
+import {
+  ConnectivityChip,
+  InlineNotice,
+  ModeChip,
+  PageFrame,
+  PageIntro,
+  PageState,
+  SectionCard,
+} from '../components/AppUi';
 import { snapshot } from '../data/auth.session';
 import { getConflictRepository } from '../data/work.sync.conflict.repository';
 import type { ConflictCase } from '../data/work.sync.conflicts';
@@ -164,6 +172,8 @@ const ConflictosTrabajo: React.FC = () => {
         <IonSelect
           aria-label={field.label}
           label={field.label}
+          labelPlacement="stacked"
+          fill="outline"
           value={value}
           onIonChange={(event) => update(field.key, event.detail.value ?? '')}
           disabled={saving}
@@ -182,6 +192,8 @@ const ConflictosTrabajo: React.FC = () => {
         <IonSelect
           aria-label={field.label}
           label={field.label}
+          labelPlacement="stacked"
+          fill="outline"
           value={value}
           onIonChange={(event) => update(field.key, event.detail.value ?? '')}
           disabled={saving}
@@ -200,6 +212,8 @@ const ConflictosTrabajo: React.FC = () => {
         <IonTextarea
           aria-label={field.label}
           label={field.label}
+          labelPlacement="stacked"
+          fill="outline"
           value={value}
           maxlength={field.maxLength}
           autoGrow
@@ -212,6 +226,8 @@ const ConflictosTrabajo: React.FC = () => {
       <IonInput
         aria-label={field.label}
         label={field.label}
+        labelPlacement="stacked"
+        fill="outline"
         type={field.kind === 'date' ? 'date' : field.kind === 'integer' ? 'number' : 'text'}
         inputmode={field.kind === 'decimal' ? 'decimal' : undefined}
         min={field.kind === 'integer' ? String(field.min ?? 0) : undefined}
@@ -234,131 +250,150 @@ const ConflictosTrabajo: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent className="ion-padding">
-        <div className="marcado-demo">
-          <IonChip color="primary">Base de trabajo</IonChip>
-          {!online && <IonChip color="warning">Sin conexión</IonChip>}
-        </div>
-        <p>
-          Revisa cada diferencia antes de elegir qué datos conservar. Las fechas y los pesos se muestran con su unidad;
-          «Sin dato» distingue un valor vacío de un cero.
-        </p>
-        <IonButton fill="clear" onClick={load} disabled={saving}>
-          Actualizar
-        </IonButton>
-        {loading && <p>Cargando conflictos…</p>}
-        {error && <p role="alert">{error}</p>}
-        {notice && <p role="status">{notice}</p>}
-        {!loading && cases.length === 0 && !error && <p>No hay conflictos pendientes.</p>}
-        {!loading && cases.length > 0 && (
-          <IonList aria-label="Conflictos pendientes">
-            {cases.map((item) => (
-              <IonItem key={item.review.conflictOperationId}>
-                <IonLabel>
-                  <h2>{item.summary}</h2>
-                  <p>
-                    {item.review.entity === 'parto_crias' ? 'Vínculo cría–parto' : item.review.entity} · versión central{' '}
-                    {item.review.expectedServerVersion}
-                    {item.central.deleted_at ? ' · Eliminado en el servidor' : ''}
-                  </p>
-                </IonLabel>
-                <IonButton slot="end" onClick={() => choose(item)} disabled={saving}>
-                  Revisar
-                </IonButton>
-              </IonItem>
-            ))}
-          </IonList>
-        )}
-        {selected && edits && (
-          <section aria-label="Revisión del conflicto">
-            <h2>Comparar {selected.review.entity === 'parto_crias' ? 'vínculo' : selected.summary}</h2>
-            <p>
-              Versión central {selected.review.expectedServerVersion}
-              {selected.central.deleted_at ? ' (eliminada)' : ''}
-            </p>
-            <IonList>
-              {conflictFields(selected.review.entity).map((field) => (
-                <IonItem key={field.key}>
-                  <IonLabel>
-                    <h3>{field.label}</h3>
-                    {field.kind === 'derived' ? (
-                      <>
-                        <p>
-                          Servidor:{' '}
-                          {selected.missingServerFields.includes(field.key)
-                            ? 'No incluido en el recibo'
-                            : formatConflictValue(field, selected.central.data[field.key], selected.references)}
-                        </p>
-                        <p>Dispositivo: solo servidor</p>
-                      </>
-                    ) : (
-                      <>
-                        <p>
-                          Servidor: {formatConflictValue(field, selected.central.data[field.key], selected.references)}
-                        </p>
-                        <p>Dispositivo: {formatConflictValue(field, selected.local[field.key], selected.references)}</p>
-                      </>
-                    )}
-                  </IonLabel>
-                </IonItem>
-              ))}
-            </IonList>
-            {canWrite && !selected.central.deleted_at && (
-              <>
-                <h3>Valores para reintentar</h3>
-                <p>
-                  Se conservan las referencias y dependencias de la versión central. Solo se reenvían los campos que
-                  edites aquí.
-                </p>
-                {editableFields(selected.review.entity).map((field) =>
-                  renderEditor(selected, field, edits[field.key] ?? ''),
-                )}
-              </>
-            )}
-            {!canWrite && (
-              <p className="texto-ayuda">
-                La sesión actual solo permite consulta. Un administrador debe iniciar sesión para resolver este
-                conflicto.
-              </p>
-            )}
-            {canWrite && (
-              <IonButton onClick={() => setDecision('central')} disabled={saving}>
-                Conservar versión central
-              </IonButton>
-            )}
-            {canWrite && !selected.central.deleted_at && (
-              <IonButton onClick={() => setDecision('retry')} disabled={saving}>
-                Reintentar cambio local
-              </IonButton>
-            )}
-            <IonButton
-              fill="clear"
-              onClick={() => {
-                setSelected(null);
-                setEdits(null);
-                setDecision(null);
-                setError(null);
-              }}
-              disabled={saving}
-            >
-              Cancelar
+        <PageFrame>
+          <PageIntro
+            eyebrow="Base de trabajo"
+            title="Conflictos de trabajo"
+            description="Revisa cada diferencia antes de elegir qué datos conservar. Las fechas y los pesos se muestran con su unidad; «Sin dato» distingue un valor vacío de un cero."
+          />
+          <div className="context-bar">
+            <div className="context-status">
+              <ModeChip work readOnly={!canWrite} />
+              <ConnectivityChip online={online} />
+            </div>
+            <IonButton fill="clear" onClick={load} disabled={saving}>
+              Actualizar
             </IonButton>
-            {decision && (
-              <div role="group" aria-label="Confirmar decisión">
-                <p>
-                  {decision === 'central'
-                    ? 'Se descartarán los cambios locales pendientes de este registro.'
-                    : 'Se creará un cambio local nuevo; se enviará en una sincronización posterior.'}
-                </p>
-                <IonButton color="danger" onClick={confirm} disabled={saving}>
-                  {saving ? 'Resolviendo…' : 'Confirmar decisión'}
-                </IonButton>
-                <IonButton fill="clear" onClick={() => setDecision(null)} disabled={saving}>
-                  Volver
-                </IonButton>
+          </div>
+
+          {error && (
+            <InlineNotice tone="danger" role="alert">
+              {error}
+            </InlineNotice>
+          )}
+          {notice && <InlineNotice tone="success">{notice}</InlineNotice>}
+          {loading && <PageState kind="loading" title="Cargando conflictos…" />}
+
+          {!loading && cases.length === 0 && !error && <PageState kind="empty" title="No hay conflictos pendientes." />}
+
+          {!loading && cases.length > 0 && (
+            <SectionCard className="section-card--flush" title="Conflictos pendientes">
+              <IonList className="app-list" aria-label="Conflictos pendientes">
+                {cases.map((item) => (
+                  <IonItem key={item.review.conflictOperationId}>
+                    <IonLabel className="ion-text-wrap">
+                      <h2>{item.summary}</h2>
+                      <p>
+                        {item.review.entity === 'parto_crias' ? 'Vínculo cría–parto' : item.review.entity} · versión
+                        central {item.review.expectedServerVersion}
+                        {item.central.deleted_at ? ' · Eliminado en el servidor' : ''}
+                      </p>
+                    </IonLabel>
+                    <IonButton slot="end" onClick={() => choose(item)} disabled={saving}>
+                      Revisar
+                    </IonButton>
+                  </IonItem>
+                ))}
+              </IonList>
+            </SectionCard>
+          )}
+
+          {selected && edits && (
+            <SectionCard title={`Comparar ${selected.review.entity === 'parto_crias' ? 'vínculo' : selected.summary}`}>
+              <p>
+                Versión central {selected.review.expectedServerVersion}
+                {selected.central.deleted_at ? ' (eliminada)' : ''}
+              </p>
+              <div className="comparison-scroll">
+                <div className="comparison-table">
+                  <div className="comparison-table__header">Campo</div>
+                  <div className="comparison-table__header">Servidor</div>
+                  <div className="comparison-table__header">Dispositivo</div>
+                  {conflictFields(selected.review.entity).map((field) => (
+                    <>
+                      <div key={`field-${field.key}`}>{field.label}</div>
+                      <div key={`server-${field.key}`}>
+                        Servidor:{' '}
+                        {field.kind === 'derived'
+                          ? selected.missingServerFields.includes(field.key)
+                            ? 'No incluido en el recibo'
+                            : formatConflictValue(field, selected.central.data[field.key], selected.references)
+                          : formatConflictValue(field, selected.central.data[field.key], selected.references)}
+                      </div>
+                      <div key={`device-${field.key}`}>
+                        Dispositivo:{' '}
+                        {field.kind === 'derived'
+                          ? 'Solo servidor'
+                          : formatConflictValue(field, selected.local[field.key], selected.references)}
+                      </div>
+                    </>
+                  ))}
+                </div>
               </div>
-            )}
-          </section>
-        )}
+
+              {canWrite && !selected.central.deleted_at && (
+                <>
+                  <h3>Valores para reintentar</h3>
+                  <p>
+                    Se conservan las referencias y dependencias de la versión central. Solo se reenvían los campos que
+                    edites aquí.
+                  </p>
+                  {editableFields(selected.review.entity).map((field) => (
+                    <div key={field.key} className="form-section">
+                      {renderEditor(selected, field, edits[field.key] ?? '')}
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {!canWrite && (
+                <p className="texto-ayuda">
+                  La sesión actual solo permite consulta. Un administrador debe iniciar sesión para resolver este
+                  conflicto.
+                </p>
+              )}
+
+              {canWrite && (
+                <IonButton onClick={() => setDecision('central')} disabled={saving}>
+                  Conservar versión central
+                </IonButton>
+              )}
+              {canWrite && !selected.central.deleted_at && (
+                <IonButton onClick={() => setDecision('retry')} disabled={saving}>
+                  Reintentar cambio local
+                </IonButton>
+              )}
+              <IonButton
+                fill="clear"
+                onClick={() => {
+                  setSelected(null);
+                  setEdits(null);
+                  setDecision(null);
+                  setError(null);
+                }}
+                disabled={saving}
+              >
+                Cancelar
+              </IonButton>
+
+              {decision && (
+                <div role="group" aria-label="Confirmar decisión">
+                  <p>
+                    {decision === 'central'
+                      ? 'Se descartarán los cambios locales pendientes de este registro.'
+                      : 'Se creará un cambio local nuevo; se enviará en una sincronización posterior.'}
+                  </p>
+                  <IonButton color="danger" onClick={confirm} disabled={saving}>
+                    {saving ? 'Resolviendo…' : 'Confirmar decisión'}
+                  </IonButton>
+                  <IonButton fill="clear" onClick={() => setDecision(null)} disabled={saving}>
+                    Volver
+                  </IonButton>
+                </div>
+              )}
+            </SectionCard>
+          )}
+        </PageFrame>
       </IonContent>
     </IonPage>
   );
