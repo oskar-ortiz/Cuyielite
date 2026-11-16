@@ -2,7 +2,7 @@
 // SQL: aporta el token en memoria y, en el caso de push, el cuerpo congelado.
 // La peticion HTTP y las operaciones de sincronizacion sobre SQLite ocurren
 // siempre en el proceso principal, contra el loopback fijo del laboratorio.
-import { app } from 'electron';
+import { app, safeStorage } from 'electron';
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -15,6 +15,8 @@ import { initializeWorkSyncDatabase } from './work.sync.migration.js';
 import { readWorkSyncStatus } from './work.sync.status.js';
 
 const LAB_BASE_URL = 'http://127.0.0.1:8000';
+const AUTH_BASE_URL = (process.env.CUYIELITE_API_URL || LAB_BASE_URL).replace(/\/+$/, '');
+const SESSION_PATH = path.join(app.getPath('userData'), 'auth-session.bin');
 
 const ROUTES = Object.freeze({
   context: '/sync/context',
@@ -71,6 +73,45 @@ function assertToken(token) {
   }
 }
 
+function assertAllowedApi(url) {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error('Destino de API invalido');
+  }
+  if (parsed.protocol === 'https:') return;
+  if (parsed.protocol === 'http:' && (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost')) return;
+  throw new Error('Destino de API no autorizado');
+}
+
+async function authRequest(route, body, token) {
+  const url = AUTH_BASE_URL + route;
+  assertAllowedApi(url);
+  const res = await fetch(url, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    redirect: 'error',
+    signal: AbortSignal.timeout(15_000),
+  });
+  assertAllowedApi(res.url);
+  if (!res.ok) {
+    let detail = `AUTH_HTTP_${res.status}`;
+    try {
+      const payload = await res.json();
+      if (payload && typeof payload.detail === 'string') detail = payload.detail;
+    } catch {
+      // mantener código HTTP
+    }
+    throw new Error(`HTTP ${res.status} ${detail}`);
+  }
+  return res.json();
+}
+
 async function request(route, token, init) {
   assertToken(token);
   const url = LAB_BASE_URL + route;
@@ -94,7 +135,7 @@ async function request(route, token, init) {
 class SyncLab {
   static __capacitorElectronPlugin = {
     name: 'SyncLab',
-    methods: ['context', 'push', 'pull', 'contextV2', 'pushV2', 'pullV2', 'bind', 'prepare', 'send', 'sync', 'status', 'listConflicts', 'keepCentral', 'retryConflict', 'predictHembra', 'predictCandidata', 'assistantQuery'],
+    methods: ['context', 'push', 'pull', 'contextV2', 'pushV2', 'pullV2', 'bind', 'prepare', 'send', 'sync', 'status', 'listConflicts', 'keepCentral', 'retryConflict', 'authLogin', 'authRefresh', 'authLogout', 'authChangePassword', 'authMe', 'authSessionSave', 'authSessionRead', 'authSessionClear', 'predictHembra', 'predictCandidata', 'assistantQuery'],
   };
 
   async load() {}
@@ -185,7 +226,7 @@ class SyncLab {
     }
   }
 
-  async sync({ token }) {
+  async sync({ token, allowPush = true }) {
     const db = openWorkDb();
     try {
       const adapter = makeAdapter(db);
@@ -196,7 +237,7 @@ class SyncLab {
         contextV2: (value) => this.contextV2({ token: value }),
         pushV2: (value, body) => this.pushV2({ token: value, body }),
         pullV2: (value, cursor, limit) => this.pullV2({ token: value, cursor, limit }),
-      }, token);
+      }, token, { allowPush });
     } finally {
       db.close();
     }
@@ -236,6 +277,44 @@ class SyncLab {
     } finally {
       db.close();
     }
+  }
+
+  async authLogin({ body }) {
+    return authRequest('/auth/login', body);
+  }
+
+  async authRefresh({ body }) {
+    return authRequest('/auth/refresh', body);
+  }
+
+  async authLogout({ body }) {
+    return authRequest('/auth/logout', body);
+  }
+
+  async authChangePassword({ token, body }) {
+    return authRequest('/auth/change-password', body, token);
+  }
+
+  async authMe({ token }) {
+    return authRequest('/auth/me', undefined, token);
+  }
+
+  async authSessionSave({ value }) {
+    if (!safeStorage.isEncryptionAvailable()) throw new Error('Almacenamiento seguro no disponible');
+    fs.mkdirSync(path.dirname(SESSION_PATH), { recursive: true });
+    fs.writeFileSync(SESSION_PATH, safeStorage.encryptString(String(value)), { mode: 0o600 });
+    return { ok: true };
+  }
+
+  async authSessionRead() {
+    if (!fs.existsSync(SESSION_PATH)) return { value: null };
+    if (!safeStorage.isEncryptionAvailable()) throw new Error('Almacenamiento seguro no disponible');
+    return { value: safeStorage.decryptString(fs.readFileSync(SESSION_PATH)) };
+  }
+
+  async authSessionClear() {
+    if (fs.existsSync(SESSION_PATH)) fs.unlinkSync(SESSION_PATH);
+    return { ok: true };
   }
 
   async predictHembra({ token, body }) {
