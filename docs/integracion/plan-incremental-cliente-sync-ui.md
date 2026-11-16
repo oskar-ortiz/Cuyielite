@@ -1,5 +1,13 @@
 # Plan incremental de cliente, sincronización y UI
 
+## Punto vigente — 2026-11-15
+
+Las entregas de publicación, sync v2, dominio local, UI y conflictos ya construidas se conservan. El siguiente trabajo se ordena en el [plan de acceso e integración del piloto](plan-piloto-lope-acceso-integracion.md): permisos para equipos compartidos, conexión de ETL/RF/RAG de Diery y propuesta de persistencia de categorías/alertas. Las respuestas de uso están confirmadas; la política nueva de predicción requiere alinear reglas, API y cliente. No se implementó ese plan en esta actualización.
+
+Las secciones iniciales siguientes describen la base de diseño de noviembre 10; no representan todos los avances posteriores. Consultar las evidencias por entrega y el punto vigente antes de tratar una carencia histórica como pendiente actual.
+
+## Base histórica del diseño
+
 Estado: **PLAN DOCUMENTAL ACTUALIZADO CON DIERY (2026-11-10)**. No implementa migraciones, endpoints ni pantallas. Incorpora su respuesta y conserva como propuestas los mecanismos aún no construidos. D1 es el siguiente corte del frente de Oskar; D1B integra el orquestador de Diery sin duplicarlo.
 
 Base examinada: `origin/dev` `8496b29`. Fuentes: [schemas de sync](../../backend/app/schemas/sync.py), [servicio de sync](../../backend/app/services/sync.py), migraciones centrales [0001](../../db/migrations/central/0001_lope_domain.sql)–[0003](../../db/migrations/central/0003_rag_e5_embeddings.sql), [esquema SQLite de trabajo](../../client/src/data/work.schema.ts), [esquema de sync local](../../client/src/data/work.sync.schema.ts), [aplicación de pull](../../client/src/data/work.sync.pull.apply.ts), evidencias [S4](../verificaciones/sync-s4.md), [S5](../verificaciones/sync-ui-s5.md), [E2E nativo](../verificaciones/sync-e2e-lab-nativo.md) y [registro en Trabajo](../verificaciones/registro-trabajo-galpones-pozas.md). D0–D7 en este documento son entregas de integración, no las antiguas decisiones D1–D8 de sincronización.
@@ -376,7 +384,9 @@ La idempotencia completa de la herramienta de Diery se demuestra conjuntamente e
 
 **Estado D5 (2026-11-11, rama `feat/backend-ml-rag-d5`):** endpoints `POST /ml/predict/hembra`, `POST /ml/predict/candidata` y `POST /assistant/query` con autenticación de laboratorio y ámbito desde el token. El servidor valida existencia, sexo y supervivencia del animal; la clase principal es la de reglas, el RF es opcional y RAG devuelve solo `{respuesta, fuentes}`. Sin escrituras de `categoria_ml` ni alertas. Verificado con funciones ML reales y dobles HTTP/RAG; la persistencia y el pipeline RAG real quedan pendientes de política/entorno. Evidencia en [d5-ml-rag](../verificaciones/d5-ml-rag.md).
 
-**Estado auth piloto (2026-11-13, rama `docs/auth-piloto-propuesta`, PROPUESTA):** [ADR 0007](../decisiones/0007-autenticacion-piloto.md) propone autenticación propia en FastAPI para el piloto: usuarios Argon2id, roles por ámbito, access JWT de 10–15 min, refresh opaco rotatorio, dispositivos ligados a usuario/ámbito, revocación por versión, TLS, almacenamiento seguro Android/Electron y recuperación asistida. Producción queda abierta a OIDC gestionado/autogestionado. No implementa código, migraciones ni credenciales; requiere revisión de Oskar y Diery.
+**Estado auth piloto (2026-11-15, rama `feat/piloto-auth-integracion`, IMPLEMENTADO EN LABORATORIO):** [ADR 0007](../decisiones/0007-autenticacion-piloto.md) se ajustó al uso confirmado: un ámbito, roles `admin`/`viewer`, equipos compartidos y cambio de cuenta sin cambiar `device_id`/scope. Se implementaron Argon2id, access JWT de 15 min, refresh opaco rotatorio, revocación, sesiones por instalación, permisos backend/local, almacenamiento seguro Android/Electron y UI de acceso. Verificado en Windows con admin/viewer, outbox preservada y reapertura; Android solo compiló porque Pixel_36 no estaba conectado. Evidencia en [acceso-piloto-integracion](../verificaciones/acceso-piloto-integracion.md). La política de categorías/alertas sigue bloqueada por decisión de Diery; RF/RAG reales no están disponibles.
+
+**Estado integración ETL (2026-11-15):** el orquestador existente `tools/lope_import` usa `publicar_con_d1` y la transacción exterior. Una prueba con base temporal y lote sintético confirmó dry-run sin persistencia, rollback, idempotencia y pull v2. No se cargaron Excel reales. La persistencia de categorías/alertas no se habilitó porque falta la decisión exacta de reglas/faltantes.
 
 ## 11. Riesgos y decisiones abiertas
 
