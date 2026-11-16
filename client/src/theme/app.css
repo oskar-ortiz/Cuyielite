@@ -150,9 +150,9 @@ ion-textarea::part(label) {
 }
 
 ion-select {
-  border: 1px solid var(--app-border-strong);
-  border-radius: var(--app-radius-sm);
-  padding-inline: 14px;
+  /* Ionic fill="outline" owns the border, including its floating label. */
+  border: 0;
+  padding-inline: 0;
 }
 
 ion-select::part(icon) {
@@ -258,6 +258,7 @@ ion-chip {
 }
 
 .status-chip ion-icon {
+  color: inherit;
   margin-right: 6px;
   font-size: 17px;
 }
@@ -902,4 +903,59 @@ ion-button[disabled] {
   html {
     color-scheme: dark;
   }
+}
+
+/* Shared icon rhythm; text always carries the action. */
+ion-button ion-icon[slot=start] {
+  flex: 0 0 auto;
+  font-size: 20px;
+  margin-inline-end: 8px;
+}
+
+ion-button ion-spinner {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  margin-inline-end: 8px;
+}
+
+.assistant-answer {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.65;
+}
+
+.assistant-sources ion-item {
+  --padding-start: 0;
+  --inner-padding-end: 0;
+}
+
+.assistant-sources ion-icon {
+  color: var(--app-primary-text);
+  font-size: 20px;
+  margin-inline-end: 12px;
+}
+
+/* Existing Ionic cards use the same vocabulary as shared SectionCard. */
+ion-card {
+  margin: 0 0 var(--app-space-4);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  box-shadow: none;
+  color: var(--app-text);
+  background: var(--app-surface);
+  overflow-wrap: anywhere;
+}
+
+ion-card-title {
+  font-size: 1.125rem;
+  line-height: 1.4;
+  font-weight: 650;
+  color: var(--app-text);
+}
+
+ion-card-subtitle {
+  color: var(--app-text-muted);
+  text-transform: none;
+  letter-spacing: normal;
 }

@@ -60,3 +60,11 @@ Definidos en `client/src/theme/variables.css` y patrones en `client/src/theme/ap
 - La tipografía principal usa rem fijos. El contexto de página usa tamaño legible y capitalización normal.
 - Feedback de botón: transición de opacidad de 120 ms, desactivada con movimiento reducido. No se agregan animaciones de entrada ni dependencias.
 - Las cifras de fichas, contadores y comparaciones usan numerales tabulares. Hover de filas solo se aplica a punteros finos compatibles.
+
+## Iconografia y recursos nativos
+
+- Guardar: save-outline; consulta: send-outline; fuentes: book-outline. Iconos decorativos ocultos a lectores de pantalla; el texto identifica siempre la accion.
+- Tamaño de iconos de accion: 20 px, espaciado de 8 px. Los chips heredan su tono semantico.
+- Asistente comparte encabezado, seccion y aviso de error con las pantallas operativas. Las fuentes se muestran como texto plano ajustable.
+- La comparacion de conflictos es una region etiquetada alcanzable con Tab para permitir desplazamiento horizontal desde teclado.
+- La marca nativa reutiliza la huella existente de Ionicons sobre azul; recursos y regeneracion en client/resources/README.md. Android, Windows y navegador usan la misma referencia.

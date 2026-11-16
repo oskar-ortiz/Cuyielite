@@ -175,6 +175,8 @@ const FormularioPesaje: React.FC = () => {
                 <div className="form-grid">
                   <div>
                     <IonSelect
+                      cancelText="Cancelar"
+                      okText="Aceptar"
                       label="Parto"
                       labelPlacement="stacked"
                       fill="outline"
@@ -195,6 +197,8 @@ const FormularioPesaje: React.FC = () => {
                   </div>
                   <div>
                     <IonSelect
+                      cancelText="Cancelar"
+                      okText="Aceptar"
                       label="Evento"
                       labelPlacement="stacked"
                       fill="outline"

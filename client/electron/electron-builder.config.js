@@ -21,6 +21,7 @@ module.exports = {
   // Explicit Windows x64 NSIS target, per-user installation (no admin rights,
   // no UAC elevation) so the field technician can install without IT support.
   win: {
+    icon: 'assets/icon.ico',
     target: [
       {
         target: 'nsis',

@@ -158,6 +158,8 @@ const FormularioEvento: React.FC = () => {
                   </div>
                   <div>
                     <IonSelect
+                      cancelText="Cancelar"
+                      okText="Aceptar"
                       label="Macho (opcional)"
                       labelPlacement="stacked"
                       fill="outline"
@@ -193,6 +195,8 @@ const FormularioEvento: React.FC = () => {
                 <div className="form-grid">
                   <div>
                     <IonSelect
+                      cancelText="Cancelar"
+                      okText="Aceptar"
                       label="Poza de origen"
                       labelPlacement="stacked"
                       fill="outline"
@@ -211,6 +215,8 @@ const FormularioEvento: React.FC = () => {
                   </div>
                   <div>
                     <IonSelect
+                      cancelText="Cancelar"
+                      okText="Aceptar"
                       label="Poza de destino"
                       labelPlacement="stacked"
                       fill="outline"
