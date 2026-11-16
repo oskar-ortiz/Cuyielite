@@ -3,13 +3,15 @@
 from collections.abc import Sequence
 from datetime import date
 import math
-from typing import Literal, Protocol, TypedDict
-
-import numpy as np
-import pandas as pd
-from numpy.typing import NDArray
+from typing import TYPE_CHECKING, Literal, Protocol, TypedDict
 
 from ml.rules.clasificar import clasificar_candidata, clasificar_reproductora
+
+if TYPE_CHECKING:  # numpy y pandas solo hacen falta para el apoyo del modelo
+    import numpy as np
+    import pandas as pd
+
+    from numpy.typing import NDArray
 
 
 class DatosHembra(TypedDict, total=False):
@@ -65,9 +67,9 @@ class ModeloCandidata(Protocol):
 
     def predict_proba(
         self,
-        X: pd.DataFrame,
+        X: "pd.DataFrame",
         /,
-    ) -> NDArray[np.float64]: ...
+    ) -> "NDArray[np.float64]": ...
 
 
 def _missing(value: object) -> bool:
@@ -114,6 +116,9 @@ def _model_support(
     feature_names = ("nupar_madre", "tcnv", "peso_nacimiento_g", "ojos")
     if any(data.get(name) is None for name in feature_names):
         return None
+
+    import numpy as np
+    import pandas as pd
 
     classes = [str(label) for label in model.classes_]
     if set(classes) != {"ELITE", "NORMAL"}:

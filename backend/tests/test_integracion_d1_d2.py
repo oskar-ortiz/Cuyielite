@@ -1,18 +1,18 @@
 """Prueba integrada D1 -> D2 sobre PostgreSQL temporal aislado.
 
-Demuestra el contrato de plataforma completo con un orquestador sintético:
+Demuestra el contrato de plataforma completo con un orquestador sintÃ©tico:
 
-1. Crear una base nueva con nombre único y aplicar bootstrap + migraciones.
+1. Crear una base nueva con nombre Ãºnico y aplicar bootstrap + migraciones.
 2. Escribir dominio y publicar versiones con ``publicar_cambios`` en una sola
-   conexión/transacción, confirmada solo por el orquestador sintético.
+   conexiÃ³n/transacciÃ³n, confirmada solo por el orquestador sintÃ©tico.
 3. Descargar el delta con ``GET /sync/pull`` autenticado y verificar snapshots,
-   versión, secuencia, UUID, referencias, cursor y borrado lógico.
+   versiÃ³n, secuencia, UUID, referencias, cursor y borrado lÃ³gico.
 4. Comprobar que un fallo antes del COMMIT exterior revierte dominio, metadatos,
-   historial, contador y lote sintético.
+   historial, contador y lote sintÃ©tico.
 5. Comprobar que el push v1 conserva su contrato y rechaza entidades de dominio.
 
-No implementa el ETL de Diery: el orquestador es un arnés de prueba, no un
-servicio de promoción paralelo.
+No implementa el ETL de Diery: el orquestador es un arnÃ©s de prueba, no un
+servicio de promociÃ³n paralelo.
 """
 
 import hashlib
@@ -35,7 +35,7 @@ from backend.app.services.publication import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DDL_DIR = REPO_ROOT / "db" / "ddl" / "central"
 SIGNING_KEY = "synthetic-test-key-never-for-production-0123456789"
-MAX_EXPECTED_MIGRATION = "0006_auth_piloto.sql"
+MAX_EXPECTED_MIGRATION = "0007_evaluacion_alertas.sql"
 
 
 def _base_url() -> str:

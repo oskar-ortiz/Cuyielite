@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from backend.app.controllers.assistant import router as assistant_router
 from backend.app.controllers.auth_api import router as auth_router
+from backend.app.controllers.evaluations import router as evaluations_router
 from backend.app.controllers.galpones import router as galpones_router
 from backend.app.controllers.health import router as health_router
 from backend.app.controllers.ml import router as ml_router
@@ -13,6 +14,7 @@ from backend.app.controllers.sync_v2 import router as sync_v2_router
 app = FastAPI(title="CuyiElite API")
 app.include_router(health_router)
 app.include_router(auth_router)
+app.include_router(evaluations_router)
 app.include_router(galpones_router)
 app.include_router(sync_router)
 app.include_router(sync_v2_router)
