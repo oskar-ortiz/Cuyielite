@@ -40,14 +40,14 @@ def test_sexo_from_code():
 
 def test_report_rejects_repo_path():
     import pytest
-    report = AuditReport(files=["test.xlsx"])
+    report = AuditReport()
     repo_root = Path(__file__).resolve().parents[3]
     with pytest.raises(ValueError):
         write_report(report, str(repo_root / "report.json"))
 
 
 def test_report_accepts_absolute_outside_repo():
-    report = AuditReport(files=["test.xlsx"])
+    report = AuditReport()
     with tempfile.TemporaryDirectory() as tmp:
         out = os.path.join(tmp, "report.json")
         write_report(report, out)

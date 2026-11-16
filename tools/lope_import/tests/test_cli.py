@@ -4,10 +4,11 @@ import os
 import subprocess
 import sys
 import tempfile
+import hashlib
+import json
 from pathlib import Path
 
 import openpyxl
-from pathlib import Path
 
 REPO_ROOT = str(Path(__file__).resolve().parents[3])
 
@@ -158,6 +159,68 @@ def test_individual_source_fields():
             assert "source" in animal
             assert "field_origins" in animal
         assert [animal["ref"]["cell"] for animal in animals] == ["C2", "C3", "C4"]
+
+
+def test_audit_contract_uses_versioned_hash_based_origins():
+    with tempfile.TemporaryDirectory() as tmp:
+        xlsx = os.path.join(tmp, "ind.xlsx")
+        out = os.path.join(tmp, "report.json")
+        _make_individual_xlsx(xlsx)
+        result = subprocess.run(
+            [sys.executable, "-m", "tools.lope_import", xlsx, "--output", out],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+        )
+        assert result.returncode == 0, result.stderr
+
+        with open(out, encoding="utf-8") as report_file:
+            data = json.load(report_file)
+        file_hash = hashlib.sha256(Path(xlsx).read_bytes()).hexdigest()
+
+        assert data["contract"] == "lope_import_audit/v1"
+        assert data["parser_version"] == "0.1.0"
+        assert data["mapeo_version"] == "0.1.0"
+        assert data["files"] == [
+            {
+                "file_id": f"sha256:{file_hash}",
+                "sha256_before": file_hash,
+                "sha256_after": file_hash,
+            }
+        ]
+        assert str(Path(xlsx)) not in Path(out).read_text(encoding="utf-8")
+        animal = next(candidate for candidate in data["candidates"] if candidate["kind"] == "animal")
+        assert animal["file_id"] == f"sha256:{file_hash}"
+        assert animal["origin_ref"] == (
+            f"sha256:{file_hash}:Individual:C2:ANIMAL:cuyes"
+        )
+        assert "records" not in data
+
+
+def test_reproductive_partos_have_stable_origin_refs():
+    with tempfile.TemporaryDirectory() as tmp:
+        xlsx = os.path.join(tmp, "repro.xlsx")
+        out = os.path.join(tmp, "report.json")
+        _make_reproductive_xlsx(xlsx)
+        result = subprocess.run(
+            [sys.executable, "-m", "tools.lope_import", xlsx, "--output", out],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+        )
+        assert result.returncode == 0, result.stderr
+
+        with open(out, encoding="utf-8") as report_file:
+            data = json.load(report_file)
+        file_hash = hashlib.sha256(Path(xlsx).read_bytes()).hexdigest()
+        block = next(candidate for candidate in data["candidates"] if candidate.get("kind") == "litter_block")
+
+        assert block["origin_ref"] == (
+            f"sha256:{file_hash}:Repro:A12:BLOQUE_REPRODUCTIVO:candidatos"
+        )
+        assert block["partos"][0]["origin_ref"] == (
+            f"sha256:{file_hash}:Repro:E12:PARTO:partos"
+        )
 
 
 def test_individual_rejects_institutional_rows():
