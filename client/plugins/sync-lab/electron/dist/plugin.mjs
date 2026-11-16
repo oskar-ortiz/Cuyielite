@@ -13,6 +13,7 @@ import { runSyncCycle } from './work.sync.coordinator.js';
 import { listConflictCases, resolveConflictKeepCentral, resolveConflictRetry } from './work.sync.conflicts.js';
 import { initializeWorkSyncDatabase } from './work.sync.migration.js';
 import { readWorkSyncStatus } from './work.sync.status.js';
+import { readAlertasDerivadas, readCategoriaDerivada } from './work.derived.apply.js';
 
 const LAB_BASE_URL = 'http://127.0.0.1:8000';
 const AUTH_BASE_URL = (process.env.CUYIELITE_API_URL || LAB_BASE_URL).replace(/\/+$/, '');
@@ -25,6 +26,7 @@ const ROUTES = Object.freeze({
   contextV2: '/sync/v2/context',
   pushV2: '/sync/v2/push',
   pullV2: '/sync/v2/pull',
+  pullDerived: '/sync/v3/pull',
   hembra: '/ml/predict/hembra',
   candidata: '/ml/predict/candidata',
   assistant: '/assistant/query',
@@ -135,7 +137,7 @@ async function request(route, token, init) {
 class SyncLab {
   static __capacitorElectronPlugin = {
     name: 'SyncLab',
-    methods: ['context', 'push', 'pull', 'contextV2', 'pushV2', 'pullV2', 'bind', 'prepare', 'send', 'sync', 'status', 'listConflicts', 'keepCentral', 'retryConflict', 'authLogin', 'authRefresh', 'authLogout', 'authChangePassword', 'authMe', 'authSessionSave', 'authSessionRead', 'authSessionClear', 'predictHembra', 'predictCandidata', 'assistantQuery'],
+    methods: ['context', 'push', 'pull', 'contextV2', 'pushV2', 'pullV2', 'pullDerived', 'categoriaDerivada', 'alertasDerivadas', 'bind', 'prepare', 'send', 'sync', 'status', 'listConflicts', 'keepCentral', 'retryConflict', 'authLogin', 'authRefresh', 'authLogout', 'authChangePassword', 'authMe', 'authSessionSave', 'authSessionRead', 'authSessionClear', 'predictHembra', 'predictCandidata', 'assistantQuery'],
   };
 
   async load() {}
@@ -184,6 +186,36 @@ class SyncLab {
     const params = new URLSearchParams({ limit: String(limit) });
     if (cursor !== null) params.set('cursor', cursor);
     return request(`${ROUTES.pullV2}?${params.toString()}`, token, { method: 'GET' });
+  }
+
+  async pullDerived({ token, cursor, limit }) {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      throw new Error('Limite pull derivado invalido');
+    }
+    if (cursor !== null && (typeof cursor !== 'string' || cursor.length > 4096)) {
+      throw new Error('Cursor pull derivado invalido');
+    }
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor !== null) params.set('cursor', cursor);
+    return request(`${ROUTES.pullDerived}?${params.toString()}`, token, { method: 'GET' });
+  }
+
+  async categoriaDerivada({ cuyId }) {
+    const db = openWorkDb();
+    try {
+      return await readCategoriaDerivada(makeAdapter(db), cuyId);
+    } finally {
+      db.close();
+    }
+  }
+
+  async alertasDerivadas({ cuyId }) {
+    const db = openWorkDb();
+    try {
+      return await readAlertasDerivadas(makeAdapter(db), cuyId);
+    } finally {
+      db.close();
+    }
   }
 
   async bind({ token }) {
@@ -237,6 +269,7 @@ class SyncLab {
         contextV2: (value) => this.contextV2({ token: value }),
         pushV2: (value, body) => this.pushV2({ token: value, body }),
         pullV2: (value, cursor, limit) => this.pullV2({ token: value, cursor, limit }),
+        pullDerived: (value, cursor, limit) => this.pullDerived({ token: value, cursor, limit }),
       }, token, { allowPush });
     } finally {
       db.close();

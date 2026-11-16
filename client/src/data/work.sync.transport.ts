@@ -34,6 +34,9 @@ export interface SyncTransport {
   contextV2?(token: string): Promise<SyncContextV2>;
   pushV2?(token: string, req: unknown): Promise<SyncPushResponse>;
   pullV2?(token: string, cursor: string | null, limit: number): Promise<unknown>;
+  // Feed derivado de solo lectura (protocolo 3). Opcional: un servidor anterior
+  // no lo expone y la sincronización de dominio sigue igual.
+  pullDerived?(token: string, cursor: string | null, limit: number): Promise<unknown>;
 }
 
 interface SyncLabPlugin {
@@ -43,6 +46,9 @@ interface SyncLabPlugin {
   contextV2(options: { token: string }): Promise<SyncContextV2>;
   pushV2(options: { token: string; body: unknown }): Promise<unknown>;
   pullV2(options: { token: string; cursor: string | null; limit: number }): Promise<unknown>;
+  pullDerived(options: { token: string; cursor: string | null; limit: number }): Promise<unknown>;
+  categoriaDerivada(options: { cuyId: string }): Promise<unknown>;
+  alertasDerivadas(options: { cuyId: string }): Promise<unknown>;
   sync(options: { token: string; allowPush?: boolean }): Promise<unknown>;
   status(): Promise<WorkSyncStatus>;
   listConflicts(): Promise<{ cases: ConflictCase[] }>;
@@ -97,6 +103,7 @@ export function createFetchTransport(): SyncTransport {
       contextV2: (token) => SyncLab.contextV2({ token }),
       pushV2: (token, req) => SyncLab.pushV2({ token, body: req }) as Promise<SyncPushResponse>,
       pullV2: (token, cursor, limit) => SyncLab.pullV2({ token, cursor, limit }),
+      pullDerived: (token, cursor, limit) => SyncLab.pullDerived({ token, cursor, limit }),
     };
   }
   if (platform === 'android') {
@@ -123,6 +130,15 @@ export function createFetchTransport(): SyncTransport {
           params.set('cursor', cursor);
         }
         return capRequest(`/sync/v2/pull?${params.toString()}`, token);
+      },
+      pullDerived: (token, cursor, limit) => {
+        if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new RangeError('limit pull fuera de rango');
+        const params = new URLSearchParams({ limit: String(limit) });
+        if (cursor !== null) {
+          if (cursor.length > 4096) throw new Error('Cursor local invalido');
+          params.set('cursor', cursor);
+        }
+        return capRequest(`/sync/v3/pull?${params.toString()}`, token);
       },
     };
   }
