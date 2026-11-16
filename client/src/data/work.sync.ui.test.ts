@@ -4,7 +4,16 @@ import type { WorkSyncStatus } from './work.sync.status';
 import { classifySyncError, describeSyncState } from './work.sync.ui';
 
 function status(overrides: Partial<WorkSyncStatus> = {}): WorkSyncStatus {
-  return { scopeId: null, cursor: null, pending: 0, prepared: 0, conflicts: 0, rejected: 0, ...overrides };
+  return {
+    scopeId: null,
+    deviceId: 'device-test',
+    cursor: null,
+    pending: 0,
+    prepared: 0,
+    conflicts: 0,
+    rejected: 0,
+    ...overrides,
+  };
 }
 
 describe('estado visible de sincronización', () => {

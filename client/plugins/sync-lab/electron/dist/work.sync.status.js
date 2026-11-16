@@ -9,6 +9,7 @@ export async function readWorkSyncStatus(db) {
        FROM sync_outbox`)).values?.[0] ?? {};
     return {
         scopeId: identity.scopeId,
+        deviceId: identity.deviceId,
         cursor: identity.cursor,
         pending: Number(row.pending ?? 0),
         prepared: Number(row.prepared ?? 0),

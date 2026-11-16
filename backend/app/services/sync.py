@@ -59,7 +59,11 @@ def process_push(token: str, device_id_body, operations: list[dict]) -> list[dic
         raise HTTPException(status_code=422, detail="INVALID_DEVICE_ID")
     if requested_device_id != dev_id:
         raise HTTPException(status_code=403, detail="DEVICE_NOT_AUTHORIZED")
+    return process_push_identity(scope_id, dev_id, operations)
 
+
+def process_push_identity(scope_id, dev_id, operations: list[dict]) -> list[dict]:
+    """Procesa un lote ya autorizado por el controlador (pilot o lab)."""
     # Batch-level validation
     op_ids = []
     record_keys = []
@@ -296,7 +300,10 @@ def pull_changes(token: str, cursor: str | None, limit: int, protocol: int = 1) 
     auth = authenticate(token)
     if auth is None:
         raise HTTPException(status_code=401, detail="UNAUTHORIZED")
-    scope_id = auth["scope_id"]
+    return pull_changes_for_identity(auth["scope_id"], cursor, limit, protocol)
+
+
+def pull_changes_for_identity(scope_id, cursor: str | None, limit: int, protocol: int = 1) -> dict:
     signing_key = cursor_key()
     scope = repo.get_scope(scope_id)
     if scope is None:

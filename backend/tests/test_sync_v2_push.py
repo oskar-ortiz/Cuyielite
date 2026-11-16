@@ -21,7 +21,7 @@ from backend.app.main import app
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DDL_DIR = REPO_ROOT / 'db' / 'ddl' / 'central'
 SIGNING_KEY = 'synthetic-v2-key-never-production-0123456789'
-MAX_MIGRATION = '0004_publicacion_dominio.sql'
+MAX_MIGRATION = '0006_auth_piloto.sql'
 
 
 def _base_url() -> str:
@@ -75,8 +75,9 @@ def lab_url():
             '0001_lope_domain.sql',
             '0002_sync_lab.sql',
             '0003_rag_e5_embeddings.sql',
-            MAX_MIGRATION,
+            '0004_publicacion_dominio.sql',
         ]
+        assert MAX_MIGRATION in applied
         yield db_url
     finally:
         _drop_database(base, name)

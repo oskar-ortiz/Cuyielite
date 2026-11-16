@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 
+import { requireCanWriteLocal } from './auth.session';
 import type { Galpon, GalponesRepository, Poza } from './galpones.repository';
 import { SqlitePoc } from './sqlitePocPlugin';
 import { getWorkConnection } from './work.database.android';
@@ -124,7 +125,30 @@ const electronWorkRepository: GalponesRepository = {
 };
 
 export function getWorkGalponesRepository(): GalponesRepository {
-  if (Capacitor.getPlatform() === 'android') return androidRepository;
-  if (Capacitor.getPlatform() === 'electron') return electronWorkRepository;
-  throw new Error('El modo trabajo requiere Android o Windows instalado.');
+  const repository =
+    Capacitor.getPlatform() === 'android'
+      ? androidRepository
+      : Capacitor.getPlatform() === 'electron'
+        ? electronWorkRepository
+        : null;
+  if (!repository) throw new Error('El modo trabajo requiere Android o Windows instalado.');
+  return {
+    ...repository,
+    createGalpon: async (input) => {
+      requireCanWriteLocal();
+      return repository.createGalpon(input);
+    },
+    createPoza: async (input) => {
+      requireCanWriteLocal();
+      return repository.createPoza(input);
+    },
+    updateGalpon: async (id, input) => {
+      requireCanWriteLocal();
+      return repository.updateGalpon(id, input);
+    },
+    updatePoza: async (galponId, pozaId, input) => {
+      requireCanWriteLocal();
+      return repository.updatePoza(galponId, pozaId, input);
+    },
+  };
 }

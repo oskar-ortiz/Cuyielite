@@ -486,7 +486,31 @@ export async function migrateWorkSyncV4ToV5(db: MigrationDb): Promise<void> {
   }
 }
 
+// La auditoría completa del esquema cuesta decenas de viajes al puente nativo.
+// El esquema de Trabajo no cambia mientras la conexión esté abierta, así que se
+// valida una vez por conexión. El contexto (ámbito y cursores) sí es volátil y
+// se relee en cada llamada. Un fallo de validación no se cachea.
+const validatedSchema = new WeakMap<MigrationDb, Promise<WorkSyncIdentity>>();
+
 export async function initializeWorkSyncDatabase(db: MigrationDb): Promise<WorkSyncIdentity> {
+  let validated = validatedSchema.get(db);
+  if (!validated) {
+    const pending = migrateAndValidate(db);
+    validatedSchema.set(db, pending);
+    pending.catch(() => validatedSchema.delete(db));
+    validated = pending;
+  }
+  const identity = await validated;
+  const row = (await db.query('SELECT scope_id, cursor FROM sync_context WHERE singleton=1')).values?.[0] as
+    { scope_id?: string | null; cursor?: string | null } | undefined;
+  return {
+    ...identity,
+    scopeId: (row?.scope_id as string | null | undefined) ?? null,
+    cursor: (row?.cursor as string | null | undefined) ?? null,
+  };
+}
+
+async function migrateAndValidate(db: MigrationDb): Promise<WorkSyncIdentity> {
   await db.exec('PRAGMA foreign_keys = ON');
   let version = await userVersion(db);
   if (version > WORK_SYNC_V2_VERSION) throw new WorkMigrationError(`Versión futura de trabajo: ${version}`);

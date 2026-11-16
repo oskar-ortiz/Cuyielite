@@ -35,7 +35,7 @@ from backend.app.services.publication import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DDL_DIR = REPO_ROOT / "db" / "ddl" / "central"
 SIGNING_KEY = "synthetic-test-key-never-for-production-0123456789"
-MAX_EXPECTED_MIGRATION = "0004_publicacion_dominio.sql"
+MAX_EXPECTED_MIGRATION = "0006_auth_piloto.sql"
 
 
 def _base_url() -> str:
@@ -92,7 +92,7 @@ def lab_url():
             "0001_lope_domain.sql",
             "0002_sync_lab.sql",
             "0003_rag_e5_embeddings.sql",
-            MAX_EXPECTED_MIGRATION,
+            "0004_publicacion_dominio.sql",
         ]
         assert MAX_EXPECTED_MIGRATION in applied
         assert "0005_pesajes_check.sql" not in applied

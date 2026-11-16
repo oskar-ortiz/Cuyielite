@@ -1,8 +1,7 @@
 import { Capacitor, CapacitorHttp } from '@capacitor/core';
 
+import { apiUrl } from './api.config.js';
 import { SyncLab } from './work.sync.transport.js';
-
-const LAB_BASE_URL = 'http://127.0.0.1:8000';
 
 export class MlHttpError extends Error {
   constructor(
@@ -18,20 +17,9 @@ export function isMlHttpError(error: unknown): error is MlHttpError {
   return typeof error === 'object' && error !== null && typeof (error as { status?: unknown }).status === 'number';
 }
 
-function assertLoopback(path: string): string {
-  const url = LAB_BASE_URL + path;
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== 'http:' || parsed.hostname !== '127.0.0.1') throw new Error('fuera de loopback');
-  } catch {
-    throw new Error('Destino ML fuera de loopback');
-  }
-  return url;
-}
-
 async function androidRequest(path: string, token: string, body: unknown): Promise<unknown> {
   const res = await CapacitorHttp.request({
-    url: assertLoopback(path),
+    url: apiUrl(path),
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
     data: body,

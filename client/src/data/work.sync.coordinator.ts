@@ -55,6 +55,7 @@ export interface CoordinatorOptions {
   limit?: number;
   sleep?: (ms: number) => Promise<void>;
   random?: () => number;
+  allowPush?: boolean;
 }
 
 export interface SyncCycleResult {
@@ -148,18 +149,21 @@ export async function runSyncCycle(
       : null;
 
     // Resolve durable requests with unknown outcomes before pulling newer snapshots.
-    const replay = await sendPrepared(db, send, protocols);
+    const allowPush = options.allowPush !== false;
+    const replay = allowPush ? await sendPrepared(db, send, protocols) : { sent: 0, failed: 0, errors: [] as string[] };
     if (replay.failed > 0) throw new Error(`No se pudo reconciliar ${replay.failed} operación(es) preparada(s)`);
 
     const before = await syncPage();
     const beforeV2 = syncPageV2 ? await syncPageV2() : null;
     let pushedResults = replay.sent;
-    while (true) {
-      const prepared = await prepareEligible(db, identity.deviceId, capturedThroughLocalSeq, protocols);
-      if (prepared === 0) break;
-      const sent = await sendPrepared(db, send, protocols);
-      pushedResults += sent.sent;
-      if (sent.failed > 0) throw new Error(`No se pudo enviar ${sent.failed} operación(es) preparada(s)`);
+    if (allowPush) {
+      while (true) {
+        const prepared = await prepareEligible(db, identity.deviceId, capturedThroughLocalSeq, protocols);
+        if (prepared === 0) break;
+        const sent = await sendPrepared(db, send, protocols);
+        pushedResults += sent.sent;
+        if (sent.failed > 0) throw new Error(`No se pudo enviar ${sent.failed} operación(es) preparada(s)`);
+      }
     }
 
     const after = await syncPage();

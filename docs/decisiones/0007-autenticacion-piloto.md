@@ -1,9 +1,14 @@
 # 0007. Autenticación para el piloto real de CuyiElite
 
-**Estado: PROPUESTA.** No aprobada por Oskar ni por Diery. No autoriza código,
-migraciones, credenciales, contratación de servicios ni cambios de despliegue.
-Número provisional: el worktree de diseño de sincronización usa 0007–0009 para
-otras decisiones aún no integradas; renumerar si se fusionan antes.
+## Actualización de requisitos — 2026-11-15
+
+Oskar confirmó un ámbito Centro Lope con ambos galpones, administrador con escritura y usuario de consulta, teléfono/computador compartidos, sin otros centros y ETL automático de Diery. Ver el [plan actualizado](../integracion/plan-piloto-lope-acceso-integracion.md) para implicaciones y orden de implementación.
+
+Estos requisitos sustituyen las suposiciones iniciales de una cuenta por dispositivo y de tres roles necesarios: el piloto requiere admin/viewer y cambio de sesión sin cambiar identidad de sincronización. La ADR fue implementada en laboratorio; su aprobación para el piloto real sigue pendiente. No se exige decidir OIDC de producción ni contratar VPS para avanzar el laboratorio. Revocación central inmediata no significa revocación del acceso offline sin conexión.
+
+## Propuesta técnica implementada en laboratorio
+
+**Estado: PROPUESTA IMPLEMENTADA EN LABORATORIO; APROBACIÓN DE OSKAR Y DIERY PENDIENTE.** No autoriza despliegue público, cuentas reales ni uso con datos del Centro Lope. Número provisional: el worktree de diseño de sincronización usa 0007–0009 para otras decisiones aún no integradas; renumerar si se fusionan antes.
 
 ## Resumen ejecutivo
 
@@ -50,11 +55,13 @@ bandera es un control de laboratorio, no autenticación de piloto.
 3. **Access token JWT** firmado por el backend, con expiración de 10–15 minutos.
 4. **Refresh token opaco** de 256 bits, almacenado solo como hash, con rotación en
    cada uso y detección de reutilización.
-5. **Dispositivo vinculado a usuario y ámbito**, conservando el `device_id` actual
-   cuando ya exista, para no invalidar recibos ni cursores.
-6. **Roles por ámbito**: `admin`, `operator`, `viewer`. El administrador global
-   gestiona usuarios, ámbitos y dispositivos; el operador sincroniza y edita su
-   ámbito; el visor solo lee.
+5. **Dispositivo vinculado a la instalación y al ámbito**, no a una sola cuenta.
+   El `device_id` actual se conserva y varias cuentas pueden iniciar sesión en el
+   mismo equipo, una sesión activa por instalación.
+6. **Dos roles**: `admin` y `viewer`. El admin del Centro Lope registra, edita,
+   consulta, descarga y resuelve conflictos; el viewer solo consulta y descarga.
+   La gestión de cuentas/dispositivos del piloto se hace por procedimiento
+   administrativo explícito, no desde la UI de negocio.
 7. **TLS obligatorio** en el piloto mediante proxy inverso; HTTP solo en desarrollo
    local y builds de laboratorio.
 8. **Almacenamiento seguro**: refresh token en Android Keystore y en Electron
@@ -91,12 +98,12 @@ decisión se revisa antes de producción; no se congela como arquitectura defini
 
 ## Modelo conceptual propuesto
 
-No se crea ninguna migración en esta entrega.
+La migración `0006_auth_piloto.sql` implementa el modelo en laboratorio; su aplicación a una base real sigue pendiente de aprobación y respaldo.
 
 | Tabla / cambio | Campos mínimos | Nota |
 | --- | --- | --- |
 | `app_users` | `id`, `username/email`, `password_hash`, `status`, `created_at`, `password_changed_at`, `auth_version` | `auth_version` invalida access tokens al deshabilitar o cambiar contraseña |
-| `app_scope_memberships` | `user_id`, `scope_id`, `role`, `created_at`, `revoked_at` | Muchos usuarios por ámbito; roles `admin/operator/viewer` |
+| `app_scope_memberships` | `user_id`, `scope_id`, `role`, `created_at`, `revoked_at` | Muchos usuarios por ámbito; roles `admin/viewer` |
 | `auth_sessions` | `id`, `user_id`, `device_id`, `scope_id`, `refresh_hash`, `family_id`, `expires_at`, `revoked_at`, `created_at`, `last_used_at` | Refresh opaco con rotación y detección de reutilización |
 | `sync_devices` extendida | `user_id`, `name`, `platform`, `status`, `revoked_at`, `last_seen_at`, `auth_version` | Conservar `id` actual; no romper `sync_receipts` |
 | `auth_audit` | `id`, `event`, `user_id`, `device_id`, `scope_id`, `ip`, `created_at`, `detail` sin secretos | Login, refresh, revocación, alta de dispositivo |
@@ -148,8 +155,9 @@ sesión/dispositivo o una operación administrativa explícita, no un campo libr
 3. Deriva `user_id`, `device_id`, `scope_id` y rol del token; no del body.
 4. Comprueba que el `device_id` del body coincide con el token.
 5. Comprueba usuario activo, dispositivo activo y membresía vigente en el ámbito.
-6. Aplica el rol: `operator` puede push/pull de su ámbito; `viewer` solo pull;
-   `admin` puede además gestionar usuarios/dispositivos.
+6. Aplica el rol: `admin` puede push/pull, escribir y resolver conflictos;
+   `viewer` solo pull/consulta. La gestión de usuarios y dispositivos se hace por
+   CLI/procedimiento administrativo, no por la UI de negocio.
 7. Los endpoints ML/RAG usan la misma identidad y ámbito; no reciben scope libre.
 
 ### 5. Revocación y pérdida de dispositivo
@@ -158,12 +166,29 @@ sesión/dispositivo o una operación administrativa explícita, no un campo libr
 2. Se incrementa `auth_version` y se marcan refresh tokens como revocados.
 3. El access token deja de valer en la siguiente petición (comparación de
    `auth_version`); no se espera a que expire.
-4. El dispositivo revocado puede seguir leyendo/escribiendo localmente, pero no
-   sincronizar ni consultar ML/RAG.
+4. El dispositivo revocado no puede sincronizar ni consultar ML/RAG. Localmente
+   puede seguir leyendo; puede escribir solo hasta la vigencia offline ya
+   almacenada y si la última sesión era `admin`. Sin red no existe revocación
+   central instantánea.
 5. El usuario se autentica en un dispositivo nuevo; se crea un `device_id` nuevo
    y el anterior queda inactivo. Los recibos del anterior no se reutilizan.
 6. Si se recupera el mismo dispositivo, se reenrola; no se reutiliza el refresh
    revocado.
+
+### 5.1 Equipos compartidos y cambio de cuenta
+
+1. El teléfono y el computador del Centro Lope conservan un único `device_id`,
+   `dataset_id` y `scope_id`; no se crean instalaciones por usuario.
+2. Cada cuenta inicia una sesión propia; la instalación mantiene una sola sesión
+   activa y el cambio de usuario cierra la anterior.
+3. Logout o cambio de cuenta no borra filas, cursores, recibos ni outbox. Los
+   pendientes creados por un admin conservan su autoría y no son enviados por un
+   viewer.
+4. La UI oculta acciones de escritura al viewer, pero la autorización efectiva
+   está en FastAPI y en los repositorios locales; ocultar un botón no autoriza.
+5. Una sesión offline previamente habilitada conserva su rol y una vigencia
+   explícita (propuesta: 7 días). Al vencer, Trabajo pasa a solo consulta hasta
+   que haya una renovación autenticada.
 
 ### 6. Expiración sin conexión
 
@@ -198,6 +223,15 @@ sesión/dispositivo o una operación administrativa explícita, no un campo libr
    fuerza una resincronización completa ni se borra la base local.
 6. Verificar que el dispositivo antiguo no puede autenticarse y que los recibos
    anteriores siguen recuperables.
+
+### Identidad técnica del ETL
+
+El ETL de Diery no usa una cuenta personal ni un refresh humano. Se conecta con
+un rol PostgreSQL dedicado, `DATABASE_URL` fuera de Git y privilegios mínimos
+sobre el ámbito autorizado; su orquestador conserva la transacción y llama a
+`publicar_cambios` con la conexión prestada. Los permisos de la API no se
+extienden a ese rol de base. La creación del rol, su ámbito y la rotación de su
+credencial son un procedimiento de operación separado.
 
 ## Seguridad y operación
 
@@ -255,7 +289,7 @@ No se contrata ni configura nada en esta entrega.
 | Requisito | Piloto | Producción |
 | --- | --- | --- |
 | Usuarios | 3–10, alta manual | Autoservicio o directorio |
-| Roles | `admin`, `operator`, `viewer` | RBAC más granular y segregación |
+| Roles | `admin`, `viewer` | RBAC más granular y segregación |
 | Dispositivos | Alta asistida; primer dispositivo aprobado | Enrollment con atestación y política |
 | Recuperación | Administrador | Correo autoservicio + MFA |
 | Tokens | 15 min / 30 días rotatorio | Más cortos, rotación y revocación central |
@@ -335,7 +369,7 @@ No se contrata ni configura nada en esta entrega.
 
 ## Fuera de alcance de esta propuesta
 
-- Implementar endpoints, migraciones, plugins, TLS o aprovisionamiento.
+- Desplegar públicamente, contratar VPS/TLS o crear cuentas reales.
 - Integrar Auth0, Clerk, Supabase, Cognito, Keycloak u otro proveedor.
 - Guardar secretos, tokens o credenciales en el repositorio.
 - Cambiar scopes, dispositivos, recibos o cursores existentes.

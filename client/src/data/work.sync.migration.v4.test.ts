@@ -162,7 +162,8 @@ describe('upgrade de SQLite sync v3 a dominio v4', () => {
     await initializeWorkSyncDatabase(adapter);
     db.exec('DROP INDEX sync_inbox_pending');
     db.exec('DROP TABLE sync_inbox');
-    await expect(initializeWorkSyncDatabase(adapter)).rejects.toThrow('sync_inbox');
+    // La auditoría se cachea por conexión: se reaudita al reabrir la base.
+    await expect(initializeWorkSyncDatabase(adapterFor(db))).rejects.toThrow('sync_inbox');
     expect(userVersion(db)).toBe(5);
     db.close();
   });

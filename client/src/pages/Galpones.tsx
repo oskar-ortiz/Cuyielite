@@ -13,6 +13,7 @@ import {
 } from '@ionic/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { snapshot } from '../data/auth.session';
 import type { Galpon } from '../data/galpones.repository';
 import { getGalponesRepository } from '../data/galpones.repository.factory';
 import { getWorkGalponesReader } from '../data/work.galpones.repository';
@@ -30,6 +31,7 @@ const Galpones: React.FC<GalponesProps> = ({ mode = 'demo' }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<number | null>(null);
+  const [canWrite, setCanWrite] = useState(() => snapshot().canWrite);
 
   const requestIdRef = useRef(0);
   const inFlightRef = useRef(false);
@@ -74,6 +76,7 @@ const Galpones: React.FC<GalponesProps> = ({ mode = 'demo' }) => {
   }, [load]);
 
   useIonViewWillEnter(() => {
+    setCanWrite(snapshot().canWrite);
     load();
   });
 
@@ -82,9 +85,11 @@ const Galpones: React.FC<GalponesProps> = ({ mode = 'demo' }) => {
       <IonHeader>
         <IonToolbar>
           <IonTitle>{workMode ? 'Galpones · Trabajo' : 'Galpones'}</IonTitle>
-          <IonButton slot="end" routerLink={workMode ? '/trabajo/galpones/nuevo' : '/galpones/nuevo'}>
-            Nuevo
-          </IonButton>
+          {(!workMode || canWrite) && (
+            <IonButton slot="end" routerLink={workMode ? '/trabajo/galpones/nuevo' : '/galpones/nuevo'}>
+              Nuevo
+            </IonButton>
+          )}
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen>
@@ -105,6 +110,9 @@ const Galpones: React.FC<GalponesProps> = ({ mode = 'demo' }) => {
               </IonButton>
               <IonButton size="small" fill="clear" routerLink="/trabajo/conflictos">
                 Revisar conflictos
+              </IonButton>
+              <IonButton size="small" fill="clear" routerLink="/trabajo/acceso">
+                Acceso
               </IonButton>
             </>
           )}

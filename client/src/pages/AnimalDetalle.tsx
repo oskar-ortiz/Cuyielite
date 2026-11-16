@@ -16,6 +16,7 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
+import { snapshot } from '../data/auth.session';
 import { getDomainRepository } from '../data/work.domain.factory';
 import type { ConflictKey } from '../data/work.domain.repository';
 import type { Cuyo, Evento, PartoCria, Parto, Pesaje } from '../data/work.domain.validation';
@@ -39,6 +40,7 @@ const AnimalDetalle: React.FC = () => {
   const [backHref, setBackHref] = useState('/trabajo/galpones');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [canWrite, setCanWrite] = useState(() => snapshot().canWrite);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -82,7 +84,10 @@ const AnimalDetalle: React.FC = () => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
-  useIonViewWillEnter(() => load());
+  useIonViewWillEnter(() => {
+    setCanWrite(snapshot().canWrite);
+    load();
+  });
 
   const conflicto = (entity: string, id: string) =>
     conflicts.some((item) => item.entity === entity && item.recordId === id);
@@ -115,7 +120,7 @@ const AnimalDetalle: React.FC = () => {
           {cuyo && (
             <IonButtons slot="end">
               <IonButton routerLink={`/trabajo/animales/${animalId}/predicciones`}>Predicciones</IonButton>
-              <IonButton routerLink={`/trabajo/animales/${animalId}/editar`}>Editar</IonButton>
+              {canWrite && <IonButton routerLink={`/trabajo/animales/${animalId}/editar`}>Editar</IonButton>}
             </IonButtons>
           )}
         </IonToolbar>
@@ -177,17 +182,19 @@ const AnimalDetalle: React.FC = () => {
               </IonItem>
             </IonList>
 
-            <div className="marcado-demo">
-              <IonButton fill="outline" routerLink={`/trabajo/animales/${animalId}/partos/nuevo`}>
-                Registrar parto
-              </IonButton>
-              <IonButton fill="outline" routerLink={`/trabajo/animales/${animalId}/pesajes/nuevo`}>
-                Registrar pesaje
-              </IonButton>
-              <IonButton fill="outline" routerLink={`/trabajo/animales/${animalId}/eventos/nuevo`}>
-                Registrar evento
-              </IonButton>
-            </div>
+            {canWrite && (
+              <div className="marcado-demo">
+                <IonButton fill="outline" routerLink={`/trabajo/animales/${animalId}/partos/nuevo`}>
+                  Registrar parto
+                </IonButton>
+                <IonButton fill="outline" routerLink={`/trabajo/animales/${animalId}/pesajes/nuevo`}>
+                  Registrar pesaje
+                </IonButton>
+                <IonButton fill="outline" routerLink={`/trabajo/animales/${animalId}/eventos/nuevo`}>
+                  Registrar evento
+                </IonButton>
+              </div>
+            )}
 
             <IonList>
               <IonItem lines="full">

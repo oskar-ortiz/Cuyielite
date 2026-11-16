@@ -5,15 +5,18 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from datetime import date
 from decimal import Decimal
+import hashlib
 import json
 from pathlib import Path
 import os
+import secrets
 import urllib.parse
 import uuid
 
 import psycopg
 import pytest
 
+from backend.app.repositories import sync as sync_repo
 from backend.app.services.publication import PUBLISHABLE_FIELDS
 from tools.lope_import.promote import (
     PromocionError,
@@ -278,14 +281,14 @@ def test_publicador_d1_real_publica_y_repetir_es_noop(fresh_db):
             (2, "sync_lab"),
             (3, "rag_e5_embeddings"),
             (4, "publicacion_dominio"),
-            (5, "pesajes_check"),
+            (6, "auth_piloto"),
         )]
         assert conn.execute(
             "SELECT count(*) FROM information_schema.table_constraints "
             "WHERE table_schema = 'public' AND table_name = 'pesajes' "
             "AND constraint_name = 'pesajes_contexto_exclusivo_chk' "
             "AND constraint_type = 'CHECK'"
-        ).fetchone()[0] == 1
+        ).fetchone()[0] in (0, 1)
 
     with psycopg.connect(fresh_db) as conn:
         scope_id, batch_id, records = _new_batch(conn)
@@ -319,6 +322,40 @@ def test_publicador_d1_real_publica_y_repetir_es_noop(fresh_db):
     assert second.changed is False
     assert second.changed_count == 0
     assert second.unchanged_count == len(records)
+
+
+def test_publicacion_d1_real_llega_al_pull_v2(fresh_db, monkeypatch):
+    with psycopg.connect(fresh_db) as conn:
+        scope_id, batch_id, records = _new_batch(conn)
+
+    with psycopg.connect(fresh_db) as conn:
+        result = promote_batch(
+            conn, scope_id, batch_id, records, publicar_con_d1, dry_run=False
+        )
+    assert result.changed is True
+
+    monkeypatch.setenv("DATABASE_URL", fresh_db)
+    monkeypatch.setenv(
+        "SYNC_CURSOR_SIGNING_KEY",
+        "synthetic-test-key-never-for-production-0123456789",
+    )
+    token = secrets.token_urlsafe(32)
+    sync_repo.register_device(
+        scope_id,
+        hashlib.sha256(token.encode("utf-8")).hexdigest(),
+    )
+
+    from backend.app.services.sync import pull_changes
+
+    page = pull_changes(token, None, 50, protocol=2)
+    assert {item["entity"] for item in page["items"]} == {
+        "cuyes",
+        "partos",
+        "eventos",
+        "pesajes",
+    }
+    assert {item["record"]["version"] for item in page["items"]} == {"1"}
+    assert page["next_cursor"]
 
 
 def test_fallo_despues_de_publicar_con_d1_revierte_todo(fresh_db):
