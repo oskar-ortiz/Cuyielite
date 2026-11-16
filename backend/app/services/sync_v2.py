@@ -346,6 +346,10 @@ def process_push_v2(token: str, device_id_body, operations: list[dict]) -> list[
         from fastapi import HTTPException
 
         raise HTTPException(status_code=403, detail='DEVICE_NOT_AUTHORIZED')
+    return process_push_v2_identity(scope_id, device_id, operations)
+
+
+def process_push_v2_identity(scope_id, device_id, operations: list[dict]) -> list[dict]:
     results = []
     rejected: set[tuple[str, str]] = set()
     for operation in operations:

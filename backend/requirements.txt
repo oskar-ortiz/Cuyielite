@@ -4,3 +4,5 @@ uvicorn
 pytest
 httpx2
 psycopg[binary]==3.3.7
+argon2-cffi>=23
+PyJWT>=2.8

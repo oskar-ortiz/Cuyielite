@@ -5,7 +5,9 @@ import os
 from fastapi import APIRouter, Header, HTTPException, Query
 from pydantic import BaseModel
 
+from backend.app.controllers.auth import require_identity
 from backend.app.schemas.sync import SyncPullResponse, SyncPushRequest, SyncPushResponse
+from backend.app.services import auth as auth_service
 from backend.app.sync_cursor import InvalidSyncCursor
 from backend.app.services import sync as service
 
@@ -20,6 +22,8 @@ class SyncContextResponse(BaseModel):
 
 
 def _require_lab_enabled() -> None:
+    if auth_service.auth_mode() == "pilot":
+        return
     if os.environ.get("CUYIELITE_SYNC_LAB_ENABLED") != "1":
         raise HTTPException(status_code=404, detail="SYNC_LAB_DISABLED")
 
@@ -36,6 +40,14 @@ def _extract_token(authorization: str | None) -> str:
 @router.get("/sync/context")
 def get_context(authorization: str | None = Header(default=None)) -> SyncContextResponse:
     _require_lab_enabled()
+    if auth_service.auth_mode() == "pilot":
+        identity = require_identity(authorization)
+        return SyncContextResponse(
+            protocol_version=1,
+            scope_id=str(identity.scope_id),
+            device_id=str(identity.device_id),
+            limits={"push_operations": 100, "push_bytes": 1048576, "pull_default": 50, "pull_max": 100},
+        )
     token = _extract_token(authorization)
     try:
         ctx = service.get_context(token)
@@ -70,11 +82,19 @@ def push(
 
     operations = [op.model_dump() for op in request.operations]
     try:
-        results = service.process_push(
-            token=_extract_token(authorization),
-            device_id_body=request.device_id,
-            operations=operations,
-        )
+        if auth_service.auth_mode() == "pilot":
+            identity = require_identity(authorization)
+            if identity.role != "admin":
+                raise HTTPException(status_code=403, detail="ROL_SIN_ESCRITURA")
+            if str(request.device_id) != str(identity.device_id):
+                raise HTTPException(status_code=403, detail="DEVICE_NOT_AUTHORIZED")
+            results = service.process_push_identity(identity.scope_id, identity.device_id, operations)
+        else:
+            results = service.process_push(
+                token=_extract_token(authorization),
+                device_id_body=request.device_id,
+                operations=operations,
+            )
     except HTTPException:
         raise
     except Exception as exc:
@@ -91,7 +111,11 @@ def pull(
     _require_lab_enabled()
     token = _extract_token(authorization)
     try:
-        response = service.pull_changes(token=token, cursor=cursor, limit=limit)
+        if auth_service.auth_mode() == "pilot":
+            identity = require_identity(authorization)
+            response = service.pull_changes_for_identity(identity.scope_id, cursor=cursor, limit=limit)
+        else:
+            response = service.pull_changes(token=token, cursor=cursor, limit=limit)
     except HTTPException:
         raise
     except InvalidSyncCursor:
