@@ -285,6 +285,7 @@ def test_publicador_d1_real_publica_y_repetir_es_noop(fresh_db):
             (6, "auth_piloto"),
             (7, "evaluacion_alertas"),
             (8, "evidencia_revisable"),
+            (9, "importacion_lotes_scope"),
         )]
         assert conn.execute(
             "SELECT count(*) FROM information_schema.table_constraints "
