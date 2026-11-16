@@ -21,7 +21,7 @@ from backend.app.main import app
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DDL_DIR = REPO_ROOT / 'db' / 'ddl' / 'central'
 SIGNING_KEY = 'synthetic-v2-key-never-production-0123456789'
-MAX_MIGRATION = '0008_evidencia_revisable.sql'
+MAX_MIGRATION = '0009_importacion_lotes_scope.sql'
 
 
 def _base_url() -> str:
