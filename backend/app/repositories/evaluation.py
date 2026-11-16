@@ -140,6 +140,19 @@ def mark_category_historical(conn, scope_id: UUID, cuy_id: UUID) -> int:
     return int(row[0]) if row else 0
 
 
+def bump_category_record_version(conn, scope_id: UUID, cuy_id: UUID) -> int:
+    """Avanza solo la version del registro derivado, sin tocar la categoria."""
+    with conn.cursor() as cur:
+        cur.execute(
+            "UPDATE cuyes SET categoria_server_version = categoria_server_version + 1, "
+            "updated_at = now() WHERE id = %s AND scope_id = %s "
+            "RETURNING categoria_server_version",
+            (cuy_id, scope_id),
+        )
+        row = cur.fetchone()
+    return int(row[0]) if row else 0
+
+
 def latest_derived(
     conn, scope_id: UUID, entity: str, record_id: UUID
 ) -> dict[str, Any] | None:

@@ -741,29 +741,31 @@ def _persist_partial(
     changed = False
     if animal.get("categoria_ml"):
         version = repo.mark_category_historical(conn, scope_id, animal["id"])
-        if version:
-            repo.insert_derived(
-                conn,
-                scope_id,
-                "categoria",
-                animal["id"],
-                version,
-                _category_snapshot(
-                    cuy_id=animal["id"],
-                    version=version,
-                    clase=animal.get("categoria_ml"),
-                    estado_evaluacion=evaluacion.estado,
-                    caracter=evaluacion.caracter,
-                    categoria_estado="HISTORICA",
-                    motivos=list(animal.get("categoria_motivos") or []),
-                    faltantes=evaluacion.faltantes or evaluacion.evidencia_pendiente,
-                    evidencia_pendiente=evaluacion.evidencia_pendiente,
-                    reglas_version=str(animal.get("categoria_reglas_version") or REGLAS_VERSION),
-                    evaluada_at=_now_iso(),
-                    procedencia=animal.get("categoria_procedencia") or {},
-                ),
-            )
-            changed = True
+    else:
+        version = repo.bump_category_record_version(conn, scope_id, animal["id"])
+    if version:
+        repo.insert_derived(
+            conn,
+            scope_id,
+            "categoria",
+            animal["id"],
+            version,
+            _category_snapshot(
+                cuy_id=animal["id"],
+                version=version,
+                clase=animal.get("categoria_ml"),
+                estado_evaluacion=evaluacion.estado,
+                caracter=evaluacion.caracter,
+                categoria_estado="HISTORICA" if animal.get("categoria_ml") else None,
+                motivos=evaluacion.motivos,
+                faltantes=evaluacion.faltantes or evaluacion.evidencia_pendiente,
+                evidencia_pendiente=evaluacion.evidencia_pendiente,
+                reglas_version=REGLAS_VERSION,
+                evaluada_at=_now_iso(),
+                procedencia=_procedencia(animal=animal, partos=partos, evidencia=evidencia),
+            ),
+        )
+        changed = True
     return _payload(
         animal,
         evaluacion,

@@ -168,6 +168,14 @@ def test_dos_abortos_es_provisional_y_no_persiste_ni_alerta(lab):
     assert [f["regla_id"] for f in body["fundamentos"]] == ["abortos_repetidos_descarte"]
     assert _estado(lab, cuy_id)["clase"] is None
     assert _alertas(lab, cuy_id) == []
+    with psycopg.connect(lab["url"]) as conn:
+        derivado = conn.execute(
+            "SELECT snapshot FROM sync_derived_changes WHERE scope_id=%s AND entity='categoria'",
+            (lab["scope"],),
+        ).fetchall()
+    assert len(derivado) == 1
+    assert derivado[0][0]["data"]["estado_evaluacion"] == "PROVISIONAL"
+    assert derivado[0][0]["data"]["clase"] is None
 
 
 def test_cuarto_parto_confirmado_es_oficial_con_fecha_limite(lab):
