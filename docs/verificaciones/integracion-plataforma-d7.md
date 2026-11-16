@@ -1,6 +1,10 @@
 # D7: verificación integral de la plataforma
 
-Estado: **recorrido nativo Windows y Android verificado; D7 global sigue pendiente por RAG real, RF real y criterios no ejecutados.**
+Estado: **recorrido nativo Windows verificado; el recorrido Android de evaluación/alertas quedó no ejecutado por memoria del host. D7 global sigue pendiente por RAG real, RF real y criterios no ejecutados.**
+
+## Actualización 2026-11-16 — Android
+
+El bloqueo de toolchain de la sesión anterior ya no aplica: JDK 21 está instalado. El intento de recorrido Android sobre `dev` `c44415b` no llegó a ejecutar acciones: con 0,65–0,81 GB libres en el host, la app abrió la pantalla de acceso pero no emitió `POST /auth/login` y el WebView dejó de responder a CDP. No se modificaron datos y el emulador quedó en el user 0. Ver `cierre-integracion-laboratorio.md` §4.
 
 ## Checks automatizados (2026-11-11, ejecutados en D7)
 
