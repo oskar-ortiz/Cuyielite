@@ -30,7 +30,7 @@ h3 {
 }
 
 h1 {
-  font-size: clamp(1.65rem, 3vw, 2rem);
+  font-size: 1.875rem;
   letter-spacing: -0.025em;
 }
 
@@ -93,6 +93,8 @@ ion-back-button::part(native):focus-visible {
 
 ion-back-button {
   --min-height: 48px;
+  min-width: 48px;
+  min-height: 48px;
   --icon-font-size: 24px;
 }
 
@@ -172,13 +174,14 @@ ion-chip {
 
 .page-frame {
   box-sizing: border-box;
-  width: min(calc(100% - 32px), var(--app-content-width));
+  width: 100%;
+  max-width: calc(var(--app-content-width) + 32px);
   margin: 0 auto;
-  padding: var(--app-space-6) 0 max(var(--app-space-8), env(safe-area-inset-bottom));
+  padding: var(--app-space-6) max(16px, env(safe-area-inset-right)) max(var(--app-space-8), env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
 }
 
 .page-frame--narrow {
-  max-width: var(--app-form-width);
+  max-width: calc(var(--app-form-width) + 32px);
 }
 
 .page-intro {
@@ -196,10 +199,8 @@ ion-chip {
 .page-intro__eyebrow {
   margin: 0 0 var(--app-space-1);
   color: var(--app-primary-text);
-  font-size: 0.75rem;
-  font-weight: 750;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.875rem;
+  font-weight: 600;
 }
 
 .page-intro__description {
@@ -357,9 +358,11 @@ ion-chip {
   border-bottom: 1px solid var(--app-border);
 }
 
-.app-list ion-item[button]:hover,
-.app-list ion-item[routerLink]:hover {
-  --background: var(--app-surface-subtle);
+@media (hover: hover) and (pointer: fine) {
+  .app-list ion-item[button]:hover,
+  .app-list ion-item[href]:hover {
+    --background: var(--app-surface-subtle);
+  }
 }
 
 .app-list__title {
@@ -558,7 +561,7 @@ ion-chip {
   overflow-wrap: anywhere;
 }
 
-.data-list dd--identifier {
+.data-list .dd--identifier {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 0.875rem;
   font-weight: 500;
@@ -666,6 +669,10 @@ ion-chip {
   font-size: 0.8125rem;
 }
 
+.mode-grid > .section-card {
+  margin-bottom: 0;
+}
+
 .mode-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -674,6 +681,8 @@ ion-chip {
 
 .mode-card .section-card__body {
   display: flex;
+  box-sizing: border-box;
+  height: 100%;
   min-height: 230px;
   flex-direction: column;
   align-items: flex-start;
@@ -731,7 +740,7 @@ ion-chip {
 
 @media (max-width: 767px) {
   .page-frame {
-    width: min(calc(100% - 24px), var(--app-content-width));
+    width: 100%;
     padding-top: var(--app-space-5);
   }
 
@@ -829,5 +838,68 @@ ion-chip {
   ion-button,
   ion-item {
     --transition: none;
+  }
+}
+
+/* Shared interaction detail: feedback never delays navigation or saving. */
+::selection {
+  background: var(--app-primary-soft);
+  color: var(--app-primary-text);
+}
+
+ion-button::part(native) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+  padding-block: 10px;
+  transition: opacity var(--app-duration-feedback) ease;
+}
+
+ion-button[disabled] {
+  opacity: 0.65;
+}
+
+.app-list__title,
+.page-intro > div,
+.section-card__header > div,
+.inline-notice > div {
+  min-width: 0;
+}
+
+.status-chip ion-label {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.data-list dd,
+.sync-cuentas dd,
+.comparison-table {
+  font-variant-numeric: tabular-nums;
+}
+
+.comparison-table > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.comparison-scroll:focus-visible {
+  outline: 2px solid var(--ion-color-primary);
+  outline-offset: 3px;
+}
+
+.form-actions ion-spinner {
+  flex: 0 0 auto;
+  margin-inline-end: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ion-button::part(native) {
+    transition: none;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  html {
+    color-scheme: dark;
   }
 }
