@@ -131,6 +131,7 @@ def test_individual_format_detected():
             data = json.load(f)
         animals = [c for c in data["candidates"] if hasattr(c, "animal_no") or (isinstance(c, dict) and "animal_no" in c)]
         assert len(animals) >= 3
+        assert animals[0]["ref"] == {"sheet": "Individual", "cell": "C2"}
 
 
 def test_individual_source_fields():
@@ -148,10 +149,15 @@ def test_individual_source_fields():
         with open(out) as f:
             data = json.load(f)
         # Verificar que los candidatos tienen campo source y field_origins
-        for c in data["candidates"]:
-            if isinstance(c, dict) and "animal_no" in c:
-                assert "source" in c
-                assert "field_origins" in c
+        animals = [
+            c
+            for c in data["candidates"]
+            if isinstance(c, dict) and "animal_no" in c
+        ]
+        for animal in animals:
+            assert "source" in animal
+            assert "field_origins" in animal
+        assert [animal["ref"]["cell"] for animal in animals] == ["C2", "C3", "C4"]
 
 
 def test_individual_rejects_institutional_rows():

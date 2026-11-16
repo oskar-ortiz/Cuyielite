@@ -376,7 +376,7 @@ publicar_cambios(conn, scope_id, registros)
 
 `conn` ya tiene una transacción activa, con autocommit deshabilitado. La función no abre otra conexión, no inicia una transacción independiente, no hace `commit`/`rollback` ni cierra la conexión. Propaga el error para que el orquestador revierta todo. No vuelve a escribir los campos de negocio ni decide identidades; actualiza metadatos de publicación y escribe historial/contador. El resultado devuelto es provisional hasta el COMMIT exterior.
 
-Estado de implementación en la rama `feat/d1-publicacion-dominio` (2026-11-10): primitiva implementada y verificada en laboratorio con 16 pruebas. Diery confirmó `0004` para D1 y `0005_*` para su CHECK independiente de pesajes. **No tiene llamador operativo**: solo la invocan pruebas y un orquestador sintético. La descarga de estas entidades quedó habilitada en D2 (`feat/d2-pull-dominio`): `GET /sync/pull` acepta `cuyes`, `partos`, `pesajes`, `eventos` y `parto_crias` además de `galpon|poza`, conserva los snapshots y el cursor firmado por ámbito. El push v1 no cambia. La frontera completa se verifica con una promoción sintética en `backend/tests/test_integracion_d1_d2.py`; el orquestador ETL real no está en este checkout y no se simula como integrado.
+Estado de implementación: la primitiva está en `dev`; el promotor transaccional de Lope está en `feat/lope-orquestador-promocion` (`b16ec2470b8c97453bf333e503c88fbcb8827c2c`). `tools/lope_import/promote.py` inserta/actualiza dominio y metadatos del lote, y llama al publicador con la misma conexión. El promotor cubre `cuyes`, `partos`, `pesajes`, `eventos` y `parto_crias`; el parser de auditoría todavía no se transforma directamente en sus registros aceptados. La descarga de estas entidades quedó habilitada en D2 (`feat/d2-pull-dominio`): `GET /sync/pull` acepta las cinco además de `galpon|poza`, conserva snapshots y cursor firmado por ámbito. El push v1 no cambia.
 
 El ámbito se autoriza en la entrada confiable del orquestador; no basta recibir un UUID en el JSON. La función exige un ámbito existente, comprueba la pertenencia de filas y referencias y no mueve registros entre ámbitos. La numeración de la migración de ámbito/versiones se coordina con el CHECK de pesajes de Diery.
 
@@ -434,13 +434,60 @@ El orquestador evita UPDATE si no cambia el contenido efectivo; no debe refresca
 
 La promoción no es una operación de un dispositivo de campo. No se reutiliza `sync_receipts` salvo que se apruebe una identidad de escritor y su semántica. La idempotencia del ETL se apoya en `importacion_lotes`, orígenes y correspondencias.
 
+### 9.7 Promotor sintético disponible y límites de integración
+
+En `feat/lope-orquestador-promocion`, el CLI `python -m tools.lope_import promote`
+consume un JSON con la forma `{"records": [...]}`. Cada elemento contiene
+`correspondencia_id`, `entity`, `id`, `expected_version`, `before` y `after`.
+`batch_id` y `scope_id` se pasan como argumentos CLI; `scope_id` no se acepta
+dentro del registro. La correspondencia debe existir en la base con estado
+`ACEPTADO`, y los registros deben cubrir exactamente las correspondencias
+aceptadas del lote.
+
+El parser de auditoría sigue emitiendo `files`, `candidates`, `warnings`,
+`errors` y `summary`; no emite `contract`, `parser_version`,
+`mapeo_version`, UUID de dominio ni correspondencias aceptadas. El promotor
+no interpreta esos candidatos. La prueba sintética crea el lote y seis
+correspondencias aceptadas (`parser_version=mapeo_version="synthetic"`), con
+dos cuyes y una fila de cada entidad restante, y luego invoca
+`publicar_con_d1`. El mapeo parser→dominio y la creación/revisión de esas
+correspondencias siguen siendo el siguiente entregable; no se deben presentar
+las versiones sintéticas como versiones de producción.
+
+La llamada de publicación ocurre dentro de la transacción de `promote_batch`:
+
+```python
+with conn.transaction(force_rollback=dry_run):
+    # Escribir filas de dominio y validar correspondencias aceptadas.
+    publication_results = publicador(conn, authorized_scope_id, publication_records)
+```
+
+El publicador predeterminado convierte los registros a `RegistroPublicacion` y
+llama `publicar_cambios(conn, scope_id, registros)`. El CLI hace rollback por
+defecto; `--commit` solo se debe usar contra la base desechable de pruebas en
+esta fase.
+
+Prueba reproducible en PowerShell (PostgreSQL 16 con pgvector; el usuario debe
+poder crear y eliminar bases temporales):
+
+```powershell
+& .\.venv\Scripts\python.exe -m pip install -r tools\lope_import\requirements.txt pytest
+$env:TEST_DATABASE_URL = 'postgresql://<usuario>:<contraseña>@127.0.0.1:5432/cuyielite_test'
+& .\.venv\Scripts\python.exe -m pytest -q tools\lope_import\tests
+```
+
+La prueba crea y elimina una base `cuyielite_lope_promote_<uuid>`; no lee los
+Excel privados. La prueba de auditoría construye su propio libro sintético. La
+carga real sigue bloqueada hasta completar el adaptador, autorizar el ámbito y
+registrar el respaldo.
+
 ## 10. Coordinación pendiente, sin reabrir lo respondido
 
 **Definido por la respuesta:** orquestador de Diery y conexión compartida, publicación sin commit propio, cría–parto como entidad, pesos con a lo sumo un vínculo, reglas ML autoritativas/RF opcional y RAG HTTP de dos campos. Estas definiciones reemplazan alternativas anteriores; no acreditan implementación.
 
 D1 implementó en laboratorio la primitiva y la migración `0004_publicacion_dominio.sql`, sin publicar filas históricas sin ámbito ni activar nuevas entidades en sync v1. Diery confirmó que su CHECK de pesajes usará `0005_*` y es independiente: utiliza columnas presentes desde `0001`. La migración `0005_*` todavía no se ha publicado; no se atribuye su CHECK a D1.
 
-La congelación de `lope_promocion/v1`, la clave durable por lote/origen y la prueba con la herramienta real de Diery pertenecen a D1B. Catálogos incompletos y `AB` con cantidad continúan en su frente de datos; conservar crudos/NULL mientras tanto. Actualizar ADR 0004 con `R = REEMPLAZO` en el corte documental correspondiente, sin volver a preguntar su significado ya comunicado.
+El contrato `lope_promocion/v1` acordado no es aún el JSON de entrada del CLI; completar ese adaptador y fijar las versiones reales de parser/mapeo pertenece a D1B. El promotor y las pruebas sintéticas no reemplazan la revisión humana de correspondencias. Catálogos incompletos y `AB` con cantidad continúan en su frente de datos; conservar crudos/NULL mientras tanto. Actualizar ADR 0004 con `R = REEMPLAZO` en el corte documental correspondiente, sin volver a preguntar su significado ya comunicado.
 
 La publicación de entidades nuevas no se activa sobre un servicio v1 que las rechaza: D1 se prueba aislado; D2 habilita el transporte compatible antes de conectar la promoción real.
 

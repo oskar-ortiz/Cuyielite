@@ -38,6 +38,8 @@ def audit_file(path: str, report: AuditReport):
             rows = read_individual_sheet(ws_f, ws_c)
             for r in rows:
                 animal_no = to_text(r.get("ANIMAL No."))
+                animal_cell = r.get("_ref_ANIMAL No.", f"A{r['_row']}")
+                sex_cell = r.get("_ref_SEXO", f"A{r['_row']}")
                 if animal_no:
                     field_origins = r.get("_field_origins", {})
                     pv = {coord: val for coord, val in r.get("_pv", {}).items() if val is not None}
@@ -56,16 +58,16 @@ def audit_file(path: str, report: AuditReport):
                         fecha_nacimiento=to_text(r.get("FECHA NACIMIENTO")),
                         color=to_text(r.get("COLOR")),
                         ojos=to_text(r.get("OJOS")),
-                        ref=CellRef(sheet=ws_f.title, cell=f"A{r['_row']}"),
+                        ref=CellRef(sheet=ws_f.title, cell=animal_cell),
                         source="observado",
                     )
                     cand.field_origins = field_origins
                     cand.extra_fields = extra
                     report.candidates.append(cand)
                 if r.get("ANIMAL No.") is None:
-                    report.warnings.append(f"{ws_f.title}!A{r['_row']}: fila sin codigo de animal")
+                    report.warnings.append(f"{ws_f.title}!{animal_cell}: fila sin codigo de animal")
                 if r.get("SEXO") is None:
-                    report.warnings.append(f"{ws_f.title}!A{r['_row']}: sexo no informado")
+                    report.warnings.append(f"{ws_f.title}!{sex_cell}: sexo no informado")
         elif fmt == "reproductive":
             blocks = read_reproductive_blocks(ws_f, ws_c)
             recon = reconcile_litters(blocks)
