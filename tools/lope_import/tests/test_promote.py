@@ -42,8 +42,9 @@ def _base_url() -> str:
     parsed = urllib.parse.urlparse(url)
     if parsed.hostname not in {"localhost", "127.0.0.1"}:
         pytest.fail("TEST_DATABASE_URL debe apuntar a localhost")
-    if parsed.path.lstrip("/") != "cuyielite_test":
-        pytest.fail("TEST_DATABASE_URL debe usar la base administrativa cuyielite_test")
+    nombre = parsed.path.lstrip("/")
+    if not nombre.startswith(("cuyelite_", "cuyielite_")) or nombre in {"cuyelite", "cuyielite", "cuyelite_pilot", "cuyielite_pilot"}:
+        pytest.fail("TEST_DATABASE_URL debe usar una base aislada con prefijo cuyelite_")
     return url
 
 

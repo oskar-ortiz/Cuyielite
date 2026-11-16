@@ -2,6 +2,7 @@
 
 import hashlib
 import os
+import re
 import threading
 import time
 import urllib.parse
@@ -23,8 +24,38 @@ def _validate_test_url(url: str) -> None:
     db_name = parsed.path.lstrip("/")
     if host not in ("localhost", "127.0.0.1"):
         raise ValueError(f"Host no permitido para base de pruebas: {host}.")
-    if db_name != "cuyielite_test":
+    if not re.fullmatch(r"cuy(?:e|ie)lite_[a-z0-9_]+", db_name):
         raise ValueError(f"Base no permitida para pruebas: {db_name}.")
+    if db_name in {
+        "cuyelite",
+        "cuyielite",
+        "cuyelite_pilot",
+        "cuyielite_pilot",
+        "postgres",
+    }:
+        raise ValueError(f"Base protegida para pruebas destructivas: {db_name}.")
+
+
+@pytest.mark.parametrize(
+    "db_name",
+    ["cuyielite_test", "cuyelite_test", "cuyielite_c1_1234abcd"],
+)
+def test_validate_test_url_accepts_isolated_test_databases(db_name: str) -> None:
+    _validate_test_url(f"postgresql://localhost:5432/{db_name}")
+
+
+@pytest.mark.parametrize(
+    "url",
+    [
+        "postgresql://localhost:5432/cuyelite",
+        "postgresql://localhost:5432/cuyielite_pilot",
+        "postgresql://localhost:5432/postgres",
+        "postgresql://example.com:5432/cuyielite_test",
+    ],
+)
+def test_validate_test_url_rejects_protected_database_or_remote_host(url: str) -> None:
+    with pytest.raises(ValueError):
+        _validate_test_url(url)
 
 
 def _require_test_db():

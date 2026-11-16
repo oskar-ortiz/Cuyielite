@@ -48,6 +48,8 @@ function categoriaRecord(version = 1, clase: string | null = 'DESCARTE') {
       cuy_id: CUY,
       clase,
       estado_evaluacion: clase ? 'DEFINITIVA' : 'DATOS_INSUFICIENTES',
+      caracter: clase ? 'CONFIRMADO' : null,
+      evidencia_pendiente: [],
       categoria_estado: clase ? 'DEFINITIVA' : 'HISTORICA',
       motivos: clase ? ['ciclo completo'] : [],
       faltantes: clase ? [] : ['abortos'],
@@ -141,6 +143,20 @@ describe('feed derivado de solo lectura', () => {
     expect(alertas).toHaveLength(1);
     expect(alertas[0].estado).toBe('obsoleta');
     expect(alertas[0].version).toBe('2');
+    db.close();
+  });
+
+  it('acepta un resultado provisional en el feed', async () => {
+    const { db, adapter } = await fresh();
+    const record = categoriaRecord(1, null);
+    record.data.estado_evaluacion = 'PROVISIONAL';
+    record.data.caracter = 'PROPUESTO';
+    const receive = async () => page([{ seq: '1', entity: 'categoria', record }], 'provisional');
+    await pullDerivedUntilCheckpoint(adapter, SCOPE, receive);
+    const categoria = await readCategoriaDerivada(adapter, CUY);
+    expect(categoria?.estadoEvaluacion).toBe('PROVISIONAL');
+    expect(categoria?.caracter).toBe('PROPUESTO');
+    expect(categoria?.clase).toBeNull();
     db.close();
   });
 
