@@ -54,7 +54,7 @@ vi.mock('@ionic/react', () => ({
   IonSpinner: () => <span>...</span>,
   IonChip: ({ children }: any) => <span>{children}</span>,
   IonLabel: ({ children }: any) => <span>{children}</span>,
-})); 
+}));
 
 vi.mock('../data/ml.transport', async (importOriginal) => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports

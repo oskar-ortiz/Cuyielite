@@ -47,7 +47,7 @@ vi.mock('@ionic/react', () => ({
   IonSpinner: () => null,
   IonChip: ({ children }: any) => <span>{children}</span>,
   IonLabel: ({ children }: any) => <span>{children}</span>,
-})); 
+}));
 
 const TOKEN = 'lab-token-sintetico-abcdefghijklmnopqrstuvwxyz';
 

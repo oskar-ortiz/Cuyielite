@@ -36,7 +36,7 @@ vi.mock('@ionic/react', () => ({
   IonSpinner: () => null,
   IonChip: ({ children }: any) => <span>{children}</span>,
   IonLabel: ({ children }: any) => <span>{children}</span>,
-})); 
+}));
 
 vi.mock('../data/galpones.repository.factory', () => ({
   getGalponesRepository: () => ({ createPoza: demoCreate }),

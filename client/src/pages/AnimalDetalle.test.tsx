@@ -31,12 +31,13 @@ vi.mock('@ionic/react', () => ({
   IonChip: ({ children }: any) => <span>{children}</span>,
   IonLabel: ({ children }: any) => <span>{children}</span>,
   useIonViewWillEnter: () => undefined,
-})); 
+}));
 
 vi.mock('../data/auth.session', () => ({
   snapshot: () => ({ canWrite: false, user: { username: 'consulta-lope', role: 'viewer' }, role: 'viewer' }),
 
-  IonLabel: ({ children }: any) => <span>{children}</span>,}));
+  IonLabel: ({ children }: any) => <span>{children}</span>,
+}));
 
 vi.mock('../data/work.domain.factory', () => ({
   getDomainRepository: () => ({
