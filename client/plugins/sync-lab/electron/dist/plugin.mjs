@@ -137,7 +137,7 @@ async function request(route, token, init) {
 class SyncLab {
   static __capacitorElectronPlugin = {
     name: 'SyncLab',
-    methods: ['context', 'push', 'pull', 'contextV2', 'pushV2', 'pullV2', 'pullDerived', 'categoriaDerivada', 'alertasDerivadas', 'bind', 'prepare', 'send', 'sync', 'status', 'listConflicts', 'keepCentral', 'retryConflict', 'authLogin', 'authRefresh', 'authLogout', 'authChangePassword', 'authMe', 'authSessionSave', 'authSessionRead', 'authSessionClear', 'predictHembra', 'predictCandidata', 'assistantQuery'],
+    methods: ['context', 'push', 'pull', 'contextV2', 'pushV2', 'pullV2', 'pullDerived', 'categoriaDerivada', 'alertasDerivadas', 'evaluationContext', 'evaluateReproductora', 'evaluateCandidata', 'declareEvidence', 'reviewEvidence', 'bind', 'prepare', 'send', 'sync', 'status', 'listConflicts', 'keepCentral', 'retryConflict', 'authLogin', 'authRefresh', 'authLogout', 'authChangePassword', 'authMe', 'authSessionSave', 'authSessionRead', 'authSessionClear', 'predictHembra', 'predictCandidata', 'assistantQuery'],
   };
 
   async load() {}
@@ -198,6 +198,38 @@ class SyncLab {
     const params = new URLSearchParams({ limit: String(limit) });
     if (cursor !== null) params.set('cursor', cursor);
     return request(`${ROUTES.pullDerived}?${params.toString()}`, token, { method: 'GET' });
+  }
+
+  async evaluationContext({ token, cuyId }) {
+    return request('/evaluaciones/reproductoras/' + encodeURIComponent(cuyId), token, { method: 'GET' });
+  }
+
+  async evaluateReproductora({ token, cuyId, body }) {
+    return request('/evaluaciones/reproductoras/' + encodeURIComponent(cuyId), token, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async evaluateCandidata({ token, cuyId, body }) {
+    return request('/evaluaciones/candidatas/' + encodeURIComponent(cuyId), token, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async declareEvidence({ token, cuyId, body }) {
+    return request('/evaluaciones/' + encodeURIComponent(cuyId) + '/evidencias', token, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async reviewEvidence({ token, cuyId, body }) {
+    return request('/evaluaciones/' + encodeURIComponent(cuyId) + '/evidencias/revision', token, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
   }
 
   async categoriaDerivada({ cuyId }) {

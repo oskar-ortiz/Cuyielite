@@ -3,7 +3,7 @@ import type { MigrationDb } from './work.migration.js';
 // Migración local propia para el feed derivado de solo lectura (alertas y
 // categoría persistida). No altera la cadena de checksums de la base de Trabajo:
 // estas tablas son una extensión auditada por su propio identificador.
-export const DERIVED_SCHEMA_VERSION = 1;
+export const DERIVED_SCHEMA_VERSION = 2;
 export const DERIVED_MIGRATION_ID = '0005_work_derived_readonly';
 export const DERIVED_PROTOCOL = 3;
 
@@ -17,7 +17,9 @@ CREATE TABLE IF NOT EXISTS categorias_animal (
   clase TEXT,
   estado_evaluacion TEXT NOT NULL,
   categoria_estado TEXT,
+  caracter TEXT,
   motivos TEXT NOT NULL,
+  evidencia_pendiente TEXT NOT NULL DEFAULT '[]',
   faltantes TEXT NOT NULL,
   reglas_version TEXT,
   evaluada_at TEXT,
@@ -68,7 +70,12 @@ export async function initializeDerivedDatabase(db: MigrationDb): Promise<void> 
   if (current > DERIVED_SCHEMA_VERSION) {
     throw new Error(`Versión futura del feed derivado: ${current}`);
   }
-  if (current === 0) {
+  if (current === 1) {
+    // v1 -> v2: caracter del resultado y evidencia pendiente en la categoría.
+    await db.exec('ALTER TABLE categorias_animal ADD COLUMN caracter TEXT');
+    await db.exec("ALTER TABLE categorias_animal ADD COLUMN evidencia_pendiente TEXT NOT NULL DEFAULT '[]'");
+    await db.run("UPDATE meta SET value=? WHERE key='derived_schema_version'", [String(DERIVED_SCHEMA_VERSION)]);
+  } else if (current === 0) {
     await db.exec(DERIVED_SQL);
     await db.run(
       "INSERT INTO meta (key, value) VALUES ('derived_schema_version', ?) " +
@@ -95,5 +102,10 @@ export async function initializeDerivedDatabase(db: MigrationDb): Promise<void> 
   const columnNames = new Set(columns.map((row) => String((row as { name?: string }).name)));
   for (const column of ['estado', 'regla_id', 'causa_tipo', 'fecha_limite']) {
     if (!columnNames.has(column)) throw new Error(`Esquema derivado incompleto: falta alertas_derivadas.${column}`);
+  }
+  const categoryColumns = (await db.query('PRAGMA table_info(categorias_animal)')).values ?? [];
+  const categoryNames = new Set(categoryColumns.map((row) => String((row as { name?: string }).name)));
+  for (const column of ['caracter', 'evidencia_pendiente']) {
+    if (!categoryNames.has(column)) throw new Error(`Esquema derivado incompleto: falta categorias_animal.${column}`);
   }
 }

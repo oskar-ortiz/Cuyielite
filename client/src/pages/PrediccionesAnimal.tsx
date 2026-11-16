@@ -11,6 +11,7 @@ import {
   IonHeader,
   IonInput,
   IonItem,
+  IonLabel,
   IonList,
   IonPage,
   IonSelect,
@@ -21,11 +22,47 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
+import { AUTH_MODE } from '../data/api.config';
+import { ensureAccessToken, snapshot } from '../data/auth.session';
 import { predictionErrorMessage } from '../data/ml.errors';
 import { getMlTransport, type CandidataResult, type HembraResult } from '../data/ml.transport';
 import { getDomainRepository } from '../data/work.domain.factory';
 import type { Cuyo } from '../data/work.domain.validation';
 import './galpones.css';
+
+interface EvaluationResult {
+  estado_evaluacion: 'DEFINITIVA' | 'PROVISIONAL' | 'DATOS_INSUFICIENTES' | 'EVIDENCIA_NO_VALIDADA';
+  caracter: 'CONFIRMADO' | 'PROPUESTO' | null;
+  clase: 'ELITE' | 'NORMAL' | 'DESCARTE' | null;
+  estado_calidad: string;
+  motivos: string[];
+  campos_faltantes: string[];
+  evidencia_pendiente: string[];
+  fundamentos: {
+    regla_id: string;
+    caracter: 'CONFIRMADO' | 'PROPUESTO';
+    causa_fecha: string | null;
+    fecha_limite: string | null;
+    motivo: string;
+  }[];
+  categoria_persistida: boolean;
+  alertas: { id: string; estado: string; regla_id: string | null; fecha_limite: string | null }[];
+}
+
+interface EvidenceRow {
+  campo: string;
+  valor: string | null;
+  estado: 'DECLARADA' | 'REVISADA' | 'RECHAZADA';
+  origen: string;
+  revisada_at: string | null;
+}
+
+function estadoLabel(value: EvaluationResult['estado_evaluacion']): string {
+  if (value === 'DEFINITIVA') return 'Confirmada';
+  if (value === 'PROVISIONAL') return 'Provisional';
+  if (value === 'EVIDENCIA_NO_VALIDADA') return 'Evidencia sin revisar';
+  return 'Datos insuficientes';
+}
 
 function compact(values: Record<string, string | number | null>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
@@ -60,6 +97,81 @@ const PrediccionesAnimal: React.FC = () => {
     peso_monta_g: '',
   });
   const requestRef = useRef(0);
+  const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
+  const [evidence, setEvidence] = useState<EvidenceRow[]>([]);
+  const [busyEval, setBusyEval] = useState(false);
+  const [evalError, setEvalError] = useState<string | null>(null);
+  const canWrite = snapshot().canWrite;
+
+  const accessToken = useCallback(async (): Promise<string> => {
+    if (AUTH_MODE === 'pilot') return ensureAccessToken();
+    const value = token.trim();
+    if (!value) throw new Error('Ingresa el token de laboratorio para consultar.');
+    return value;
+  }, [token]);
+
+  const loadContext = useCallback(async () => {
+    try {
+      const bearer = await accessToken();
+      const context = (await getMlTransport().evaluationContext(bearer, animalId)) as {
+        evidencias?: EvidenceRow[];
+      };
+      setEvidence(context.evidencias ?? []);
+      setEvalError(null);
+    } catch (error) {
+      setEvalError(error instanceof Error ? error.message : String(error));
+    }
+  }, [accessToken, animalId]);
+
+  const runEvaluation = useCallback(
+    async (kind: 'reproductora' | 'candidata', declareOnly = false) => {
+      setBusyEval(true);
+      setEvalError(null);
+      try {
+        const bearer = await accessToken();
+        const transport = getMlTransport();
+        if (declareOnly) {
+          const fields: Record<string, string> =
+            kind === 'reproductora' ? { abortos: hembra.abortos } : { ...candidata };
+          for (const [campo, valor] of Object.entries(fields)) {
+            if (valor === '' || valor === undefined) continue;
+            await transport.declareEvidence(bearer, animalId, { campo, valor });
+          }
+          await loadContext();
+          return;
+        }
+        const result = (
+          kind === 'reproductora'
+            ? await transport.evaluateReproductora(bearer, animalId, {})
+            : await transport.evaluateCandidata(bearer, animalId, {})
+        ) as EvaluationResult;
+        setEvaluation(result);
+        await loadContext();
+      } catch (error) {
+        setEvalError(predictionErrorMessage(error));
+      } finally {
+        setBusyEval(false);
+      }
+    },
+    [accessToken, animalId, candidata, hembra.abortos, loadContext],
+  );
+
+  const review = useCallback(
+    async (campo: string) => {
+      setBusyEval(true);
+      setEvalError(null);
+      try {
+        const bearer = await accessToken();
+        await getMlTransport().reviewEvidence(bearer, animalId, { campo, decision: 'REVISADA' });
+        await loadContext();
+      } catch (error) {
+        setEvalError(predictionErrorMessage(error));
+      } finally {
+        setBusyEval(false);
+      }
+    },
+    [accessToken, animalId, loadContext],
+  );
 
   useEffect(() => {
     let active = true;
@@ -292,6 +404,107 @@ const PrediccionesAnimal: React.FC = () => {
                           ))}
                         </ul>
                       </div>
+                    )}
+                  </div>
+                )}
+              </IonCardContent>
+            </IonCard>
+            <IonCard>
+              <IonCardHeader>
+                <IonCardTitle>Evaluación oficial y evidencia</IonCardTitle>
+              </IonCardHeader>
+              <IonCardContent>
+                <p className="texto-ayuda">
+                  Solo una evaluación confirmada cambia la categoría. Lo provisional, lo insuficiente y la evidencia sin
+                  revisar no se guardan como categoría oficial.
+                </p>
+                {evalError && <p className="estado-vacio">{evalError}</p>}
+                <IonList>
+                  {evidence.length === 0 && (
+                    <IonItem>
+                      <IonLabel>Sin evidencia registrada para este animal.</IonLabel>
+                    </IonItem>
+                  )}
+                  {evidence.map((item) => (
+                    <IonItem key={item.campo}>
+                      <IonLabel>
+                        <h3>{item.campo}</h3>
+                        <p>
+                          {item.valor ?? 'sin valor'} · {item.estado}
+                          {item.revisada_at ? ` · revisada ${item.revisada_at.slice(0, 10)}` : ''}
+                        </p>
+                      </IonLabel>
+                      {canWrite && item.estado === 'DECLARADA' && (
+                        <IonButton slot="end" size="small" disabled={busyEval} onClick={() => void review(item.campo)}>
+                          Revisar
+                        </IonButton>
+                      )}
+                    </IonItem>
+                  ))}
+                </IonList>
+                {canWrite ? (
+                  <div className="marcado-demo">
+                    <IonButton
+                      fill="outline"
+                      disabled={busyEval}
+                      onClick={() => void runEvaluation('reproductora', true)}
+                    >
+                      Declarar abortos
+                    </IonButton>
+                    <IonButton disabled={busyEval} onClick={() => void runEvaluation('reproductora')}>
+                      {busyEval ? 'Evaluando…' : 'Evaluar y guardar (reproductora)'}
+                    </IonButton>
+                    <IonButton fill="outline" disabled={busyEval} onClick={() => void runEvaluation('candidata', true)}>
+                      Declarar criterios de candidata
+                    </IonButton>
+                    <IonButton disabled={busyEval} onClick={() => void runEvaluation('candidata')}>
+                      Evaluar y guardar (candidata)
+                    </IonButton>
+                  </div>
+                ) : (
+                  <p className="texto-ayuda">La cuenta actual solo puede consultar: no declara evidencia ni evalúa.</p>
+                )}
+                {evaluation && (
+                  <div>
+                    <div className="marcado-demo">
+                      <IonChip color={evaluation.estado_evaluacion === 'DEFINITIVA' ? 'success' : 'warning'}>
+                        {estadoLabel(evaluation.estado_evaluacion)}
+                      </IonChip>
+                      {evaluation.caracter === 'PROPUESTO' && (
+                        <IonChip color="warning">Propuesta pendiente de validación</IonChip>
+                      )}
+                    </div>
+                    <p>
+                      Clase de reglas: {evaluation.clase ?? 'sin clase'} · calidad: {evaluation.estado_calidad}
+                    </p>
+                    <p>
+                      Categoría oficial {evaluation.categoria_persistida ? 'actualizada' : 'no modificada'}. Alertas
+                      oficiales activas: {evaluation.alertas.length}.
+                    </p>
+                    <ul>
+                      {evaluation.motivos.map((motivo, index) => (
+                        <li key={`${index}-${motivo}`}>{motivo}</li>
+                      ))}
+                    </ul>
+                    {evaluation.fundamentos.map((fundamento) => (
+                      <p key={fundamento.regla_id}>
+                        {fundamento.caracter === 'CONFIRMADO' ? 'Fundamento confirmado' : 'Fundamento propuesto'}:{' '}
+                        {fundamento.motivo}
+                        {fundamento.causa_fecha
+                          ? ` · causa ${fundamento.causa_fecha}`
+                          : ' · fecha del cuarto parto pendiente de validar'}
+                        {fundamento.fecha_limite ? ` · límite ${fundamento.fecha_limite}` : ''}
+                      </p>
+                    ))}
+                    {evaluation.evidencia_pendiente.length > 0 && (
+                      <p className="texto-ayuda">
+                        Evidencia pendiente de revisión: {evaluation.evidencia_pendiente.join(', ')}.
+                      </p>
+                    )}
+                    {evaluation.estado_evaluacion === 'PROVISIONAL' && (
+                      <p className="texto-ayuda">
+                        Resultado provisional: no reemplaza la categoría anterior ni genera una alerta oficial.
+                      </p>
                     )}
                   </div>
                 )}

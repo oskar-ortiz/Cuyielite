@@ -49,6 +49,15 @@ Casos cubiertos por `test_derived_sync.py`:
 - Alertas no mueven `last_sequence`: v1 y v2 siguen entregando solo dominio.
 - Entidad desconocida en historial: `500 HISTORIAL_NO_SOPORTADO` sin avanzar cursor; al retirarla, el pull continúa.
 
+## 2.1 Herramienta de alertas anteriores
+
+`python -m backend.app.alertas_cli --scope <UUID>` (dry-run) y `--apply --responsable "Nombre"`.
+
+- Solo cierra alertas **activas** con `regla_id='abortos_repetidos_descarte'`; cualquier otra regla se informa y se deja intacta.
+- Dry-run por defecto; `--apply` exige `--responsable`. Registra `closed_reason='CAUSA_PROPUESTA_NO_OFICIAL'`, evento `alerta_propuesta_obsoleta` en `auth_audit` con alerta, animal, causa y responsable, y entrada en el feed derivado.
+- No usa `atendida` y no borra historial. Es idempotente: una segunda ejecución no repite el cierre.
+- No se ejecutó sobre datos reales; solo con datos sintéticos en PostgreSQL temporal.
+
 ## 3. Límites
 
 - `abortos` y el peso de empadre no tienen columna central: se declaran, se validan y quedan en la procedencia. No se infirieron.

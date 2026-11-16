@@ -62,6 +62,19 @@ function validateCategoria(data: Record<string, unknown>): void {
   if (data.categoria_estado !== null && !['DEFINITIVA', 'HISTORICA'].includes(String(data.categoria_estado))) {
     throw new DerivedPullError('estado de categoría derivado inválido');
   }
+  if (
+    data.caracter !== null &&
+    data.caracter !== undefined &&
+    !['CONFIRMADO', 'PROPUESTO'].includes(String(data.caracter))
+  ) {
+    throw new DerivedPullError('carácter derivado inválido');
+  }
+  if (data.evidencia_pendiente !== undefined) {
+    const pendiente = data.evidencia_pendiente;
+    if (!Array.isArray(pendiente) || !pendiente.every((item: unknown) => typeof item === 'string')) {
+      throw new DerivedPullError('evidencia pendiente inválida');
+    }
+  }
   if (!Array.isArray(data.motivos) || !data.motivos.every((item) => typeof item === 'string')) {
     throw new DerivedPullError('motivos derivados inválidos');
   }
@@ -157,16 +170,18 @@ async function applyItem(db: MigrationDb, item: DerivedItem, now: string): Promi
     const data = record.data;
     await db.run(
       `INSERT INTO categorias_animal
-         (cuy_id, version, clase, estado_evaluacion, categoria_estado, motivos, faltantes,
-          reglas_version, evaluada_at, procedencia, server_snapshot, updated_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+         (cuy_id, version, clase, estado_evaluacion, categoria_estado, caracter, motivos, faltantes,
+          evidencia_pendiente, reglas_version, evaluada_at, procedencia, server_snapshot, updated_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
        ON CONFLICT(cuy_id) DO UPDATE SET
          version=excluded.version,
          clase=excluded.clase,
          estado_evaluacion=excluded.estado_evaluacion,
          categoria_estado=excluded.categoria_estado,
+         caracter=excluded.caracter,
          motivos=excluded.motivos,
          faltantes=excluded.faltantes,
+         evidencia_pendiente=excluded.evidencia_pendiente,
          reglas_version=excluded.reglas_version,
          evaluada_at=excluded.evaluada_at,
          procedencia=excluded.procedencia,
@@ -179,8 +194,10 @@ async function applyItem(db: MigrationDb, item: DerivedItem, now: string): Promi
         data.clase ?? null,
         String(data.estado_evaluacion),
         data.categoria_estado ?? null,
+        data.caracter ?? null,
         JSON.stringify(data.motivos ?? []),
         JSON.stringify(data.faltantes ?? []),
+        JSON.stringify(data.evidencia_pendiente ?? []),
         data.reglas_version ?? null,
         data.evaluada_at ?? null,
         JSON.stringify(data.procedencia ?? {}),
@@ -265,8 +282,10 @@ export interface CategoriaDerivada {
   clase: string | null;
   estadoEvaluacion: string;
   categoriaEstado: string | null;
+  caracter: string | null;
   motivos: string[];
   faltantes: string[];
+  evidenciaPendiente: string[];
   reglasVersion: string | null;
   evaluadaAt: string | null;
   procedencia: Record<string, unknown>;
@@ -297,8 +316,10 @@ export async function readCategoriaDerivada(db: MigrationDb, cuyId: string): Pro
     clase: (row.clase as string | null) ?? null,
     estadoEvaluacion: String(row.estado_evaluacion),
     categoriaEstado: (row.categoria_estado as string | null) ?? null,
+    caracter: (row.caracter as string | null) ?? null,
     motivos: JSON.parse(String(row.motivos ?? '[]')) as string[],
     faltantes: JSON.parse(String(row.faltantes ?? '[]')) as string[],
+    evidenciaPendiente: JSON.parse(String(row.evidencia_pendiente ?? '[]')) as string[],
     reglasVersion: (row.reglas_version as string | null) ?? null,
     evaluadaAt: (row.evaluada_at as string | null) ?? null,
     procedencia: JSON.parse(String(row.procedencia ?? '{}')) as Record<string, unknown>,

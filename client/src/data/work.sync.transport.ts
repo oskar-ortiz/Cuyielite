@@ -48,6 +48,11 @@ interface SyncLabPlugin {
   pullV2(options: { token: string; cursor: string | null; limit: number }): Promise<unknown>;
   pullDerived(options: { token: string; cursor: string | null; limit: number }): Promise<unknown>;
   categoriaDerivada(options: { cuyId: string }): Promise<unknown>;
+  evaluationContext(options: { token: string; cuyId: string }): Promise<unknown>;
+  evaluateReproductora(options: { token: string; cuyId: string; body: unknown }): Promise<unknown>;
+  evaluateCandidata(options: { token: string; cuyId: string; body: unknown }): Promise<unknown>;
+  declareEvidence(options: { token: string; cuyId: string; body: unknown }): Promise<unknown>;
+  reviewEvidence(options: { token: string; cuyId: string; body: unknown }): Promise<unknown>;
   alertasDerivadas(options: { cuyId: string }): Promise<unknown>;
   sync(options: { token: string; allowPush?: boolean }): Promise<unknown>;
   status(): Promise<WorkSyncStatus>;

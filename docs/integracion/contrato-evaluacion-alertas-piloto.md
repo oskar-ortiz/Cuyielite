@@ -1,12 +1,13 @@
 # Contrato de evaluación persistente y alertas
 
-Estado: **IMPLEMENTADO CON DATOS SINTÉTICOS (2026-11-16)**. Las reglas y umbrales son de Diery; la plataforma no los redefinió.
+Estado: **IMPLEMENTADO CON DATOS SINTÉTICOS (2026-11-16)**. Las reglas y umbrales son de Diery; la plataforma no los redefinió. Actualizado con las aclaraciones de Diery del 2026-11-16: dos abortos es provisional, el cuarto parto es el único criterio confirmado y la evidencia oficial debe estar revisada.
 
 ## 1. Política confirmada por Diery
 
 | Punto | Decisión |
 | --- | --- |
-| ELITE | Exige destete a los 15 días y peso de empadre entre 900 y 1000 g |
+| ELITE | Exige los criterios vigentes, incluidos destete a los 15 días y peso de monta entre 900 y 1000 g |
+| Candidata con faltantes | predecir_candidata conserva NORMAL, agrega los faltantes a motivos y marca REVISAR |
 | Datos faltantes | La función conserva `NORMAL`, agrega el faltante a los motivos y marca `estado_calidad=REVISAR`; la clase no queda vacía |
 | `NORMAL+REVISAR` en la API | Es informativo; **no** es categoría definitiva para persistir |
 | Modelo RF | Si no hay modelo o faltan sus predictores, `apoyo_modelo=null`; nunca modifica la clase de reglas |
@@ -76,6 +77,16 @@ Se agregó un feed propio de solo lectura:
 - Local: `categorias_animal`, `alertas_derivadas` y `sync_derived_cursor` (migración `0005_work_derived_readonly`, versión 1 del feed).
 - El cliente aplica solo si la versión entrante es mayor; un replay no retrocede ni duplica.
 - No existe escritura de alertas desde el cliente.
+
+## 3.1 Evidencia revisable (migración 0008)
+
+Una declaración del cliente (abortos, peso de monta o criterios de candidata) **no** autoriza persistencia oficial. Se guarda en evidencias_evaluacion con origen, archivo/huella, hoja, fila, celda y versiones de parser/mapeo, en estado DECLARADA.
+
+- POST /evaluaciones/{cuy_id}/evidencias registra la declaración; nunca acepta pruebas de revisión.
+- POST /evaluaciones/{cuy_id}/evidencias/revision exige sesión de administrador autenticada: el revisor sale del token, no del cuerpo. Decisiones: REVISADA o RECHAZADA.
+- Solo la evidencia REVISADA sostiene una categoría oficial o una alerta.
+- Una declaración nueva sobre un campo ya revisado lo devuelve a DECLARADA.
+- Regla aplicada: la reproductora NORMAL exige bortos revisado; la candidata exige sus siete campos revisados; el descarte por cuarto parto no se bloquea por evidencia ajena a ese criterio.
 
 ## 4. Pendiente
 

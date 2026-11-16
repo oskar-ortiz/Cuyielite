@@ -17,12 +17,17 @@ export function isMlHttpError(error: unknown): error is MlHttpError {
   return typeof error === 'object' && error !== null && typeof (error as { status?: unknown }).status === 'number';
 }
 
-async function androidRequest(path: string, token: string, body: unknown): Promise<unknown> {
+async function androidRequest(
+  path: string,
+  token: string,
+  body?: unknown,
+  method: 'GET' | 'POST' = 'POST',
+): Promise<unknown> {
   const res = await CapacitorHttp.request({
     url: apiUrl(path),
-    method: 'POST',
+    method,
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    data: body,
+    ...(body === undefined ? {} : { data: body }),
     disableRedirects: true,
     connectTimeout: 15_000,
     readTimeout: 30_000,
@@ -51,6 +56,11 @@ export interface MlTransport {
   predictHembra(token: string, body: unknown): Promise<unknown>;
   predictCandidata(token: string, body: unknown): Promise<unknown>;
   assistantQuery(token: string, body: unknown): Promise<unknown>;
+  evaluationContext(token: string, cuyId: string): Promise<unknown>;
+  evaluateReproductora(token: string, cuyId: string, body: unknown): Promise<unknown>;
+  evaluateCandidata(token: string, cuyId: string, body: unknown): Promise<unknown>;
+  declareEvidence(token: string, cuyId: string, body: unknown): Promise<unknown>;
+  reviewEvidence(token: string, cuyId: string, body: unknown): Promise<unknown>;
 }
 
 export interface HembraResult {
@@ -87,6 +97,13 @@ export function getMlTransport(): MlTransport {
       predictHembra: (token, body) => androidRequest('/ml/predict/hembra', token, body),
       predictCandidata: (token, body) => androidRequest('/ml/predict/candidata', token, body),
       assistantQuery: (token, body) => androidRequest('/assistant/query', token, body),
+      evaluationContext: (token, cuyId) =>
+        androidRequest('/evaluaciones/reproductoras/' + cuyId, token, undefined, 'GET'),
+      evaluateReproductora: (token, cuyId, body) => androidRequest('/evaluaciones/reproductoras/' + cuyId, token, body),
+      evaluateCandidata: (token, cuyId, body) => androidRequest('/evaluaciones/candidatas/' + cuyId, token, body),
+      declareEvidence: (token, cuyId, body) => androidRequest('/evaluaciones/' + cuyId + '/evidencias', token, body),
+      reviewEvidence: (token, cuyId, body) =>
+        androidRequest('/evaluaciones/' + cuyId + '/evidencias/revision', token, body),
     };
   }
   if (platform === 'electron') {
@@ -97,6 +114,11 @@ export function getMlTransport(): MlTransport {
         electronRequest((t, b) => SyncLab.predictCandidata({ token: t, body: b }), token, body),
       assistantQuery: (token, body) =>
         electronRequest((t, b) => SyncLab.assistantQuery({ token: t, body: b }), token, body),
+      evaluationContext: (token, cuyId) => SyncLab.evaluationContext({ token, cuyId }),
+      evaluateReproductora: (token, cuyId, body) => SyncLab.evaluateReproductora({ token, cuyId, body }),
+      evaluateCandidata: (token, cuyId, body) => SyncLab.evaluateCandidata({ token, cuyId, body }),
+      declareEvidence: (token, cuyId, body) => SyncLab.declareEvidence({ token, cuyId, body }),
+      reviewEvidence: (token, cuyId, body) => SyncLab.reviewEvidence({ token, cuyId, body }),
     };
   }
   throw new Error('Las consultas ML/RAG requieren Android o Windows instalado');
