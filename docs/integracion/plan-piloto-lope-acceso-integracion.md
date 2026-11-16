@@ -13,14 +13,14 @@ Actualización: 2026-11-15. Plan recomendado por Codex a partir de respuestas de
 | 5. Lectura de alertas y UI | **Pendiente**, depende de 4 | No se muestran alertas como sincronizadas |
 | 6. Ensayo integral y operación | **Parcial**: acceso verificado en Windows y Android; operación real pendiente | No hay VPS/TLS público ni carga real |
 
-No se declara aprobación del diseño ni cierre del piloto. El código de acceso vive en la rama `feat/piloto-auth-integracion`; no se fusiona aquí.
+La tabla anterior es una fotografía histórica del 2026-11-15 y queda sustituida por el estado posterior a #145 que sigue. El acceso piloto, la evaluación persistente y la UI de alertas ya se fusionaron en `dev`; esto no significa aprobación para producción ni cierre del piloto.
 
 
-## 0. Estado posterior a #144 (2026-11-16)
+## 0. Estado posterior a #145 (2026-11-16)
 
-HECHO: acceso admin/viewer, evaluacion oficial/provisional con evidencia revisable, feed derivado v3 de solo lectura, UI de ficha y evaluacion, herramienta de alertas antiguas. Verificado en Windows con datos sinteticos.
+HECHO: acceso admin/viewer, evaluación oficial/provisional con evidencia revisable, feed derivado v3 de solo lectura, UI de ficha y evaluación, herramienta de alertas antiguas. PR #144 corrigió la aplicación del estado provisional; #145 actualizó el inventario y reconstruyó la app Windows, restaurando el perfil original. Windows y el ETL de manifiestos sintéticos están verificados.
 
-PENDIENTE: recorrido Android (bloqueado por falta de JDK 21 y por el usuario de prueba residual del emulador), ETL real de Diery sobre Excel, artefacto RF, corpus RAG y despliegue. Ver `docs/verificaciones/cierre-integracion-laboratorio.md`.
+PENDIENTE: recorrido Android (último ensayo bloqueado por mismatch de ámbito, falta de JDK 21 y memoria; el usuario `LabCuyi` solo debe limpiarse en una ventana segura), confirmar la fuente y modalidad del ETL de Diery, artefacto RF, corpus/configuración RAG y despliegue. No se autorizó cargar datos reales. Ver [cierre de integración en laboratorio](../verificaciones/cierre-integracion-laboratorio.md).
 
 ## 1. Base que se conserva
 

@@ -38,6 +38,15 @@ const SincronizacionTrabajo: React.FC = () => {
 
   const requestIdRef = useRef(0);
   const inFlightRef = useRef(false);
+  const authIdentityRef = useRef(`${auth.user?.id ?? ''}:${auth.scopeId ?? ''}`);
+
+  useEffect(() => {
+    const identity = `${auth.user?.id ?? ''}:${auth.scopeId ?? ''}`;
+    if (authIdentityRef.current !== identity) {
+      authIdentityRef.current = identity;
+      setOutcome((current) => (current.kind === 'scopeMismatch' ? { kind: 'none' } : current));
+    }
+  }, [auth.scopeId, auth.user?.id]);
 
   const load = useCallback(() => {
     if (inFlightRef.current) return;
@@ -74,7 +83,10 @@ const SincronizacionTrabajo: React.FC = () => {
   useIonViewWillEnter(() => load());
 
   const pilot = AUTH_MODE === 'pilot';
-  const canRun = pilot ? Boolean(auth.user) && !syncing : token.trim().length > 0 && !syncing;
+  const scopeMismatch = outcome.kind === 'scopeMismatch';
+  const canRun = pilot
+    ? Boolean(auth.user) && !syncing && !scopeMismatch
+    : token.trim().length > 0 && !syncing && !scopeMismatch;
   const canRetry = outcome.kind === 'offline' || outcome.kind === 'error';
   const view = describeSyncState({ status, syncing, outcome });
   const chipColor = view.tone === 'medium' ? 'medium' : view.tone;
@@ -207,7 +219,10 @@ const SincronizacionTrabajo: React.FC = () => {
                 spellcheck={false}
                 value={token}
                 disabled={syncing}
-                onIonInput={(event) => setToken(event.detail.value ?? '')}
+                onIonInput={(event) => {
+                  setToken(event.detail.value ?? '');
+                  if (scopeMismatch) setOutcome({ kind: 'none' });
+                }}
               />
               <p className="texto-ayuda">
                 Solo se mantiene en memoria mientras la app está abierta. No se guarda en la base ni en el repositorio.

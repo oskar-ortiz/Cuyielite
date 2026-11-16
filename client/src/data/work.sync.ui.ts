@@ -1,9 +1,11 @@
 import type { WorkSyncStatus } from './work.sync.status.js';
 
-export type SyncPhase = 'unsynced' | 'pending' | 'syncing' | 'done' | 'offline' | 'conflict' | 'error';
+export type SyncPhase =
+  'unsynced' | 'pending' | 'syncing' | 'done' | 'offline' | 'conflict' | 'scopeMismatch' | 'error';
 export type SyncTone = 'medium' | 'warning' | 'success' | 'danger' | 'primary';
 
-export type SyncOutcome = { kind: 'none' } | { kind: 'done' } | { kind: 'offline' } | { kind: 'error' };
+export type SyncOutcome =
+  { kind: 'none' } | { kind: 'done' } | { kind: 'offline' } | { kind: 'scopeMismatch' } | { kind: 'error' };
 
 export interface SyncView {
   phase: SyncPhase;
@@ -14,8 +16,11 @@ export interface SyncView {
 
 // Un fallo de red o un 503 se puede reintentar; un token inválido o un contexto
 // incompatible exigen revisar la configuración antes de volver a intentarlo.
-export function classifySyncError(error: unknown): 'offline' | 'error' {
+export function classifySyncError(error: unknown): 'offline' | 'scopeMismatch' | 'error' {
   const message = error instanceof Error ? error.message : String(error ?? '');
+  if (/scope local no coincide|cambio de scope no permitido|ámbito local no coincide/i.test(message)) {
+    return 'scopeMismatch';
+  }
   if (
     /HTTP 401|HTTP 403|Token de sincronizacion invalido|Contexto central incompatible|Sincronizacion no disponible|protocol_version/i.test(
       message,
@@ -59,6 +64,15 @@ export function describeSyncState(input: {
       title: 'Sincronizando…',
       detail: 'Puedes seguir consultando los galpones mientras termina.' + note,
       tone: 'primary',
+    };
+  }
+  if (outcome.kind === 'scopeMismatch') {
+    return {
+      phase: 'scopeMismatch',
+      title: 'La sesión y la base local tienen ámbitos distintos',
+      detail:
+        'No se modificaron ni borraron datos, y los cambios pendientes se conservaron. Verifica que la cuenta corresponda al Centro Lope y que esta instalación de Trabajo esté vinculada al mismo ámbito. No reintentes hasta corregir el perfil.',
+      tone: 'danger',
     };
   }
   if (conflicts > 0) {
