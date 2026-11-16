@@ -50,7 +50,16 @@ vi.mock('@ionic/react', () => ({
 const TOKEN = 'lab-token-sintetico-abcdefghijklmnopqrstuvwxyz';
 
 function state(overrides: Partial<WorkSyncStatus> = {}): WorkSyncStatus {
-  return { scopeId: null, cursor: null, pending: 0, prepared: 0, conflicts: 0, rejected: 0, ...overrides };
+  return {
+    scopeId: null,
+    deviceId: 'device-test',
+    cursor: null,
+    pending: 0,
+    prepared: 0,
+    conflicts: 0,
+    rejected: 0,
+    ...overrides,
+  };
 }
 
 describe('pantalla de sincronización de trabajo', () => {
@@ -82,7 +91,7 @@ describe('pantalla de sincronización de trabajo', () => {
     fireEvent.change(screen.getByLabelText('Token de laboratorio'), { target: { value: TOKEN } });
     fireEvent.click(screen.getByRole('button', { name: 'Sincronizar' }));
 
-    await waitFor(() => expect(run).toHaveBeenCalledWith(TOKEN));
+    await waitFor(() => expect(run).toHaveBeenCalledWith(TOKEN, { allowPush: true }));
     expect(await screen.findByText('Sincronización completada.')).toBeInTheDocument();
     expect(screen.getByText('Se recibieron 1 registro(s) y se enviaron 2 cambio(s).')).toBeInTheDocument();
     expect(screen.getByText('Galpones de trabajo')).toBeInTheDocument();

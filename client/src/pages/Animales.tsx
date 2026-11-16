@@ -16,6 +16,7 @@ import {
 import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
+import { snapshot } from '../data/auth.session';
 import { getDomainRepository } from '../data/work.domain.factory';
 import type { Cuyo } from '../data/work.domain.validation';
 import { getWorkSyncRepository } from '../data/work.sync.repository';
@@ -33,6 +34,7 @@ const Animales: React.FC<AnimalesProps> = () => {
   const [pending, setPending] = useState(0);
   const [conflicts, setConflicts] = useState(0);
   const [online, setOnline] = useState(() => navigator.onLine);
+  const [canWrite, setCanWrite] = useState(() => snapshot().canWrite);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -60,7 +62,10 @@ const Animales: React.FC<AnimalesProps> = () => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
-  useIonViewWillEnter(() => load());
+  useIonViewWillEnter(() => {
+    setCanWrite(snapshot().canWrite);
+    load();
+  });
   useEffect(() => {
     const handler = () => setOnline(navigator.onLine);
     window.addEventListener('online', handler);
@@ -82,7 +87,9 @@ const Animales: React.FC<AnimalesProps> = () => {
           <IonTitle>Animales</IonTitle>
           <IonButtons slot="end">
             <IonButton routerLink="/trabajo/asistente">Asistente</IonButton>
-            <IonButton routerLink={`${base}/${galponId}/pozas/${pozaId}/animales/nuevo`}>Nuevo animal</IonButton>
+            {canWrite && (
+              <IonButton routerLink={`${base}/${galponId}/pozas/${pozaId}/animales/nuevo`}>Nuevo animal</IonButton>
+            )}
           </IonButtons>
         </IonToolbar>
       </IonHeader>

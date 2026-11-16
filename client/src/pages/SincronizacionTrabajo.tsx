@@ -17,6 +17,9 @@ import {
 } from '@ionic/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { AUTH_MODE } from '../data/api.config';
+import { ensureAccessToken, initializeAuthSession, snapshot } from '../data/auth.session';
+import type { AuthSnapshot } from '../data/auth.types';
 import { getWorkSyncRepository, type SyncRunSummary } from '../data/work.sync.repository';
 import type { WorkSyncStatus } from '../data/work.sync.status';
 import { classifySyncError, describeSyncState, type SyncOutcome } from '../data/work.sync.ui';
@@ -24,10 +27,12 @@ import './sincronizacion.css';
 
 const SincronizacionTrabajo: React.FC = () => {
   const [status, setStatus] = useState<WorkSyncStatus | null>(null);
+  const [auth, setAuth] = useState<AuthSnapshot>(() => snapshot());
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [outcome, setOutcome] = useState<SyncOutcome>({ kind: 'none' });
   const [token, setToken] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
   const [result, setResult] = useState<SyncRunSummary | null>(null);
   const [statusError, setStatusError] = useState<string | null>(null);
 
@@ -41,7 +46,11 @@ const SincronizacionTrabajo: React.FC = () => {
     setLoading(true);
     setStatusError(null);
     Promise.resolve()
-      .then(() => getWorkSyncRepository().status())
+      .then(() => initializeAuthSession())
+      .then(() => {
+        if (requestId === requestIdRef.current) setAuth(snapshot());
+        return getWorkSyncRepository().status();
+      })
       .then((current) => {
         if (requestId !== requestIdRef.current) return;
         setStatus(current);
@@ -64,7 +73,8 @@ const SincronizacionTrabajo: React.FC = () => {
 
   useIonViewWillEnter(() => load());
 
-  const canRun = token.trim().length > 0 && !syncing;
+  const pilot = AUTH_MODE === 'pilot';
+  const canRun = pilot ? Boolean(auth.user) && !syncing : token.trim().length > 0 && !syncing;
   const canRetry = outcome.kind === 'offline' || outcome.kind === 'error';
   const view = describeSyncState({ status, syncing, outcome });
   const chipColor = view.tone === 'medium' ? 'medium' : view.tone;
@@ -74,11 +84,29 @@ const SincronizacionTrabajo: React.FC = () => {
     setSyncing(true);
     setResult(null);
     setStatusError(null);
+    setAuthError(null);
     try {
-      const summary = await getWorkSyncRepository().run(token);
+      let access = token;
+      let allowPush = true;
+      if (pilot) {
+        access = await ensureAccessToken();
+        allowPush = auth.role === 'admin';
+      }
+      const summary = await getWorkSyncRepository().run(access, { allowPush });
       setResult(summary);
       setOutcome({ kind: 'done' });
     } catch (error) {
+      if (
+        pilot &&
+        error instanceof Error &&
+        /AUTH_|SESION|sesión|CREDENCIALES|REFRESH|ROL_|OFFLINE/i.test(error.message)
+      ) {
+        setAuthError(
+          error.message === 'OFFLINE'
+            ? 'Sin conexión para renovar la sesión. El trabajo local sigue disponible.'
+            : 'La sesión venció o ya no es válida. Inicia sesión de nuevo.',
+        );
+      }
       setOutcome({ kind: classifySyncError(error) });
     } finally {
       setSyncing(false);
@@ -134,19 +162,58 @@ const SincronizacionTrabajo: React.FC = () => {
           <p className="texto-ayuda">
             La sincronización no bloquea la consulta local. Si falla, tus datos siguen disponibles y puedes reintentar.
           </p>
-          <IonInput
-            label="Token de laboratorio"
-            labelPlacement="stacked"
-            type="password"
-            autocomplete="off"
-            spellcheck={false}
-            value={token}
-            disabled={syncing}
-            onIonInput={(event) => setToken(event.detail.value ?? '')}
-          />
-          <p className="texto-ayuda">
-            Solo se mantiene en memoria mientras la app está abierta. No se guarda en la base ni en el repositorio.
-          </p>
+          {pilot ? (
+            <>
+              {auth.user ? (
+                <div>
+                  <p>
+                    Sesión: <strong>{auth.user.username}</strong> ·{' '}
+                    {auth.role === 'admin' ? 'Administrador' : 'Consulta'} · instalación {auth.deviceId?.slice(0, 8)}
+                  </p>
+                  {auth.role === 'viewer' && (
+                    <p className="texto-ayuda">
+                      Esta cuenta solo consulta: puede descargar cambios, pero no escribir, resolver conflictos ni
+                      enviar pendientes. La outbox se conserva.
+                    </p>
+                  )}
+                  <IonButton fill="clear" size="small" routerLink="/trabajo/acceso">
+                    Ver perfil / cambiar usuario
+                  </IonButton>
+                </div>
+              ) : (
+                <>
+                  <p className="texto-ayuda">Inicia sesión para sincronizar. Trabajo sigue disponible para consulta.</p>
+                  <IonButton fill="outline" routerLink="/trabajo/acceso">
+                    Iniciar sesión
+                  </IonButton>
+                </>
+              )}
+              {authError && (
+                <p role="alert">
+                  {authError}{' '}
+                  <IonButton fill="clear" size="small" routerLink="/trabajo/acceso">
+                    Ir a acceso
+                  </IonButton>
+                </p>
+              )}
+            </>
+          ) : (
+            <>
+              <IonInput
+                label="Token de laboratorio"
+                labelPlacement="stacked"
+                type="password"
+                autocomplete="off"
+                spellcheck={false}
+                value={token}
+                disabled={syncing}
+                onIonInput={(event) => setToken(event.detail.value ?? '')}
+              />
+              <p className="texto-ayuda">
+                Solo se mantiene en memoria mientras la app está abierta. No se guarda en la base ni en el repositorio.
+              </p>
+            </>
+          )}
           <IonButton expand="block" onClick={sync} disabled={!canRun} aria-busy={syncing}>
             {syncing ? (
               <>
@@ -158,10 +225,10 @@ const SincronizacionTrabajo: React.FC = () => {
               'Sincronizar'
             )}
           </IonButton>
-          {!syncing && !token.trim() && (
+          {!pilot && !syncing && !token.trim() && (
             <p className="texto-ayuda">Ingresa el token de laboratorio para habilitar la sincronización.</p>
           )}
-          {token.trim() !== '' && !syncing && (
+          {!pilot && token.trim() !== '' && !syncing && (
             <IonButton fill="clear" size="small" onClick={() => setToken('')}>
               Borrar token
             </IonButton>

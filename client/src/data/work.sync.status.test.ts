@@ -24,7 +24,8 @@ describe('estado de sincronización de trabajo', () => {
     const adapter = adapterFor(db);
     await initializeWorkSyncDatabase(adapter);
 
-    await expect(readWorkSyncStatus(adapter)).resolves.toEqual({
+    const status = await readWorkSyncStatus(adapter);
+    expect(status).toMatchObject({
       scopeId: null,
       cursor: null,
       pending: 0,
@@ -32,6 +33,7 @@ describe('estado de sincronización de trabajo', () => {
       conflicts: 0,
       rejected: 0,
     });
+    expect(status.deviceId).toMatch(/^[0-9a-f-]{36}$/);
     db.close();
   });
 
@@ -49,7 +51,8 @@ describe('estado de sincronización de trabajo', () => {
     db.prepare("UPDATE sync_outbox SET state='conflict' WHERE local_seq=2").run();
     db.prepare("UPDATE sync_outbox SET state='rejected' WHERE local_seq=3").run();
 
-    await expect(readWorkSyncStatus(adapter)).resolves.toEqual({
+    const status = await readWorkSyncStatus(adapter);
+    expect(status).toMatchObject({
       scopeId: null,
       cursor: null,
       pending: 1,
@@ -57,6 +60,7 @@ describe('estado de sincronización de trabajo', () => {
       conflicts: 1,
       rejected: 1,
     });
+    expect(status.deviceId).toMatch(/^[0-9a-f-]{36}$/);
     db.close();
   });
 

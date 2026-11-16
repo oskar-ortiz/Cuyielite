@@ -17,6 +17,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
+import { snapshot } from '../data/auth.session';
 import type { Galpon, Poza } from '../data/galpones.repository';
 import { getGalponesRepository } from '../data/galpones.repository.factory';
 import { getWorkGalponesReader } from '../data/work.galpones.repository';
@@ -35,6 +36,7 @@ const GalponDetalle: React.FC<GalponDetalleProps> = ({ mode = 'demo' }) => {
   const [loading, setLoading] = useState<boolean>(!!id);
   const [notFound, setNotFound] = useState<boolean>(!id);
   const [error, setError] = useState<string | null>(null);
+  const [canWrite, setCanWrite] = useState(() => snapshot().canWrite);
 
   const requestIdRef = useRef(0);
   const load = useCallback(() => {
@@ -82,6 +84,7 @@ const GalponDetalle: React.FC<GalponDetalleProps> = ({ mode = 'demo' }) => {
   }, [load]);
 
   useIonViewWillEnter(() => {
+    setCanWrite(snapshot().canWrite);
     load();
   });
 
@@ -150,8 +153,12 @@ const GalponDetalle: React.FC<GalponDetalleProps> = ({ mode = 'demo' }) => {
           </IonButtons>
           <IonTitle>{galpon.nombre}</IonTitle>
           <IonButtons slot="end">
-            <IonButton routerLink={`${basePath}/${id}/editar`}>Editar galpón</IonButton>
-            <IonButton routerLink={`${basePath}/${id}/pozas/nueva`}>Nueva poza</IonButton>
+            {(!workMode || canWrite) && (
+              <>
+                <IonButton routerLink={`${basePath}/${id}/editar`}>Editar galpón</IonButton>
+                <IonButton routerLink={`${basePath}/${id}/pozas/nueva`}>Nueva poza</IonButton>
+              </>
+            )}
           </IonButtons>
         </IonToolbar>
       </IonHeader>
@@ -171,9 +178,11 @@ const GalponDetalle: React.FC<GalponDetalleProps> = ({ mode = 'demo' }) => {
                   <h2>{poza.codigo}</h2>
                   <p>{poza.tipo}</p>
                 </IonLabel>
-                <IonButton slot="end" routerLink={`${basePath}/${id}/pozas/${poza.id}/editar`}>
-                  Editar
-                </IonButton>
+                {(!workMode || canWrite) && (
+                  <IonButton slot="end" routerLink={`${basePath}/${id}/pozas/${poza.id}/editar`}>
+                    Editar
+                  </IonButton>
+                )}
                 {workMode && (
                   <IonButton slot="end" fill="outline" routerLink={`${basePath}/${id}/pozas/${poza.id}/animales`}>
                     Animales

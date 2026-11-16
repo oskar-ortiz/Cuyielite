@@ -20,6 +20,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
+import { snapshot } from '../data/auth.session';
 import { getConflictRepository } from '../data/work.sync.conflict.repository';
 import type { ConflictCase } from '../data/work.sync.conflicts';
 import {
@@ -53,6 +54,7 @@ const ConflictosTrabajo: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [online, setOnline] = useState(() => navigator.onLine);
+  const [canWrite, setCanWrite] = useState(() => snapshot().canWrite);
   const requestIdRef = useRef(0);
   const inFlightRef = useRef(false);
   const savingRef = useRef(false);
@@ -105,7 +107,10 @@ const ConflictosTrabajo: React.FC = () => {
       requestIdRef.current = -1;
     };
   }, [load]);
-  useIonViewWillEnter(() => load());
+  useIonViewWillEnter(() => {
+    setCanWrite(snapshot().canWrite);
+    load();
+  });
 
   useEffect(() => {
     const handler = () => setOnline(navigator.onLine);
@@ -297,7 +302,7 @@ const ConflictosTrabajo: React.FC = () => {
                 </IonItem>
               ))}
             </IonList>
-            {!selected.central.deleted_at && (
+            {canWrite && !selected.central.deleted_at && (
               <>
                 <h3>Valores para reintentar</h3>
                 <p>
@@ -309,10 +314,18 @@ const ConflictosTrabajo: React.FC = () => {
                 )}
               </>
             )}
-            <IonButton onClick={() => setDecision('central')} disabled={saving}>
-              Conservar versión central
-            </IonButton>
-            {!selected.central.deleted_at && (
+            {!canWrite && (
+              <p className="texto-ayuda">
+                La sesión actual solo permite consulta. Un administrador debe iniciar sesión para resolver este
+                conflicto.
+              </p>
+            )}
+            {canWrite && (
+              <IonButton onClick={() => setDecision('central')} disabled={saving}>
+                Conservar versión central
+              </IonButton>
+            )}
+            {canWrite && !selected.central.deleted_at && (
               <IonButton onClick={() => setDecision('retry')} disabled={saving}>
                 Reintentar cambio local
               </IonButton>
