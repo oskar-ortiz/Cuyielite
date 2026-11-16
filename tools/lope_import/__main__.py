@@ -101,6 +101,13 @@ def audit_file(path: str, report: AuditReport, file_hash: str):
                         "BLOQUE_REPRODUCTIVO",
                         "candidatos",
                     ),
+                    "peso_origin_ref": _origin_ref(
+                        file_hash,
+                        ws_f.title,
+                        f"B{b['row']}",
+                        "PESAJE_MADRE",
+                        "pesajes",
+                    ),
                     "poza": b["poza"],
                     "macho": b["macho"],
                     "hembra": b["hembra"],
@@ -134,6 +141,10 @@ def main(argv=None):
         from .promote import main as promote_main
 
         return promote_main(argv[1:])
+    if argv and argv[0] == "adapt":
+        from .adapt import main as adapt_main
+
+        return adapt_main(argv[1:])
 
     parser = argparse.ArgumentParser(description="Auditoria de solo lectura de fuentes Excel")
     parser.add_argument("files", nargs="+", help="Rutas explicitas de archivos Excel")

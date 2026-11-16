@@ -52,8 +52,8 @@ Diery indicó `cuyes`, `partos`, `pesajes`, `eventos` y `parto_crias` para las e
 | Sync actual | Protocolo v1 restringido a `galpon|poza`; cursor firmado, recibos, conflictos y outbox implementados y verificados. | Añadir `cuyes|partos|pesajes|eventos|parto_crias`. | Requiere extensión y compatibilidad de clientes. | Oskar | Mantener `galpon|poza`; diseñar negociación y cursor en D2. |
 | Endpoints ML | `ml.prediccion` implementado; no hay rutas HTTP en `backend/`. | `/ml/predict/hembra`, `/ml/predict/candidata`, `/assistant/query`. | Funciones compatibles; rutas propuestas; separar predicción temprana de clasificación completa. | Oskar integra; Diery aporta reglas/modelo/RAG. | Contrato y validaciones en `contrato-servicios-ml-rag.md`. |
 | RAG | `rag.src.retrieve.consultar` devuelve `respuesta`, `fuentes`, `modo` y `citas`; sin ruta FastAPI. | HTTP solo `{respuesta, fuentes}`; modo/citas internos. | Adaptación explícita definida por Diery. | Diery / Oskar | Filtrar salida HTTP y probar que no expone campos internos. |
-| Auditoría ETL | `tools/lope_import` emite un JSON privado con `files`, `candidates`, `warnings`, `errors`, `summary`; no emite `contract`, `parser_version` ni `mapeo_version`. | Formalizar `lope_import_audit/v1`. | Parcial: el contenido existe, el envelope versionado no. | Diery / Oskar | Formalizar sin romper el CLI; ver §5. |
-| Promoción ETL | No se verificó un orquestador implementado en esta base. | Diery controla la transacción y llama `publicar_cambios` sobre la conexión abierta. | Frontera definida; implementación pendiente. | Diery promueve; Oskar publica. | Precisar evidencia before/after y versión esperada, §9. |
+| Auditoría ETL | `tools/lope_import` emite `lope_import_audit/v1` y el comando `adapt` produce propuestas `lope_import_review/v1`, sin rutas locales. | Mantener audit y revisión separados de la publicación. | Parcial: propuestas sin UUID, correspondencias aceptadas ni registros publicables. | Diery | Completar el paso review→`lope_promocion/v1`; ver §§4.3 y 9.7. |
+| Promoción ETL | Promotor transaccional sintético en `feat/lope-orquestador-promocion`; todavía no conectado a datos reales. | Diery controla la transacción y llama `publicar_cambios` sobre la conexión abierta. | Contrato ejercitado con datos sintéticos; faltan integración del ETL y revisión de correspondencias. | Diery promueve; Oskar publica. | Completar el manifiesto acordado y mantener ámbito autorizado/respaldo como gates, §9. |
 | `R` en DESTINO | El parser no conserva DESTINO; ADR 0004 lo deja pendiente. | `R` = REEMPLAZO, confirmado por Diery. | Diferencia documental. | Oskar actualiza ADR; Diery confirma. | Actualizar ADR 0004 y conservar DESTINO en la auditoría futura. |
 | `AB` con cantidad | El ETL ML lo marca `NO_INTERPRETADO_AB_CON_CANTIDAD`. | No interpretar hasta confirmar con Lope; cantidad NULL. | Compatible. | Diery / Lope | Mantener sin inferencia. |
 | Ojos 1/2 | Código se conserva; 1=negro, 2=rojo según ADR 0004. | Distinguir 1/2 confirmados de códigos desconocidos. | Compatible; catálogo normalizado pendiente. | Diery / Lope | Conservar código crudo y no clasificar códigos desconocidos. |
@@ -111,6 +111,7 @@ Ejemplo válido con la forma actual (sin identificadores ficticios ni rutas priv
       "macho": "045",
       "hembra": "C001",
       "peso": "980",
+      "peso_origin_ref": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef:HOJA-REP-SINTETICA:B12:PESAJE_MADRE:pesajes",
       "color": null,
       "ojos": "2",
       "partos": [
@@ -147,10 +148,10 @@ Los hashes del ejemplo son sintéticos y tienen formato SHA-256; no corresponden
 Implementación actual de `lope_import_audit/v1`:
 
 - El identificador de origen combina huella del archivo, hoja, celda y rol/tipo; una huella o ubicación distinta requiere conciliación, no crea una entidad automáticamente.
-- El mapeo a registros de dominio, la revisión de correspondencias y la creación del manifiesto `lope_promocion/v1` siguen siendo pasos separados.
+- `python -m tools.lope_import adapt <audit.json> --output <review.json>` genera propuestas de dominio pendientes de revisión; no crea correspondencias ni registros publicables.
 - Mantener el reporte fuera del repositorio y sin filas reales en Git.
 
-Estos cambios no deben presentarse como salida actual del CLI hasta que el código los emita.
+La salida de adaptación se describe en §4.3 y no debe confundirse con `lope_promocion/v1`.
 
 ### 4.2 Promoción al dominio
 
@@ -227,6 +228,27 @@ Ejemplo válido de promoción con una entidad aceptada y una ambigua:
 ```
 
 Regla de ejemplo: una correspondencia `AMBIGUO` no lleva `entidad_id` aceptado; siempre `null`. El UUID aceptado del ejemplo es sintético y con formato v4; no identifica una entidad real.
+
+### 4.3 Adaptación de auditoría a propuestas revisables
+
+`python -m tools.lope_import adapt <audit.json> --output <review.json>` valida
+`lope_import_audit/v1` y produce `lope_import_review/v1`. Es una salida
+intermedia, no es entrada de `promote` ni publica datos:
+
+- Para `cuyes`, propone solo código, sexo, fecha ISO, color y ojos que existan en
+  la auditoría. La correspondencia, UUID y `poza_id` quedan pendientes.
+- Para `partos`, propone la fecha solo si es ISO y conserva el código de la
+  madre y el T.C.N. original. `madre_id`, `numero_parto` y los tres conteos
+  quedan `null` hasta revisión; nunca interpreta automáticamente `4+1M`.
+- El peso reproductivo numérico se propone como `pesajes.etapa = MONTA`, pero
+  `cuy_id` y fecha quedan pendientes. No se inventa el vínculo al animal.
+- No infiere `eventos` ni `parto_crias`: las fuentes auditadas no bastan para
+  crear esos vínculos.
+
+Todas las propuestas tienen estado `PENDIENTE_REVISION`; el reporte incluye
+cero correspondencias aceptadas y cero registros de promoción. No contiene
+`scope_id`, UUID de dominio, `before` ni `expected_version`. El adaptador
+rechaza reportes con errores o con archivos que cambiaron durante la auditoría.
 
 ## 5. Diccionario de campos propuestos
 
@@ -457,14 +479,17 @@ dentro del registro. La correspondencia debe existir en la base con estado
 aceptadas del lote.
 
 El parser emite `lope_import_audit/v1`, `parser_version`, `mapeo_version`,
-referencias por huella/hoja/celda/rol y candidatos crudos. No emite UUID de
-dominio ni correspondencias aceptadas; las referencias de candidatos tampoco
-son aún las filas finales de `importacion_origenes`. El promotor no interpreta
-esos candidatos. La prueba sintética crea el lote y seis correspondencias
-aceptadas (`parser_version=mapeo_version="synthetic"`), con dos cuyes y una
-fila de cada entidad restante, y luego invoca `publicar_con_d1`. El mapeo
-audit→dominio y la creación/revisión de correspondencias siguen pendientes; no
-se deben presentar las versiones sintéticas como versiones de producción.
+referencias por huella/hoja/celda/rol y candidatos crudos. El comando `adapt`
+los convierte en `lope_import_review/v1`, con propuestas no publicables y
+pendientes de revisión. No emite UUID de dominio ni correspondencias aceptadas;
+las referencias de candidatos tampoco son aún las filas finales de
+`importacion_origenes`. El promotor no interpreta esos candidatos. La prueba
+sintética crea el lote y seis correspondencias aceptadas
+(`parser_version=mapeo_version="synthetic"`), con dos cuyes y una fila de cada
+entidad restante, y luego invoca `publicar_con_d1`. El mapeo de propuestas a
+`lope_promocion/v1`, la creación/revisión de correspondencias y la integración
+con el orquestador de Diery siguen pendientes; las versiones sintéticas no son
+versiones de producción.
 
 La llamada de publicación ocurre dentro de la transacción de `promote_batch`:
 
@@ -490,8 +515,8 @@ $env:TEST_DATABASE_URL = 'postgresql://<usuario>:<contraseña>@127.0.0.1:5432/cu
 
 La prueba crea y elimina una base `cuyielite_lope_promote_<uuid>`; no lee los
 Excel privados. La prueba de auditoría construye su propio libro sintético. La
-carga real sigue bloqueada hasta completar el adaptador, autorizar el ámbito y
-registrar el respaldo.
+carga real sigue bloqueada hasta completar la integración del orquestador,
+autorizar el ámbito y registrar el respaldo.
 
 ## 10. Coordinación pendiente, sin reabrir lo respondido
 

@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 
 import openpyxl
+import pytest
 
 REPO_ROOT = str(Path(__file__).resolve().parents[3])
 
@@ -221,6 +222,108 @@ def test_reproductive_partos_have_stable_origin_refs():
         assert block["partos"][0]["origin_ref"] == (
             f"sha256:{file_hash}:Repro:E12:PARTO:partos"
         )
+        assert block["peso_origin_ref"] == (
+            f"sha256:{file_hash}:Repro:B12:PESAJE_MADRE:pesajes"
+        )
+
+
+def test_adapt_generates_review_only_domain_proposals():
+    with tempfile.TemporaryDirectory() as tmp:
+        individual = os.path.join(tmp, "ind.xlsx")
+        reproductive = os.path.join(tmp, "repro.xlsx")
+        audit_path = os.path.join(tmp, "audit.json")
+        review_path = os.path.join(tmp, "review.json")
+        _make_individual_xlsx(individual)
+        _make_reproductive_xlsx(reproductive)
+
+        audit_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "tools.lope_import",
+                individual,
+                reproductive,
+                "--output",
+                audit_path,
+            ],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+        )
+        assert audit_result.returncode == 0, audit_result.stderr
+        adapt_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "tools.lope_import",
+                "adapt",
+                audit_path,
+                "--output",
+                review_path,
+            ],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+        )
+        assert adapt_result.returncode == 0, adapt_result.stderr
+
+        with open(review_path, encoding="utf-8") as review_file:
+            review = json.load(review_file)
+        proposals = review["proposals"]
+        animals = [item for item in proposals if item["entity"] == "cuyes"]
+        partos = [item for item in proposals if item["entity"] == "partos"]
+        pesajes = [item for item in proposals if item["entity"] == "pesajes"]
+
+        assert review["contract"] == "lope_import_review/v1"
+        assert len(animals) == 3
+        assert len(partos) == 3
+        assert len(pesajes) == 2
+        assert all(item["status"] == "PENDIENTE_REVISION" for item in proposals)
+        assert all(item["proposed_fields"]["nacidos_vivos"] is None for item in partos)
+        assert all(item["proposed_fields"]["nacidos_muertos"] is None for item in partos)
+        assert all(
+            item["proposed_fields"]["tamano_camada_nacida"] is None
+            for item in partos
+        )
+        assert partos[0]["source_fields"]["tcn_original"] == "3"
+        assert pesajes[0]["proposed_fields"]["peso_gramos"] == "995"
+        assert pesajes[0]["proposed_fields"]["etapa"] == "MONTA"
+        assert review["summary"] == {
+            "proposal_count": 8,
+            "accepted_correspondences": 0,
+            "promotion_records": 0,
+        }
+        assert "scope_id" not in review
+        assert not any(
+            "correspondencia_id" in item or "id" in item for item in proposals
+        )
+        assert {item["entity"] for item in review["not_inferred"]} == {
+            "eventos",
+            "parto_crias",
+        }
+
+
+def test_adapt_rejects_audit_with_changed_source_files():
+    from tools.lope_import.adapt import AdaptacionError, adapt_audit
+
+    audit = {
+        "contract": "lope_import_audit/v1",
+        "parser_version": "0.1.0",
+        "mapeo_version": "0.1.0",
+        "files": [
+            {
+                "file_id": f"sha256:{'a' * 64}",
+                "sha256_before": "a" * 64,
+                "sha256_after": "a" * 64,
+            }
+        ],
+        "candidates": [],
+        "errors": [],
+        "warnings": [],
+        "summary": {"files_unchanged": False},
+    }
+    with pytest.raises(AdaptacionError, match="archivos modificados"):
+        adapt_audit(audit)
 
 
 def test_individual_rejects_institutional_rows():
