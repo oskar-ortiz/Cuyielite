@@ -314,6 +314,11 @@ def _snapshot_fields(snapshot: Mapping[str, Any], entity: str) -> dict[str, Any]
     return result
 
 
+def fields_from_snapshot(snapshot: Mapping[str, Any], entity: str) -> dict[str, Any]:
+    """Campos publicables de un snapshot previo (evidencia para `before`)."""
+    return _snapshot_fields(snapshot, entity)
+
+
 def _ensure_transaction(conn) -> None:
     if conn.closed:
         _fail("SIN_TRANSACCION", "la conexión está cerrada")

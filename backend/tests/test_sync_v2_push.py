@@ -1,8 +1,8 @@
 """Pruebas backend del push v2 de dominio con PostgreSQL temporal aislado.
 
-Cubre el contrato decidido para v2: protocolo explícito, cursor independiente,
-escritura de dominio y publicación en la misma transacción, recibo por
-operación, allowlists, referencias por ámbito y resultados parciales.
+Cubre el contrato decidido para v2: protocolo explÃ­cito, cursor independiente,
+escritura de dominio y publicaciÃ³n en la misma transacciÃ³n, recibo por
+operaciÃ³n, allowlists, referencias por Ã¡mbito y resultados parciales.
 """
 
 import hashlib
@@ -21,7 +21,7 @@ from backend.app.main import app
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DDL_DIR = REPO_ROOT / 'db' / 'ddl' / 'central'
 SIGNING_KEY = 'synthetic-v2-key-never-production-0123456789'
-MAX_MIGRATION = '0006_auth_piloto.sql'
+MAX_MIGRATION = '0007_evaluacion_alertas.sql'
 
 
 def _base_url() -> str:
@@ -30,7 +30,7 @@ def _base_url() -> str:
         pytest.fail('TEST_DATABASE_URL requerida')
     parsed = urllib.parse.urlparse(url)
     if parsed.hostname not in ('localhost', '127.0.0.1'):
-        pytest.fail('host de pruebas inválido')
+        pytest.fail('host de pruebas invÃ¡lido')
     return url
 
 
@@ -103,7 +103,7 @@ def lab(lab_url, monkeypatch):
         conn.execute("INSERT INTO galpones (id, scope_id, nombre) VALUES (%s, %s, 'G')", (galpon, scope))
         conn.execute(
             "INSERT INTO pozas (id, scope_id, galpon_id, codigo, tipo, capacidad_maxima) "
-            "VALUES (%s, %s, %s, 'P', 'cría', 10)",
+            "VALUES (%s, %s, %s, 'P', 'crÃ­a', 10)",
             (poza, scope, galpon),
         )
     client = TestClient(app, headers={'Authorization': f'Bearer {token}'})
@@ -232,7 +232,7 @@ def test_v1_intacto_y_contexto_v2(lab):
                     'action': 'create',
                     'base_version': None,
                     'client_created_at': '2026-11-12T10:00:00Z',
-                    'data': {'nombre': 'Galpón v1', 'ubicacion': None},
+                    'data': {'nombre': 'GalpÃ³n v1', 'ubicacion': None},
                 }
             ],
         },
@@ -284,7 +284,7 @@ def test_autenticacion_device_y_ambito(lab):
         conn.execute("INSERT INTO galpones (id, scope_id, nombre) VALUES (%s, %s, 'FG')", (foreign_galpon, foreign_scope))
         conn.execute(
             "INSERT INTO pozas (id, scope_id, galpon_id, codigo, tipo, capacidad_maxima) "
-            "VALUES (%s, %s, %s, 'FP', 'cría', 5)",
+            "VALUES (%s, %s, %s, 'FP', 'crÃ­a', 5)",
             (foreign_poza, foreign_scope, foreign_galpon),
         )
     cross = _one(lab, _op('cuyes', uuid.uuid4(), cuy_data(lab, 'CROSS', poza=foreign_poza)))
@@ -335,7 +335,7 @@ def test_create_y_update_de_las_cinco_entidades(lab):
     )
     assert cria_update['status'] == 'accepted' and cria_update['record']['version'] == '2'
 
-    # Un reintento con otra operación y los mismos datos no genera versión nueva.
+    # Un reintento con otra operaciÃ³n y los mismos datos no genera versiÃ³n nueva.
     noop = _one(lab, _op('cuyes', madre, {**cuy_data(lab, 'MADRE-1'), 'estado': 'VENDIDO'}, 'update', '2'))
     assert noop['status'] == 'accepted' and noop['changed'] is False
     assert noop['record']['version'] == '2'
@@ -458,7 +458,7 @@ def test_versiones_recibos_replay_y_reuso(lab):
     accepted = _one(lab, update)
     assert accepted['status'] == 'accepted' and accepted['record']['version'] == '2'
 
-    # Operación distinta con base_version ya superada: conflicto, no replay.
+    # OperaciÃ³n distinta con base_version ya superada: conflicto, no replay.
     old = _op('cuyes', record, {**cuy_data(lab, 'RECIBO'), 'estado': 'ACTIVO'}, 'update', '1')
     assert _one(lab, old)['code'] == 'VERSION_CONFLICT'
 
@@ -493,7 +493,7 @@ def test_rollback_de_publicacion_no_avanza_nada(lab):
 
 def test_cursor_v2_independiente_paginacion_y_replay(lab):
     client = lab['client']
-    # Un cambio v1 en el mismo ámbito no debe aparecer en la página v2.
+    # Un cambio v1 en el mismo Ã¡mbito no debe aparecer en la pÃ¡gina v2.
     v1 = client.post(
         '/sync/push',
         json={

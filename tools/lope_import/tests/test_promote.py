@@ -106,7 +106,7 @@ class FakePublicador:
             (scope_id,),
         )
         if self.fail:
-            raise RuntimeError("publicador sintético falló")
+            raise RuntimeError("publicador sintÃ©tico fallÃ³")
         results = []
         for record in registros:
             table = record["entity"]
@@ -129,7 +129,7 @@ def _new_batch(conn):
     )
     conn.execute(
         "INSERT INTO galpones (id, scope_id, nombre) VALUES (%s, %s, %s)",
-        (galpon_id, scope_id, "Galpón sintético"),
+        (galpon_id, scope_id, "GalpÃ³n sintÃ©tico"),
     )
     conn.execute(
         "INSERT INTO pozas (id, scope_id, galpon_id, codigo, tipo, capacidad_maxima) "
@@ -282,6 +282,7 @@ def test_publicador_d1_real_publica_y_repetir_es_noop(fresh_db):
             (3, "rag_e5_embeddings"),
             (4, "publicacion_dominio"),
             (6, "auth_piloto"),
+            (7, "evaluacion_alertas"),
         )]
         assert conn.execute(
             "SELECT count(*) FROM information_schema.table_constraints "
@@ -367,7 +368,7 @@ def test_fallo_despues_de_publicar_con_d1_revierte_todo(fresh_db):
         results = publicar_con_d1(conn, publisher_scope_id, publication_records)
         assert all(result.changed for result in results)
         assert conn.info.transaction_status.name == "INTRANS"
-        raise RuntimeError("fallo sintético posterior a D1")
+        raise RuntimeError("fallo sintÃ©tico posterior a D1")
 
     with psycopg.connect(fresh_db) as conn:
         with pytest.raises(RuntimeError, match="posterior a D1"):
@@ -405,7 +406,7 @@ def test_fallo_del_publicador_revierte_el_lote_completo(fresh_db):
     publicador = FakePublicador(fail=True)
 
     with psycopg.connect(fresh_db) as conn:
-        with pytest.raises(RuntimeError, match="publicador sintético"):
+        with pytest.raises(RuntimeError, match="publicador sintÃ©tico"):
             promote_batch(
                 conn, scope_id, batch_id, records, publicador, dry_run=False
             )
