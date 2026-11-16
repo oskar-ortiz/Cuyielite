@@ -17,6 +17,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { snapshot } from '../data/auth.session';
+import type { AlertaDerivada, CategoriaDerivada } from '../data/work.derived.apply';
+import { getDerivedReader } from '../data/work.derived.repository';
 import { getDomainRepository } from '../data/work.domain.factory';
 import type { ConflictKey } from '../data/work.domain.repository';
 import type { Cuyo, Evento, PartoCria, Parto, Pesaje } from '../data/work.domain.validation';
@@ -41,6 +43,9 @@ const AnimalDetalle: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [canWrite, setCanWrite] = useState(() => snapshot().canWrite);
+  const [evaluacion, setEvaluacion] = useState<CategoriaDerivada | null>(null);
+  const [alertas, setAlertas] = useState<AlertaDerivada[]>([]);
+  const [derivedError, setDerivedError] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -75,6 +80,18 @@ const AnimalDetalle: React.FC = () => {
         void getWorkSyncRepository()
           .status()
           .catch(() => null);
+      })
+      .then(() => {
+        // Categoría y alertas son datos derivados de solo lectura: si todavía no
+        // llegaron, la ficha sigue operativa con el estado local.
+        const reader = getDerivedReader();
+        Promise.all([reader.categoria(animalId), reader.alertas(animalId)])
+          .then(([categoria, lista]) => {
+            setEvaluacion(categoria);
+            setAlertas(lista);
+            setDerivedError(null);
+          })
+          .catch(() => setDerivedError('No se pudo leer la evaluación derivada de este animal.'));
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
       .finally(() => setLoading(false));
@@ -171,7 +188,7 @@ const AnimalDetalle: React.FC = () => {
               <IonItem>
                 <IonLabel>Categoría (derivada del servidor)</IonLabel>
                 <IonLabel slot="end">{cuyo.categoriaMl ?? 'Sin registrar'}</IonLabel>
-              </IonItem>
+              </IonItem>{' '}
               <IonItem>
                 <IonLabel>Padre</IonLabel>
                 <IonLabel slot="end">{nameOf(cuyo.padreId) ?? 'Sin registrar'}</IonLabel>
@@ -181,6 +198,99 @@ const AnimalDetalle: React.FC = () => {
                 <IonLabel slot="end">{nameOf(cuyo.madreId) ?? 'Sin registrar'}</IonLabel>
               </IonItem>
             </IonList>
+
+            <section aria-label="Evaluación del servidor">
+              <h2>Evaluación del servidor</h2>
+              {derivedError && <p className="texto-ayuda">{derivedError}</p>}
+              {!evaluacion && !derivedError && (
+                <p className="estado-vacio">
+                  Sin evaluación definitiva sincronizada. Solo se guarda la clase de reglas cuando la evaluación es
+                  definitiva.
+                </p>
+              )}
+              {evaluacion && (
+                <>
+                  <div className="marcado-demo">
+                    <IonChip
+                      color={
+                        evaluacion.clase === 'DESCARTE' ? 'danger' : evaluacion.clase === 'ELITE' ? 'success' : 'medium'
+                      }
+                    >
+                      {evaluacion.clase ?? 'Sin clase definitiva'}
+                    </IonChip>
+                    <IonChip color={evaluacion.estadoEvaluacion === 'DEFINITIVA' ? 'success' : 'warning'}>
+                      {evaluacion.estadoEvaluacion === 'DEFINITIVA' ? 'Definitiva' : 'Datos insuficientes'}
+                    </IonChip>
+                    {evaluacion.categoriaEstado === 'HISTORICA' && (
+                      <IonChip color="medium">Histórica / no confirmada</IonChip>
+                    )}
+                  </div>
+                  <IonList>
+                    <IonItem>
+                      <IonLabel>Clase de reglas</IonLabel>
+                      <IonLabel slot="end">{evaluacion.clase ?? 'Sin clase'}</IonLabel>
+                    </IonItem>
+                    <IonItem>
+                      <IonLabel>Versión de reglas</IonLabel>
+                      <IonLabel slot="end">{evaluacion.reglasVersion ?? 'Sin registrar'}</IonLabel>
+                    </IonItem>
+                    <IonItem>
+                      <IonLabel>Evaluada</IonLabel>
+                      <IonLabel slot="end">{evaluacion.evaluadaAt?.slice(0, 10) ?? 'Sin fecha'}</IonLabel>
+                    </IonItem>
+                  </IonList>
+                  {evaluacion.motivos.length > 0 && (
+                    <>
+                      <h3>Motivos de la regla</h3>
+                      <ul>
+                        {evaluacion.motivos.map((motivo, index) => (
+                          <li key={`${index}-${motivo}`}>{motivo}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                  {evaluacion.faltantes.length > 0 && (
+                    <p className="texto-ayuda">
+                      Faltan datos: {evaluacion.faltantes.join(', ')}. Se muestra como REVISAR, no como clasificación
+                      definitiva.
+                    </p>
+                  )}
+                  <p className="texto-ayuda">
+                    La clase proviene solo de las reglas. El apoyo del Random Forest no se guarda como categoría.
+                  </p>
+                </>
+              )}
+            </section>
+
+            <section aria-label="Recomendaciones">
+              <h2>Recomendaciones</h2>
+              {alertas.length === 0 ? (
+                <p className="estado-vacio">Sin recomendaciones sincronizadas para este animal.</p>
+              ) : (
+                <IonList>
+                  {alertas.map((alerta) => (
+                    <IonItem key={alerta.id}>
+                      <IonLabel>
+                        <h3>
+                          {alerta.estado === 'activa'
+                            ? 'Descarte recomendado'
+                            : alerta.estado === 'obsoleta'
+                              ? 'Recomendación obsoleta'
+                              : 'Recomendación no confirmada'}
+                        </h3>
+                        <p>{alerta.motivo ?? 'Sin motivo registrado'}</p>
+                        {alerta.causaFecha && <p>Causa registrada el {alerta.causaFecha}</p>}
+                        {alerta.fechaLimite && <p>Fecha límite sugerida: {alerta.fechaLimite}</p>}
+                        <p>Es una recomendación: no ejecuta el descarte del animal.</p>
+                      </IonLabel>
+                      <IonChip slot="end" color={alerta.estado === 'activa' ? 'warning' : 'medium'}>
+                        {alerta.estado}
+                      </IonChip>
+                    </IonItem>
+                  ))}
+                </IonList>
+              )}
+            </section>
 
             {canWrite && (
               <div className="marcado-demo">
