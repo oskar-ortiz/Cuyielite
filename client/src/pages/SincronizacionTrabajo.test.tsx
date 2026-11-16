@@ -68,6 +68,30 @@ describe('pantalla de sincronización de trabajo', () => {
     run.mockReset().mockResolvedValue({ appliedRemoteRecords: 0, pushedResults: 0 });
   });
 
+  it('explica un desajuste de ámbito, bloquea el reintento y permite corregir el token', async () => {
+    run.mockRejectedValueOnce(new Error('scope local no coincide')).mockResolvedValueOnce({
+      appliedRemoteRecords: 0,
+      pushedResults: 0,
+    });
+
+    render(<SincronizacionTrabajo />);
+    await screen.findByText('Sin sincronizar.');
+    const tokenInput = screen.getByLabelText('Token de laboratorio');
+    fireEvent.change(tokenInput, { target: { value: TOKEN } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sincronizar' }));
+
+    expect(await screen.findByText(/La sesión y la base local tienen ámbitos distintos\./i)).toBeInTheDocument();
+    expect(screen.getByText(/no se modificaron ni borraron datos/i)).toBeInTheDocument();
+    const syncButton = screen.getByRole('button', { name: 'Sincronizar' });
+    expect(syncButton).toBeDisabled();
+    expect(run).toHaveBeenCalledTimes(1);
+
+    fireEvent.change(tokenInput, { target: { value: 'token-corregido' } });
+    expect(syncButton).toBeEnabled();
+    fireEvent.click(syncButton);
+    await waitFor(() => expect(run).toHaveBeenCalledTimes(2));
+  });
+
   it('muestra el estado sin sincronizar y exige un token antes de enviar', async () => {
     render(<SincronizacionTrabajo />);
     expect(await screen.findByText('Sin sincronizar.')).toBeInTheDocument();

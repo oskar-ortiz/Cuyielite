@@ -1,8 +1,8 @@
 # Plan incremental de cliente, sincronización y UI
 
-## Punto vigente — 2026-11-15
+## Punto vigente — 2026-11-16
 
-Las entregas de publicación, sync v2, dominio local, UI y conflictos ya construidas se conservan. El siguiente trabajo se ordena en el [plan de acceso e integración del piloto](plan-piloto-lope-acceso-integracion.md): permisos para equipos compartidos, conexión de ETL/RF/RAG de Diery y propuesta de persistencia de categorías/alertas. Las respuestas de uso están confirmadas; la política nueva de predicción requiere alinear reglas, API y cliente. No se implementó ese plan en esta actualización.
+Las entregas de publicación, sync v2, dominio local, UI, conflictos, autenticación piloto, evaluación y alertas ya están integradas en `dev` hasta el PR #145. El recorrido Windows y el ETL con manifiestos sintéticos están verificados. La última verificación Android quedó bloqueada por un perfil con otro ámbito; el PR #145 también registró que no había JDK 21 disponible, la memoria era insuficiente y quedó un usuario Android de laboratorio pendiente de limpieza segura. No se deben borrar ni reiniciar datos de Pixel_36 para repetir la prueba. El ETL sobre Excel reales, el artefacto RF y el corpus/configuración RAG dependen de entregas de Diery; carga real y despliegue siguen fuera de este tramo. El manejo específico del error de ámbito se documenta en [sync-scope-mismatch-ui](../verificaciones/sync-scope-mismatch-ui.md); esa evidencia no sustituye el recorrido nativo.
 
 Las secciones iniciales siguientes describen la base de diseño de noviembre 10; no representan todos los avances posteriores. Consultar las evidencias por entrega y el punto vigente antes de tratar una carencia histórica como pendiente actual.
 
