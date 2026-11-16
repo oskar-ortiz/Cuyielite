@@ -1,6 +1,6 @@
-"""Acceso SQL para evaluación persistente, alertas y feed derivado.
+"""Acceso SQL para evaluaciÃ³n persistente, alertas y feed derivado.
 
-Todas las funciones reciben una conexión con transacción abierta. No confirman
+Todas las funciones reciben una conexiÃ³n con transacciÃ³n abierta. No confirman
 ni revierten: el servicio que orquesta decide el COMMIT.
 """
 
@@ -15,6 +15,7 @@ from psycopg.rows import dict_row
 
 CATEGORY_COLUMNS = (
     "categoria_ml",
+    "categoria_caracter",
     "categoria_estado",
     "categoria_motivos",
     "categoria_faltantes",
@@ -38,9 +39,9 @@ def get_animal_for_update(conn, scope_id: UUID, cuy_id: UUID) -> dict[str, Any] 
 
 
 def partos_summary(conn, scope_id: UUID, madre_id: UUID) -> dict[str, Any]:
-    """Resumen central de partos: total, último parto y el cuarto declarado.
+    """Resumen central de partos: total, Ãºltimo parto y el cuarto declarado.
 
-    `cuarto` solo se completa cuando `numero_parto = 4` identifica sin ambigüedad
+    `cuarto` solo se completa cuando `numero_parto = 4` identifica sin ambigÃ¼edad
     el evento causal; si la columna es nula no se infiere.
     """
     with conn.cursor(row_factory=dict_row) as cur:
@@ -81,20 +82,21 @@ def update_category(
     *,
     clase: str,
     estado: str,
+    caracter: str | None,
     motivos: list[str],
     faltantes: list[str],
     reglas_version: str,
     procedencia: str,
     bump_version: bool,
 ) -> int:
-    """Escribe la categoría definitiva y su procedencia.
+    """Escribe la categorÃ­a definitiva y su procedencia.
 
     `bump_version` solo es cierto cuando cambia el contenido que se publica en el
-    feed derivado; una re-evaluación idéntica no crea versión nueva.
+    feed derivado; una re-evaluaciÃ³n idÃ©ntica no crea versiÃ³n nueva.
     """
     with conn.cursor() as cur:
         cur.execute(
-            "UPDATE cuyes SET categoria_ml = %s, categoria_estado = %s, "
+            "UPDATE cuyes SET categoria_ml = %s, categoria_estado = %s, categoria_caracter = %s, "
             "categoria_motivos = %s::jsonb, categoria_faltantes = %s::jsonb, "
             "categoria_reglas_version = %s, categoria_evaluada_at = now(), "
             "categoria_procedencia = %s::jsonb, "
@@ -105,6 +107,7 @@ def update_category(
             (
                 clase,
                 estado,
+                caracter,
                 _json(motivos),
                 _json(faltantes),
                 reglas_version,
@@ -116,12 +119,12 @@ def update_category(
         )
         row = cur.fetchone()
     if row is None:
-        raise LookupError("cuy desapareció durante la evaluación")
+        raise LookupError("cuy desapareciÃ³ durante la evaluaciÃ³n")
     return int(row[0])
 
 
 def mark_category_historical(conn, scope_id: UUID, cuy_id: UUID) -> int:
-    """Marca la categoría previa como no confirmada sin borrarla."""
+    """Marca la categorÃ­a previa como no confirmada sin borrarla."""
     with conn.cursor() as cur:
         cur.execute(
             "UPDATE cuyes SET categoria_estado = 'HISTORICA', "
@@ -311,3 +314,141 @@ def _json(value: Any) -> str:
     import json
 
     return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
+EVIDENCE_COLUMNS = (
+    "id",
+    "campo",
+    "valor",
+    "origen",
+    "archivo_huella",
+    "hoja",
+    "fila",
+    "celda",
+    "parser_version",
+    "mapeo_version",
+    "estado",
+    "declarada_por",
+    "revisada_por",
+    "revisada_at",
+    "nota",
+    "server_version",
+    "updated_at",
+)
+
+
+def list_evidence(conn, scope_id: UUID, cuy_id: UUID) -> list[dict[str, Any]]:
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            "SELECT " + ", ".join(EVIDENCE_COLUMNS) + " FROM evidencias_evaluacion "
+            "WHERE scope_id = %s AND cuy_id = %s ORDER BY campo",
+            (scope_id, cuy_id),
+        )
+        return [dict(row) for row in cur.fetchall()]
+
+
+def reviewed_evidence(conn, scope_id: UUID, cuy_id: UUID) -> dict[str, str]:
+    """Solo evidencia REVISADA y con valor; el resto no autoriza persistencia."""
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            "SELECT campo, valor FROM evidencias_evaluacion "
+            "WHERE scope_id = %s AND cuy_id = %s AND estado = 'REVISADA' AND valor IS NOT NULL",
+            (scope_id, cuy_id),
+        )
+        return {row["campo"]: row["valor"] for row in cur.fetchall()}
+
+
+def upsert_evidence(
+    conn,
+    scope_id: UUID,
+    cuy_id: UUID,
+    campo: str,
+    valor: str | None,
+    *,
+    origen: str,
+    declarada_por: UUID | None,
+    archivo_huella: str | None = None,
+    hoja: str | None = None,
+    fila: int | None = None,
+    celda: str | None = None,
+    parser_version: str | None = None,
+    mapeo_version: str | None = None,
+) -> dict[str, Any]:
+    """Registra una declaraciÃ³n. Vuelve a DECLARADA: una declaraciÃ³n nueva no
+    conserva la revisiÃ³n anterior."""
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            "INSERT INTO evidencias_evaluacion "
+            "(scope_id, cuy_id, campo, valor, origen, archivo_huella, hoja, fila, celda, "
+            "parser_version, mapeo_version, estado, declarada_por) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'DECLARADA', %s) "
+            "ON CONFLICT (scope_id, cuy_id, campo) DO UPDATE SET "
+            "valor = excluded.valor, origen = excluded.origen, "
+            "archivo_huella = excluded.archivo_huella, hoja = excluded.hoja, fila = excluded.fila, "
+            "celda = excluded.celda, parser_version = excluded.parser_version, "
+            "mapeo_version = excluded.mapeo_version, estado = 'DECLARADA', "
+            "declarada_por = excluded.declarada_por, revisada_por = NULL, revisada_at = NULL, "
+            "nota = NULL, server_version = evidencias_evaluacion.server_version + 1, "
+            "updated_at = now() "
+            "RETURNING " + ", ".join(EVIDENCE_COLUMNS),
+            (
+                scope_id,
+                cuy_id,
+                campo,
+                valor,
+                origen,
+                archivo_huella,
+                hoja,
+                fila,
+                celda,
+                parser_version,
+                mapeo_version,
+                declarada_por,
+            ),
+        )
+        return dict(cur.fetchone())
+
+
+def review_evidence(
+    conn,
+    scope_id: UUID,
+    cuy_id: UUID,
+    campo: str,
+    decision: str,
+    reviewer: UUID | None,
+    nota: str | None,
+) -> dict[str, Any] | None:
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            "UPDATE evidencias_evaluacion SET estado = %s, revisada_por = %s, "
+            "revisada_at = now(), nota = %s, "
+            "server_version = server_version + 1, updated_at = now() "
+            "WHERE scope_id = %s AND cuy_id = %s AND campo = %s "
+            "RETURNING " + ", ".join(EVIDENCE_COLUMNS),
+            (decision, reviewer, nota, scope_id, cuy_id, campo),
+        )
+        row = cur.fetchone()
+    return dict(row) if row else None
+
+
+def get_evidence(conn, scope_id: UUID, cuy_id: UUID, campo: str) -> dict[str, Any] | None:
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            "SELECT " + ", ".join(EVIDENCE_COLUMNS) + " FROM evidencias_evaluacion "
+            "WHERE scope_id = %s AND cuy_id = %s AND campo = %s",
+            (scope_id, cuy_id, campo),
+        )
+        row = cur.fetchone()
+    return dict(row) if row else None
+
+def get_animal(conn, scope_id: UUID, cuy_id: UUID) -> dict[str, Any] | None:
+    """Lectura sin bloqueo, con la misma forma que get_animal_for_update."""
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            "SELECT id, sexo, estado, deleted_at, server_version, "
+            + ", ".join(CATEGORY_COLUMNS)
+            + " FROM cuyes WHERE id = %s AND scope_id = %s",
+            (cuy_id, scope_id),
+        )
+        row = cur.fetchone()
+    return dict(row) if row else None

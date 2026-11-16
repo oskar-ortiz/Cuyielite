@@ -219,8 +219,17 @@ const AnimalDetalle: React.FC = () => {
                       {evaluacion.clase ?? 'Sin clase definitiva'}
                     </IonChip>
                     <IonChip color={evaluacion.estadoEvaluacion === 'DEFINITIVA' ? 'success' : 'warning'}>
-                      {evaluacion.estadoEvaluacion === 'DEFINITIVA' ? 'Definitiva' : 'Datos insuficientes'}
+                      {evaluacion.estadoEvaluacion === 'DEFINITIVA'
+                        ? 'Confirmada'
+                        : evaluacion.estadoEvaluacion === 'PROVISIONAL'
+                          ? 'Provisional'
+                          : evaluacion.estadoEvaluacion === 'EVIDENCIA_NO_VALIDADA'
+                            ? 'Evidencia sin revisar'
+                            : 'Datos insuficientes'}
                     </IonChip>
+                    {evaluacion.caracter === 'PROPUESTO' && (
+                      <IonChip color="warning">Propuesta pendiente de validación</IonChip>
+                    )}
                     {evaluacion.categoriaEstado === 'HISTORICA' && (
                       <IonChip color="medium">Histórica / no confirmada</IonChip>
                     )}
@@ -255,6 +264,24 @@ const AnimalDetalle: React.FC = () => {
                       definitiva.
                     </p>
                   )}
+                  {evaluacion.evidenciaPendiente.length > 0 && (
+                    <p className="texto-ayuda">
+                      Evidencia pendiente de revisión: {evaluacion.evidenciaPendiente.join(', ')}. Sin esa revisión no
+                      se confirma una categoría oficial.
+                    </p>
+                  )}
+                  {evaluacion.estadoEvaluacion === 'PROVISIONAL' && (
+                    <p className="texto-ayuda">
+                      Resultado provisional: se apoya en una regla que todavía no está validada. No reemplaza la
+                      categoría anterior ni genera una alerta oficial.
+                    </p>
+                  )}
+                  {evaluacion.estadoEvaluacion === 'EVIDENCIA_NO_VALIDADA' && (
+                    <p className="texto-ayuda">
+                      La evaluación está calculada, pero falta la revisión de la evidencia. No se guardó como categoría
+                      oficial.
+                    </p>
+                  )}
                   <p className="texto-ayuda">
                     La clase proviene solo de las reglas. El apoyo del Random Forest no se guarda como categoría.
                   </p>
@@ -281,6 +308,9 @@ const AnimalDetalle: React.FC = () => {
                         <p>{alerta.motivo ?? 'Sin motivo registrado'}</p>
                         {alerta.causaFecha && <p>Causa registrada el {alerta.causaFecha}</p>}
                         {alerta.fechaLimite && <p>Fecha límite sugerida: {alerta.fechaLimite}</p>}
+                        {!alerta.causaFecha && (
+                          <p>Fecha del cuarto parto pendiente de validar; no se calcula vencimiento.</p>
+                        )}
                         <p>Es una recomendación: no ejecuta el descarte del animal.</p>
                       </IonLabel>
                       <IonChip slot="end" color={alerta.estado === 'activa' ? 'warning' : 'medium'}>

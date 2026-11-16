@@ -76,8 +76,10 @@ describe('ficha de animal con evaluación derivada', () => {
       clase: null,
       estadoEvaluacion: 'DATOS_INSUFICIENTES',
       categoriaEstado: 'HISTORICA',
+      caracter: null,
       motivos: ['dato faltante o inválido: abortos'],
       faltantes: ['abortos'],
+      evidenciaPendiente: ['abortos'],
       reglasVersion: 'adr0004+reglas-2026-11-16',
       evaluadaAt: null,
       procedencia: { fuente: 'CENTRAL' },
@@ -118,5 +120,89 @@ describe('ficha de animal con evaluación derivada', () => {
     await waitFor(() => expect(screen.getByText(/Evaluación del servidor/i)).toBeTruthy());
     expect(screen.queryByText(/Registrar parto/i)).toBeNull();
     expect(screen.queryByText(/Registrar pesaje/i)).toBeNull();
+  });
+
+  it('presenta el descarte provisional como propuesta y no como decisión', async () => {
+    mocks.categoria.mockResolvedValue({
+      cuyId: CUY,
+      version: '3',
+      clase: 'DESCARTE',
+      estadoEvaluacion: 'PROVISIONAL',
+      categoriaEstado: 'HISTORICA',
+      caracter: 'PROPUESTO',
+      motivos: ['problema repetido (se dejó un parto más)'],
+      faltantes: [],
+      evidenciaPendiente: [],
+      reglasVersion: 'adr0004+reglas-2026-11-16+oficial-1',
+      evaluadaAt: '2026-11-16T10:00:00Z',
+      procedencia: { fuente: 'CENTRAL+EVIDENCIA_REVISADA' },
+    });
+    mocks.alertas.mockResolvedValue([]);
+
+    render(<AnimalDetalle />);
+    await waitFor(() => expect(screen.getByText(/Propuesta pendiente de validación/i)).toBeTruthy());
+    expect(screen.getByText(/Resultado provisional/i)).toBeTruthy();
+    expect(screen.getByText(/No reemplaza la categoría anterior ni genera una alerta oficial/i)).toBeTruthy();
+    expect(screen.getByText(/Sin recomendaciones sincronizadas/i)).toBeTruthy();
+  });
+
+  it('avisa cuando falta la fecha del cuarto parto sin inventar vencimiento', async () => {
+    mocks.categoria.mockResolvedValue({
+      cuyId: CUY,
+      version: '4',
+      clase: 'DESCARTE',
+      estadoEvaluacion: 'DEFINITIVA',
+      categoriaEstado: 'DEFINITIVA',
+      caracter: 'CONFIRMADO',
+      motivos: ['ciclo completo'],
+      faltantes: [],
+      evidenciaPendiente: [],
+      reglasVersion: 'adr0004+reglas-2026-11-16+oficial-1',
+      evaluadaAt: '2026-11-16T10:00:00Z',
+      procedencia: { fuente: 'CENTRAL+EVIDENCIA_REVISADA' },
+    });
+    mocks.alertas.mockResolvedValue([
+      {
+        id: '44444444-4444-4444-8444-444444444444',
+        cuyId: CUY,
+        version: '1',
+        estado: 'activa',
+        reglaId: 'partos_reproductora_descarte',
+        motivo: 'ciclo completo',
+        causaTipo: 'PARTO',
+        causaId: '55555555-5555-4555-8555-555555555555',
+        causaFecha: null,
+        fechaLimite: null,
+      },
+    ]);
+
+    render(<AnimalDetalle />);
+    await waitFor(() => expect(screen.getByText(/Descarte recomendado/i)).toBeTruthy());
+    expect(screen.getByText(/Fecha del cuarto parto pendiente de validar/i)).toBeTruthy();
+    expect(screen.queryByText(/Fecha límite sugerida/i)).toBeNull();
+    expect(screen.getByText(/Confirmada/)).toBeTruthy();
+  });
+
+  it('muestra la evidencia pendiente como bloqueo de la categoría oficial', async () => {
+    mocks.categoria.mockResolvedValue({
+      cuyId: CUY,
+      version: '5',
+      clase: null,
+      estadoEvaluacion: 'EVIDENCIA_NO_VALIDADA',
+      categoriaEstado: null,
+      caracter: null,
+      motivos: ['sin criterio de descarte'],
+      faltantes: [],
+      evidenciaPendiente: ['abortos', 'peso_monta_g'],
+      reglasVersion: 'adr0004+reglas-2026-11-16+oficial-1',
+      evaluadaAt: null,
+      procedencia: { fuente: 'CENTRAL+EVIDENCIA_REVISADA' },
+    });
+    mocks.alertas.mockResolvedValue([]);
+
+    render(<AnimalDetalle />);
+    await waitFor(() => expect(screen.getByText(/Evidencia sin revisar/i)).toBeTruthy());
+    expect(screen.getByText(/Evidencia pendiente de revisión: abortos, peso_monta_g/i)).toBeTruthy();
+    expect(screen.getByText(/No se guardó como categoría oficial/i)).toBeTruthy();
   });
 });
