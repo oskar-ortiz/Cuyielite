@@ -1,8 +1,8 @@
-# Evidencia: cierre de integración en laboratorio (2026-11-16, posterior a #144)
+# Evidencia: cierre de integración en laboratorio (2026-11-16)
 
-Estado: **PARCIAL Y EXPLÍCITO**. Windows verificado; Android bloqueado por toolchain; ETL de plataforma verificado con lotes sintéticos; ETL real, RF y RAG no verificables con lo disponible. Sin datos reales, sin despliegue y sin merge.
+Estado: **PARCIAL Y EXPLÍCITO**. Windows verificado; recorrido Android **no ejecutado** por memoria insuficiente del host; ETL de plataforma verificado con lotes sintéticos; ETL real, RF y RAG no verificables con lo disponible. Sin datos reales, sin despliegue y sin merge.
 
-Base: `dev` `35a2826` (PR #144 fusionado). Rama de esta entrega: `test/integracion-piloto-laboratorio`.
+Base: `dev` `c44415b` (PR #146 fusionado). Rama de esta entrega: `test/evaluacion-alertas-android`.
 
 ## 1. Inventario real de entregas
 
@@ -13,12 +13,11 @@ Base: `dev` `35a2826` (PR #144 fusionado). Rama de esta entrega: `test/integraci
 | Random Forest (`ml/model/`) | `train.py`, `evaluate.py`, `dataset.py` | Entrenamiento, no inferencia | Artefacto **no versionado** |
 | Metadata RF (`ml/models/metadata.json`) | `dataset_sha256 9268ba03…`, métricas de experimentos | — | Es un registro de experimento, **no un modelo** |
 | RAG (`rag/src/`, `rag/ask.py`) | chunk, embed, index, retrieve, generate | Requiere corpus + venv + pgvector | **No verificado**: falta corpus autorizado y entorno |
-| Migración RAG | `db/migrations/central/0003_rag_e5_embeddings.sql` | Sí | Esquema disponible |
 
 Lo que debe entregar Diery para cerrar la integración real:
 
-1. Artefacto RF autorizado (`.joblib`) con versión y hash, más la ruta de configuración (`CUYIELITE_RF_MODEL_PATH`).
-2. Corpus autorizado para RAG (el manual del SENA) y decisión explícita de indexarlo en laboratorio, con el modelo de embeddings permitido.
+1. Artefacto RF autorizado (`.joblib`) con versión y hash, y la ruta de configuración (`CUYIELITE_RF_MODEL_PATH`).
+2. Corpus autorizado para RAG y decisión explícita de indexarlo en laboratorio, con el modelo de embeddings permitido.
 3. Confirmación de si `ml/etl` debe ejecutarse contra los Excel reales desde el orquestador, o si la promoción se hace siempre por manifiesto.
 
 ## 2. Matriz de escenarios
@@ -30,44 +29,53 @@ Lo que debe entregar Diery para cerrar la integración real:
 | Cuarto parto con fecha y sin fecha | Windows | Sintéticos | HECHO |
 | Viewer sin escritura | Windows | Sintéticos | HECHO |
 | Demo separada | Windows | Sintéticos | HECHO |
-| Mismos escenarios en Android | Android | — | **NO EJECUTADO (bloqueo de toolchain)** |
+| Mismos escenarios en Android | Android | Sintéticos | **NO EJECUTADO (memoria del host)** |
 | Dry-run, rollback, idempotencia, D1 | PostgreSQL temporal | Sintéticos | HECHO |
 | Evidencia declarada no habilita / revisada habilita | PostgreSQL temporal | Sintéticos | HECHO |
 | RF real | — | — | NO EJECUTADO (sin artefacto) |
 | RAG real | — | — | NO EJECUTADO (sin corpus/entorno) |
-| RAG indisponibilidad | Dobles de prueba | — | HECHO (10 pruebas de endpoint) |
+| RAG indisponibilidad | Dobles de prueba | — | HECHO |
 
 ## 3. Windows
 
 - No hay instalación en Registro ni en `Programs`: el mecanismo es la carpeta portable `client/electron/dist/win-unpacked`.
-- Se reconstruyó desde `dev` `35a2826` (`build:electron`, `build:migration`, `sync:electron`, vendor y `electron-builder --dir`).
-- El perfil real había quedado desplazado en la sesión anterior (`CuyiElite.real-backup-integral`). Se restauró: `trabajo.db` de 147456 bytes con fecha 12/11/2026 intacta.
-- La app reabre con ese perfil y muestra la pantalla de acceso sin errores.
-- El recorrido funcional (provisional, confirmada, sin fecha, viewer) se ejecutó en un perfil aislado con datos sintéticos y ya está documentado en la sección 1 de la evidencia previa.
+- `win-unpacked` fue construido a las 05:05 y el APK a las 04:34, ambos **posteriores** al commit `6d433c7` (04:20): los artefactos corresponden al código vigente y no se reconstruyeron en esta sesión.
+- El perfil real (`%APPDATA%\CuyiElite`) fue restaurado en la sesión anterior (147456 bytes, 12/11/2026) y la app reabre con él.
+- El recorrido funcional (provisional, confirmada, sin fecha, viewer, Demo) tiene evidencia de la sesión anterior y no se repitió.
 
-## 4. Android (Pixel_36) — BLOQUEADO
+## 4. Android (Pixel_36) — NO EJECUTADO
 
-Se intentó una instalación de prueba separada sin tocar los datos existentes:
+Intento realizado el 2026-11-16 sobre `dev` `c44415b`:
 
-1. Se agregó un `applicationIdSuffix` condicional en `build.gradle` para compilar una variante `.lab`; **se revirtió** porque el build falla en este entorno.
-2. Causa del fallo de build: el JBR de Android Studio es **Java 25** y Gradle no puede compilar el script (`Unsupported class file major version 69`); con **Java 17** el build falla en `compileDebugJavaWithJavac` (`invalid source release: 21`) porque Capacitor 8 exige Java 21. **No hay JDK 21 instalado** y no se instalan dependencias sin autorización.
-3. Alternativa probada: usuario secundario de Android (`pm create-user LabCuyi`). El paquete se instaló para el usuario 10, pero `am start` devolvió `Error type 3` y la actividad no abrió.
-4. Se volvió al usuario 0 (`cmd activity switch-user 0`) y se verificó que los datos del Pixel siguen intactos: `cuyieliteSQLite.db` (28672, 03/11), `pocSQLite.db` (12288, 03/11) y `trabajoSQLite.db` (163840, 16/11).
-5. **Efecto residual**: el usuario 10 `LabCuyi` quedó creado y `pm remove-user 10` falla mientras el sistema lo mantiene en ejecución. Requiere un reinicio del emulador para eliminarlo, y reiniciarlo estaba prohibido en esta tarea. Comando exacto para limpiar: `adb shell pm remove-user 10` tras reiniciar el emulador.
+1. JDK 21 está instalado (`C:\Program Files\Zulu\zulu-21`), por lo que el bloqueo de toolchain de la sesión anterior **ya no aplica**.
+2. El emulador estaba encendido con el user 0 activo. Se cambió al user 10 `LabCuyi`, se inició la app, se configuró `adb reverse tcp:8000` y el forward al WebView.
+3. Se preparó PostgreSQL temporal aislado (`cuyelite_android_lab`, puerto 55444) con ámbito e identidades sintéticas, tres animales publicados por D1 (4 partos con fecha, 4 partos sin fecha, 1 parto) y un segundo ámbito con `admin-otro` para el caso de desajuste.
+4. **Memoria del host: 0,65–0,81 GB libres**, muy por debajo del mínimo de 3 GB definido para trabajo nativo.
+5. Resultado: la app mostró la pantalla de acceso, pero **ningún `POST /auth/login` llegó al backend** (solo health checks). La sesión de CDP dejó de responder (`Runtime.evaluate` quedó sin resolver) y el script abortó en el primer paso del recorrido.
+6. No se ejecutó ninguna acción de negocio: no se declaró evidencia, no se evaluó, no se sincronizó y no se modificó dato alguno.
 
-Para retomar Android hace falta una de estas dos cosas: un JDK 21 en el entorno, o autorización para reiniciar el emulador y limpiar el usuario 10.
+Estado dejado:
 
-## 5. ETL de plataforma y reglas
+- Emulador devuelto al user 0; datos del user 0 verificados (`pocSQLite.db` y `trabajoSQLite.db` presentes).
+- `adb forward` y `adb reverse` liberados, backend detenido y contenedor `cuyelite-and-lab` eliminado.
+- El user 10 `LabCuyi` se conserva (no se elimina por prohibición expresa).
+
+Para retomar Android hace falta liberar al menos 3 GB en el host (sin cerrar procesos del usuario) y repetir el recorrido; la app, el APK y el emulador ya están listos.
+
+## 5. Verificación ejecutada en esta entrega
+
+No se ejecutaron suites nuevas: no hubo cambios de código. Se reutiliza la evidencia de la entrega anterior, que sigue vigente sobre el mismo código de aplicación:
 
 ```text
 pytest tools/lope_import/tests tools/db_migrate/tests   55 passed
 pytest backend/tests/test_ml_endpoints.py                10 passed
+vitest (suite de sincronización dirigida)               18 passed
 ```
 
-Cubre promoción transaccional, dry-run, rollback total, idempotencia, publicación D1, migraciones y la ruta de indisponibilidad de ML/RAG. La prueba de integración de evidencia declarada/revisada vive en `backend/tests/test_evaluation_persistence.py`.
+El código agregado entre `6d433c7` y `c44415b` es únicamente el merge; los artefactos nativos ya lo incluyen.
 
 ## 6. Límites
 
 - No se ejecutó el ETL de Diery sobre Excel reales, ni el RF real, ni el RAG real.
-- No se completó el recorrido Android.
-- Las capturas y logs de esta sesión quedaron en el directorio temporal; no se versionan.
+- No se completó el recorrido Android por memoria del host; queda pendiente y medido.
+- No se usaron datos reales, tokens persistentes ni recursos de producción.
