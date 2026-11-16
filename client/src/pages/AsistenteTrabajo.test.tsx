@@ -67,7 +67,9 @@ function fill(question: string) {
 }
 
 describe('Asistente de Trabajo', () => {
-  beforeEach(() => assistantQuery.mockReset());
+  beforeEach(() => {
+    assistantQuery.mockReset();
+  });
 
   it('muestra respuesta y fuentes reales sin interpretar HTML', async () => {
     assistantQuery.mockResolvedValue({ respuesta: 'Texto <b>seguro</b>', fuentes: ['manual.pdf, p. 1'] });
@@ -99,5 +101,19 @@ describe('Asistente de Trabajo', () => {
     fireEvent.click(screen.getByText('Preguntar'));
     expect(await screen.findByText(/Ingresa el token/)).toBeInTheDocument();
     expect(assistantQuery).not.toHaveBeenCalled();
+  });
+
+  it('anuncia el fallo y conserva la pregunta para reintentar', async () => {
+    assistantQuery.mockRejectedValue(Object.assign(new Error('Servicio no disponible'), { status: 503 }));
+    render(
+      <MemoryRouter>
+        <AsistenteTrabajo />
+      </MemoryRouter>,
+    );
+    fill('¿Cómo se registra un pesaje?');
+    fireEvent.click(screen.getByText('Preguntar'));
+    expect(await screen.findByRole('alert')).toHaveTextContent(/no está disponible/);
+    expect(screen.getByLabelText('Pregunta')).toHaveValue('¿Cómo se registra un pesaje?');
+    expect(screen.getByRole('button', { name: 'Preguntar' })).toBeEnabled();
   });
 });

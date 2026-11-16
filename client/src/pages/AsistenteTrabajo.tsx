@@ -2,10 +2,9 @@ import {
   IonBackButton,
   IonButton,
   IonButtons,
-  IonCard,
-  IonCardContent,
   IonContent,
   IonHeader,
+  IonIcon,
   IonInput,
   IonItem,
   IonLabel,
@@ -13,13 +12,15 @@ import {
   IonPage,
   IonSelect,
   IonSelectOption,
+  IonSpinner,
   IonTextarea,
   IonTitle,
   IonToolbar,
 } from '@ionic/react';
+import { bookOutline, sendOutline } from 'ionicons/icons';
 import { useRef, useState } from 'react';
 
-import { PageFrame } from '../components/AppUi';
+import { InlineNotice, PageFrame, PageIntro, SectionCard } from '../components/AppUi';
 import { assistantErrorMessage } from '../data/ml.errors';
 import { getMlTransport, type AssistantResult } from '../data/ml.transport';
 import './galpones.css';
@@ -34,6 +35,7 @@ const AsistenteTrabajo: React.FC = () => {
   const requestRef = useRef(0);
 
   const submit = async () => {
+    if (busy) return;
     if (!token.trim()) {
       setError('Ingresa el token de laboratorio para consultar.');
       return;
@@ -70,67 +72,79 @@ const AsistenteTrabajo: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen className="app-content">
-        <PageFrame>
-          <p className="estado-vacio">
-            Consulta los manuales indexados. La respuesta y sus fuentes provienen del servidor; no se generan fuentes
-            localmente.
-          </p>
-          <IonInput
-            fill="outline"
-            label="Token de laboratorio"
-            labelPlacement="stacked"
-            type="password"
-            value={token}
-            onIonInput={(e) => setToken(String(e.detail.value ?? ''))}
-            autocomplete="off"
+        <PageFrame narrow>
+          <PageIntro
+            title="Asistente"
+            description="Consulta los manuales indexados. Cada respuesta conserva las fuentes devueltas por el servidor."
           />
-          <IonTextarea
-            fill="outline"
-            label="Pregunta"
-            labelPlacement="stacked"
-            value={question}
-            onIonInput={(e) => setQuestion(String(e.detail.value ?? ''))}
-            maxlength={500}
-            autoGrow
-          />
-          <IonSelect
-            fill="outline"
-            label="Resultados"
-            labelPlacement="stacked"
-            value={topK}
-            onIonChange={(e) => setTopK(String(e.detail.value))}
-          >
-            <IonSelectOption value="3">3</IonSelectOption>
-            <IonSelectOption value="5">5</IonSelectOption>
-            <IonSelectOption value="10">10</IonSelectOption>
-          </IonSelect>
-          {error && <p className="estado-vacio">{error}</p>}
-          <IonButton
-            expand="block"
-            onClick={() => void submit().catch((e) => setError(assistantErrorMessage(e)))}
-            disabled={busy}
-          >
-            {busy ? 'Consultando…' : 'Preguntar'}
-          </IonButton>
+          <SectionCard title="Tu consulta" description="Escribe una pregunta concreta sobre el manejo de cuyes.">
+            <IonInput
+              fill="outline"
+              label="Token de laboratorio"
+              labelPlacement="stacked"
+              type="password"
+              value={token}
+              onIonInput={(e) => setToken(String(e.detail.value ?? ''))}
+              autocomplete="off"
+            />
+            <IonTextarea
+              fill="outline"
+              label="Pregunta"
+              labelPlacement="stacked"
+              value={question}
+              onIonInput={(e) => setQuestion(String(e.detail.value ?? ''))}
+              maxlength={500}
+              autoGrow
+            />
+            <IonSelect
+              cancelText="Cancelar"
+              okText="Aceptar"
+              fill="outline"
+              label="Resultados"
+              labelPlacement="stacked"
+              value={topK}
+              onIonChange={(e) => setTopK(String(e.detail.value))}
+            >
+              <IonSelectOption value="3">3</IonSelectOption>
+              <IonSelectOption value="5">5</IonSelectOption>
+              <IonSelectOption value="10">10</IonSelectOption>
+            </IonSelect>
+            {error && (
+              <InlineNotice tone="danger" role="alert">
+                {error}
+              </InlineNotice>
+            )}
+            <IonButton
+              expand="block"
+              onClick={() => void submit().catch((e) => setError(assistantErrorMessage(e)))}
+              disabled={busy}
+              aria-busy={busy}
+            >
+              {busy ? (
+                <IonSpinner name="dots" aria-hidden="true" />
+              ) : (
+                <IonIcon slot="start" icon={sendOutline} aria-hidden="true" />
+              )}
+              {busy ? 'Consultando…' : 'Preguntar'}
+            </IonButton>
+          </SectionCard>
           {result && (
-            <IonCard>
-              <IonCardContent>
-                <h3>Respuesta</h3>
-                <p style={{ whiteSpace: 'pre-wrap' }}>{result.respuesta}</p>
-                <h4>Fuentes</h4>
-                {result.fuentes.length === 0 ? (
-                  <p className="estado-vacio">El asistente no devolvió fuentes para esta respuesta.</p>
-                ) : (
-                  <IonList>
-                    {result.fuentes.map((fuente, index) => (
-                      <IonItem key={`${index}-${fuente}`}>
-                        <IonLabel>{fuente}</IonLabel>
-                      </IonItem>
-                    ))}
-                  </IonList>
-                )}
-              </IonCardContent>
-            </IonCard>
+            <SectionCard title="Respuesta">
+              <p className="assistant-answer">{result.respuesta}</p>
+              <h3>Fuentes</h3>
+              {result.fuentes.length === 0 ? (
+                <p className="estado-vacio">El asistente no devolvió fuentes para esta respuesta.</p>
+              ) : (
+                <IonList className="app-list assistant-sources" aria-label="Fuentes de la respuesta">
+                  {result.fuentes.map((fuente, index) => (
+                    <IonItem key={`${index}-${fuente}`}>
+                      <IonIcon slot="start" icon={bookOutline} aria-hidden="true" />
+                      <IonLabel className="ion-text-wrap">{fuente}</IonLabel>
+                    </IonItem>
+                  ))}
+                </IonList>
+              )}
+            </SectionCard>
           )}
         </PageFrame>
       </IonContent>

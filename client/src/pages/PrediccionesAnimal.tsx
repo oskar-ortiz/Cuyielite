@@ -371,6 +371,8 @@ const PrediccionesAnimal: React.FC = () => {
                     ))}
                     <IonItem>
                       <IonSelect
+                        cancelText="Cancelar"
+                        okText="Aceptar"
                         fill="outline"
                         label="Ojos"
                         labelPlacement="stacked"

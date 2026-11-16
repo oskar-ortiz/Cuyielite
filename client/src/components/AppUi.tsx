@@ -7,6 +7,7 @@ import {
   cloudOfflineOutline,
   flaskOutline,
   informationCircleOutline,
+  saveOutline,
   syncOutline,
   timeOutline,
   warningOutline,
@@ -206,7 +207,10 @@ export function FormActions({
             <IonSpinner name="dots" aria-hidden="true" /> Guardando…
           </>
         ) : (
-          label
+          <>
+            <IonIcon slot="start" icon={saveOutline} aria-hidden="true" />
+            {label}
+          </>
         )}
       </IonButton>
     </div>

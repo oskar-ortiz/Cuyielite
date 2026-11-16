@@ -196,6 +196,8 @@ const FormularioCuyo: React.FC = () => {
                   </div>
                   <div>
                     <IonSelect
+                      cancelText="Cancelar"
+                      okText="Aceptar"
                       label="Sexo"
                       labelPlacement="stacked"
                       fill="outline"
@@ -223,6 +225,8 @@ const FormularioCuyo: React.FC = () => {
                   </div>
                   <div>
                     <IonSelect
+                      cancelText="Cancelar"
+                      okText="Aceptar"
                       label="Poza"
                       labelPlacement="stacked"
                       fill="outline"
@@ -261,6 +265,8 @@ const FormularioCuyo: React.FC = () => {
                 <div className="form-grid">
                   <div>
                     <IonSelect
+                      cancelText="Cancelar"
+                      okText="Aceptar"
                       label="Padre"
                       labelPlacement="stacked"
                       fill="outline"
@@ -279,6 +285,8 @@ const FormularioCuyo: React.FC = () => {
                   </div>
                   <div>
                     <IonSelect
+                      cancelText="Cancelar"
+                      okText="Aceptar"
                       label="Madre"
                       labelPlacement="stacked"
                       fill="outline"

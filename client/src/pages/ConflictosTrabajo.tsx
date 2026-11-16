@@ -170,6 +170,8 @@ const ConflictosTrabajo: React.FC = () => {
       const options = item.references?.[field.reference!] ?? [];
       return (
         <IonSelect
+          cancelText="Cancelar"
+          okText="Aceptar"
           aria-label={field.label}
           label={field.label}
           labelPlacement="stacked"
@@ -190,6 +192,8 @@ const ConflictosTrabajo: React.FC = () => {
     if (field.kind === 'select') {
       return (
         <IonSelect
+          cancelText="Cancelar"
+          okText="Aceptar"
           aria-label={field.label}
           label={field.label}
           labelPlacement="stacked"
@@ -304,7 +308,12 @@ const ConflictosTrabajo: React.FC = () => {
                 Versión central {selected.review.expectedServerVersion}
                 {selected.central.deleted_at ? ' (eliminada)' : ''}
               </p>
-              <div className="comparison-scroll">
+              <div
+                className="comparison-scroll"
+                role="region"
+                aria-label="Comparación de versiones: servidor y dispositivo"
+                tabIndex={0}
+              >
                 <div className="comparison-table">
                   <div className="comparison-table__header">Campo</div>
                   <div className="comparison-table__header">Servidor</div>
