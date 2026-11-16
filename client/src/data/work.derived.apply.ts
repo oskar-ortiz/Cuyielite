@@ -56,7 +56,11 @@ function validateCategoria(data: Record<string, unknown>): void {
   if (data.clase !== null && !['ELITE', 'NORMAL', 'DESCARTE'].includes(String(data.clase))) {
     throw new DerivedPullError('categoría derivada inválida');
   }
-  if (!['DEFINITIVA', 'DATOS_INSUFICIENTES', 'PROVISIONAL', 'EVIDENCIA_NO_VALIDADA'].includes(String(data.estado_evaluacion))) {
+  if (
+    !['DEFINITIVA', 'DATOS_INSUFICIENTES', 'PROVISIONAL', 'EVIDENCIA_NO_VALIDADA'].includes(
+      String(data.estado_evaluacion),
+    )
+  ) {
     throw new DerivedPullError('estado de evaluación derivado inválido');
   }
   if (data.categoria_estado !== null && !['DEFINITIVA', 'HISTORICA'].includes(String(data.categoria_estado))) {
