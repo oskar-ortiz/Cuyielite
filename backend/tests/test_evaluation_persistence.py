@@ -1,4 +1,4 @@
-"""Evaluación oficial, provisional y evidencia revisable (0007-0008)."""
+﻿"""EvaluaciÃ³n oficial, provisional y evidencia revisable (0007-0008)."""
 
 from __future__ import annotations
 
@@ -257,7 +257,7 @@ def test_declaracion_nueva_vuelve_a_no_validada(lab):
     _revisar(lab, cuy_id, "abortos", 0)
     _evaluar(lab, cuy_id)
 
-    # Una declaración posterior reinicia la revisión.
+    # Una declaraciÃ³n posterior reinicia la revisiÃ³n.
     _evaluar(lab, cuy_id, abortos=1)
     body = _evaluar(lab, cuy_id).json()
     assert body["estado_evaluacion"] == "EVIDENCIA_NO_VALIDADA"
@@ -376,3 +376,56 @@ def test_viewer_no_puede_evaluar_ni_revisar(lab, monkeypatch):
         json={"campo": "abortos", "decision": "REVISADA"},
         headers=headers,
     ).status_code == 403
+
+def test_publicacion_d1_y_evidencia_habilitan_la_categoria_oficial(lab):
+    """El ETL publica el animal por D1; la evidencia declarada no autoriza y la
+    revisada por admin sí habilita la categoría oficial."""
+    from backend.app.services.publication import (
+        PUBLISHABLE_FIELDS,
+        RegistroPublicacion,
+        publicar_cambios,
+    )
+
+    cuy_id = _cuy(lab)
+    _parto(lab, cuy_id, 1, date(2025, 12, 1))
+    with psycopg.connect(lab["url"]) as conn:
+        row = conn.execute(
+            "SELECT id, poza_id, galpon_origen_id, codigo_identificacion, sexo, fecha_nacimiento, "
+            "color_codigo, ojos_codigo, pelaje_original, padre_id, madre_id, categoria_ml, "
+            "ultimo_peso_g, estado, deleted_at FROM cuyes WHERE id=%s",
+            (cuy_id,),
+        ).fetchone()
+        names = ("id", *PUBLISHABLE_FIELDS["cuyes"])
+        data = dict(zip(names, row))
+        results = publicar_cambios(
+            conn,
+            lab["scope"],
+            [
+                RegistroPublicacion(
+                    "cuyes",
+                    cuy_id,
+                    None,
+                    None,
+                    {field: data[field] for field in PUBLISHABLE_FIELDS["cuyes"]},
+                )
+            ],
+        )
+        conn.commit()
+    assert results[0].version == 1
+
+    # Declarada: no habilita categoria oficial.
+    declared = _evaluar(lab, cuy_id, abortos=0).json()
+    assert declared["estado_evaluacion"] == "EVIDENCIA_NO_VALIDADA"
+    assert _estado(lab, cuy_id)["clase"] is None
+
+    # Revisada por admin: habilita la categoria oficial.
+    reviewed = lab["client"].post(
+        f"/evaluaciones/{cuy_id}/evidencias/revision",
+        json={"campo": "abortos", "decision": "REVISADA"},
+        headers=lab["headers"],
+    )
+    assert reviewed.status_code == 200, reviewed.text
+    official = _evaluar(lab, cuy_id).json()
+    assert official["estado_evaluacion"] == "DEFINITIVA"
+    assert _estado(lab, cuy_id)["clase"] == "NORMAL"
+    assert _estado(lab, cuy_id)["server_version"] == 2

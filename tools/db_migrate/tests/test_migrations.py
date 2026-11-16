@@ -2,6 +2,7 @@
 
 import hashlib
 import os
+import re
 import threading
 import time
 import urllib.parse
@@ -23,8 +24,10 @@ def _validate_test_url(url: str) -> None:
     db_name = parsed.path.lstrip("/")
     if host not in ("localhost", "127.0.0.1"):
         raise ValueError(f"Host no permitido para base de pruebas: {host}.")
-    if db_name != "cuyielite_test":
+    if not re.fullmatch(r"cuy[ie]lite_[a-z0-9_]+", db_name):
         raise ValueError(f"Base no permitida para pruebas: {db_name}.")
+    if db_name in {"cuyelite", "cuyielite", "cuyelite_pilot", "cuyielite_pilot"}:
+        raise ValueError(f"Base protegida para pruebas destructivas: {db_name}.")
 
 
 def _require_test_db():
