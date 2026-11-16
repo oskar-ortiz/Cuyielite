@@ -1,6 +1,5 @@
 import {
   IonBackButton,
-  IonButton,
   IonButtons,
   IonCheckbox,
   IonContent,
@@ -13,12 +12,22 @@ import {
   IonTitle,
   IonToolbar,
 } from '@ionic/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import {
+  FieldErrors,
+  FormActions,
+  InlineNotice,
+  PageFrame,
+  PageIntro,
+  PageState,
+  SectionCard,
+} from '../components/AppUi';
 import { getDomainRepository } from '../data/work.domain.factory';
 import { validateParto, type Cuyo, type PartoInput } from '../data/work.domain.validation';
-import './galpones.css';
+
+const fieldHints = ['fecha', 'número', 'nacidos', 'camada', 'cría', 'madre'];
 
 const FormularioParto: React.FC = () => {
   const navigate = useNavigate();
@@ -36,6 +45,7 @@ const FormularioParto: React.FC = () => {
   const [cuyes, setCuyes] = useState<Cuyo[]>([]);
   const [loading, setLoading] = useState(editing);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
 
@@ -63,12 +73,14 @@ const FormularioParto: React.FC = () => {
   const numberValue = (value: unknown) => (String(value ?? '').trim() === '' ? null : Number(value));
 
   const submit = async () => {
+    if (savingRef.current || loading) return;
     setNotice(null);
     const validation = validateParto(input);
     if (!validation.ok) {
       setErrors(validation.errors);
       return;
     }
+    savingRef.current = true;
     setSaving(true);
     setErrors([]);
     try {
@@ -84,6 +96,7 @@ const FormularioParto: React.FC = () => {
     } catch (e) {
       setErrors([e instanceof Error ? e.message : String(e)]);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
@@ -98,79 +111,131 @@ const FormularioParto: React.FC = () => {
           <IonTitle>{editing ? 'Editar parto' : 'Registrar parto'}</IonTitle>
         </IonToolbar>
       </IonHeader>
-      <IonContent className="ion-padding">
-        {loading && <p className="estado-vacio">Cargando…</p>}
-        <IonInput
-          label="Fecha de parto"
-          labelPlacement="stacked"
-          type="date"
-          value={input.fechaParto ?? ''}
-          onIonInput={(e) => change({ fechaParto: String(e.detail.value ?? '') || null })}
-        />
-        <IonInput
-          label="Número de parto (NUPAR)"
-          labelPlacement="stacked"
-          type="number"
-          value={input.numeroParto ?? ''}
-          onIonInput={(e) => change({ numeroParto: numberValue(e.detail.value) })}
-        />
-        <IonInput
-          label="Nacidos vivos"
-          labelPlacement="stacked"
-          type="number"
-          value={input.nacidosVivos ?? ''}
-          onIonInput={(e) => change({ nacidosVivos: numberValue(e.detail.value) })}
-        />
-        <IonInput
-          label="Nacidos muertos"
-          labelPlacement="stacked"
-          type="number"
-          value={input.nacidosMuertos ?? ''}
-          onIonInput={(e) => change({ nacidosMuertos: numberValue(e.detail.value) })}
-        />
-        <IonInput
-          label="Tamaño de camada"
-          labelPlacement="stacked"
-          type="number"
-          value={input.tamanoCamadaNacida ?? ''}
-          onIonInput={(e) => change({ tamanoCamadaNacida: numberValue(e.detail.value) })}
-        />
-        <IonList>
-          <IonItem lines="full">
-            <IonLabel>
-              <h2>Crias vinculadas al parto</h2>
-              <p>Se crea un registro parto_crias por cada cría seleccionada.</p>
-            </IonLabel>
-          </IonItem>
-          {cuyes
-            .filter((cuyo) => cuyo.id !== input.madreId)
-            .map((cuyo) => (
-              <IonItem key={cuyo.id}>
-                <IonCheckbox
-                  slot="start"
-                  checked={input.crias.includes(cuyo.id)}
-                  onIonChange={(e) =>
-                    change({
-                      crias: e.detail.checked ? [...input.crias, cuyo.id] : input.crias.filter((id) => id !== cuyo.id),
-                    })
-                  }
-                />
-                <IonLabel>
-                  {cuyo.codigoIdentificacion}
-                  <p>{cuyo.sexo === 'M' ? 'Macho' : cuyo.sexo === 'H' ? 'Hembra' : 'Sexo sin registrar'}</p>
-                </IonLabel>
-              </IonItem>
-            ))}
-        </IonList>
-        {errors.map((err, index) => (
-          <p key={index} className="estado-vacio">
-            {err}
-          </p>
-        ))}
-        {notice && <p className="estado-vacio">{notice}</p>}
-        <IonButton expand="block" onClick={submit} disabled={saving || loading}>
-          {saving ? 'Guardando…' : 'Guardar'}
-        </IonButton>
+      <IonContent fullscreen className="app-content">
+        <PageFrame narrow>
+          <PageIntro
+            eyebrow="Base de trabajo"
+            title={editing ? 'Editar parto' : 'Registrar parto'}
+            description="Añade datos reproductivos y vincula las crías nacidas. Los campos vacíos permanecen sin registrar."
+          />
+          {loading ? (
+            <PageState kind="loading" title="Cargando parto…" />
+          ) : (
+            <form
+              noValidate
+              onSubmit={(event) => {
+                event.preventDefault();
+                void submit();
+              }}
+            >
+              <SectionCard title="Datos del parto">
+                <div className="form-grid">
+                  <div className="form-grid__full">
+                    <IonInput
+                      label="Fecha de parto"
+                      labelPlacement="stacked"
+                      fill="outline"
+                      type="date"
+                      value={input.fechaParto ?? ''}
+                      onIonInput={(e) => change({ fechaParto: String(e.detail.value ?? '') || null })}
+                      disabled={saving}
+                    />
+                    <FieldErrors errors={errors.filter((error) => error.toLowerCase().includes('fecha'))} />
+                  </div>
+                  <div>
+                    <IonInput
+                      label="Número de parto (NUPAR)"
+                      labelPlacement="stacked"
+                      fill="outline"
+                      type="number"
+                      inputmode="numeric"
+                      value={input.numeroParto ?? ''}
+                      onIonInput={(e) => change({ numeroParto: numberValue(e.detail.value) })}
+                      disabled={saving}
+                    />
+                    <FieldErrors errors={errors.filter((error) => error.toLowerCase().includes('parto'))} />
+                  </div>
+                  <div>
+                    <IonInput
+                      label="Nacidos vivos"
+                      labelPlacement="stacked"
+                      fill="outline"
+                      type="number"
+                      inputmode="numeric"
+                      value={input.nacidosVivos ?? ''}
+                      onIonInput={(e) => change({ nacidosVivos: numberValue(e.detail.value) })}
+                      disabled={saving}
+                    />
+                    <FieldErrors errors={errors.filter((error) => error.toLowerCase().includes('vivos'))} />
+                  </div>
+                  <div>
+                    <IonInput
+                      label="Nacidos muertos"
+                      labelPlacement="stacked"
+                      fill="outline"
+                      type="number"
+                      inputmode="numeric"
+                      value={input.nacidosMuertos ?? ''}
+                      onIonInput={(e) => change({ nacidosMuertos: numberValue(e.detail.value) })}
+                      disabled={saving}
+                    />
+                    <FieldErrors errors={errors.filter((error) => error.toLowerCase().includes('muertos'))} />
+                  </div>
+                  <div className="form-grid__full">
+                    <IonInput
+                      label="Tamaño de camada"
+                      labelPlacement="stacked"
+                      fill="outline"
+                      type="number"
+                      inputmode="numeric"
+                      value={input.tamanoCamadaNacida ?? ''}
+                      onIonInput={(e) => change({ tamanoCamadaNacida: numberValue(e.detail.value) })}
+                      disabled={saving}
+                    />
+                    <FieldErrors errors={errors.filter((error) => error.toLowerCase().includes('camada'))} />
+                  </div>
+                </div>
+              </SectionCard>
+
+              <SectionCard
+                title="Crías vinculadas al parto"
+                description="Se crea un registro parto_crias por cada cría seleccionada."
+              >
+                <IonList className="app-list">
+                  {cuyes
+                    .filter((cuyo) => cuyo.id !== input.madreId)
+                    .map((cuyo) => (
+                      <IonItem key={cuyo.id}>
+                        <IonCheckbox
+                          slot="start"
+                          checked={input.crias.includes(cuyo.id)}
+                          onIonChange={(e) =>
+                            change({
+                              crias: e.detail.checked
+                                ? [...input.crias, cuyo.id]
+                                : input.crias.filter((id) => id !== cuyo.id),
+                            })
+                          }
+                          disabled={saving}
+                        />
+                        <IonLabel>
+                          {cuyo.codigoIdentificacion}
+                          <p>{cuyo.sexo === 'M' ? 'Macho' : cuyo.sexo === 'H' ? 'Hembra' : 'Sexo sin registrar'}</p>
+                        </IonLabel>
+                      </IonItem>
+                    ))}
+                </IonList>
+                <FieldErrors errors={errors.filter((error) => error.toLowerCase().includes('cría'))} />
+              </SectionCard>
+
+              <FieldErrors
+                errors={errors.filter((error) => !fieldHints.some((hint) => error.toLocaleLowerCase().includes(hint)))}
+              />
+              {notice && <InlineNotice role="status">{notice}</InlineNotice>}
+              <FormActions saving={saving} />
+            </form>
+          )}
+        </PageFrame>
       </IonContent>
     </IonPage>
   );

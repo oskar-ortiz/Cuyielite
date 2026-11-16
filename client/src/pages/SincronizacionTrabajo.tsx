@@ -17,6 +17,7 @@ import {
 } from '@ionic/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { PageFrame, PageIntro, SectionCard } from '../components/AppUi';
 import { AUTH_MODE } from '../data/api.config';
 import { ensureAccessToken, initializeAuthSession, snapshot } from '../data/auth.session';
 import type { AuthSnapshot } from '../data/auth.types';
@@ -79,7 +80,6 @@ const SincronizacionTrabajo: React.FC = () => {
       requestIdRef.current = -1;
     };
   }, [load]);
-
   useIonViewWillEnter(() => load());
 
   const pilot = AUTH_MODE === 'pilot';
@@ -137,148 +137,160 @@ const SincronizacionTrabajo: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent className="ion-padding">
-        <section aria-labelledby="sync-estado" className="sync-resumen">
-          <div className="sync-encabezado">
-            <h1 id="sync-estado">Estado de sincronización</h1>
-            <IonChip color={chipColor} aria-hidden="true">
-              {view.title}
-            </IonChip>
-          </div>
-          <div role="status" aria-live="polite" aria-atomic="true" aria-busy={syncing}>
-            <p>
-              <strong>{view.title}.</strong> {view.detail}
-            </p>
-          </div>
-          {loading && <p className="texto-ayuda">Leyendo el estado local…</p>}
-          {statusError && <p role="alert">{statusError}</p>}
-          {status && (
-            <dl className="sync-cuentas" aria-label="Resumen de cambios locales">
-              <div>
-                <dt>Pendientes de envío</dt>
-                <dd>{status.pending}</dd>
-              </div>
-              <div>
-                <dt>Conflictos</dt>
-                <dd>{status.conflicts}</dd>
-              </div>
-              <div>
-                <dt>Rechazados por el servidor</dt>
-                <dd>{status.rejected}</dd>
-              </div>
-            </dl>
-          )}
-        </section>
+        <PageFrame>
+          <PageIntro
+            eyebrow="Base de trabajo"
+            title="Sincronización"
+            description="Envía y recibe cambios sin bloquear la consulta local."
+          />
 
-        <section aria-labelledby="sync-acciones">
-          <h2 id="sync-acciones">Sincronizar ahora</h2>
-          <p className="texto-ayuda">
-            La sincronización no bloquea la consulta local. Si falla, tus datos siguen disponibles y puedes reintentar.
-          </p>
-          {pilot ? (
-            <>
-              {auth.user ? (
-                <div>
-                  <p>
-                    Sesión: <strong>{auth.user.username}</strong> ·{' '}
-                    {auth.role === 'admin' ? 'Administrador' : 'Consulta'} · instalación {auth.deviceId?.slice(0, 8)}
-                  </p>
-                  {auth.role === 'viewer' && (
-                    <p className="texto-ayuda">
-                      Esta cuenta solo consulta: puede descargar cambios, pero no escribir, resolver conflictos ni
-                      enviar pendientes. La outbox se conserva.
-                    </p>
-                  )}
-                  <IonButton fill="clear" size="small" routerLink="/trabajo/acceso">
-                    Ver perfil / cambiar usuario
-                  </IonButton>
-                </div>
-              ) : (
-                <>
-                  <p className="texto-ayuda">Inicia sesión para sincronizar. Trabajo sigue disponible para consulta.</p>
-                  <IonButton fill="outline" routerLink="/trabajo/acceso">
-                    Iniciar sesión
-                  </IonButton>
-                </>
-              )}
-              {authError && (
-                <p role="alert">
-                  {authError}{' '}
-                  <IonButton fill="clear" size="small" routerLink="/trabajo/acceso">
-                    Ir a acceso
-                  </IonButton>
-                </p>
-              )}
-            </>
-          ) : (
-            <>
-              <IonInput
-                label="Token de laboratorio"
-                labelPlacement="stacked"
-                type="password"
-                autocomplete="off"
-                spellcheck={false}
-                value={token}
-                disabled={syncing}
-                onIonInput={(event) => {
-                  setToken(event.detail.value ?? '');
-                  if (scopeMismatch) setOutcome({ kind: 'none' });
-                }}
-              />
-              <p className="texto-ayuda">
-                Solo se mantiene en memoria mientras la app está abierta. No se guarda en la base ni en el repositorio.
+          <section aria-labelledby="sync-estado" className="sync-resumen">
+            <div className="sync-encabezado">
+              <h2 id="sync-estado">Estado de sincronización</h2>
+              <IonChip color={chipColor} aria-hidden="true">
+                {view.title}
+              </IonChip>
+            </div>
+            <div role="status" aria-live="polite" aria-atomic="true" aria-busy={syncing}>
+              <p>
+                <strong>{view.title}.</strong> {view.detail}
               </p>
-            </>
-          )}
-          <IonButton expand="block" onClick={sync} disabled={!canRun} aria-busy={syncing}>
-            {syncing ? (
-              <>
-                <IonSpinner name="dots" /> Sincronizando…
-              </>
-            ) : canRetry ? (
-              'Reintentar'
-            ) : (
-              'Sincronizar'
+            </div>
+            {loading && <p className="texto-ayuda">Leyendo el estado local…</p>}
+            {statusError && <p role="alert">{statusError}</p>}
+            {status && (
+              <dl className="sync-cuentas" aria-label="Resumen de cambios locales">
+                <div>
+                  <dt>Pendientes de envío</dt>
+                  <dd>{status.pending}</dd>
+                </div>
+                <div>
+                  <dt>Conflictos</dt>
+                  <dd>{status.conflicts}</dd>
+                </div>
+                <div>
+                  <dt>Rechazados por el servidor</dt>
+                  <dd>{status.rejected}</dd>
+                </div>
+              </dl>
             )}
-          </IonButton>
-          {!pilot && !syncing && !token.trim() && (
-            <p className="texto-ayuda">Ingresa el token de laboratorio para habilitar la sincronización.</p>
-          )}
-          {!pilot && token.trim() !== '' && !syncing && (
-            <IonButton fill="clear" size="small" onClick={() => setToken('')}>
-              Borrar token
-            </IonButton>
-          )}
-          {result && (
-            <p role="status">
-              Se recibieron {result.appliedRemoteRecords} registro(s) y se enviaron {result.pushedResults} cambio(s).
-            </p>
-          )}
-        </section>
-
-        {status && status.conflicts > 0 && (
-          <section aria-labelledby="sync-conflictos">
-            <h2 id="sync-conflictos">Conflictos por revisar</h2>
-            <p>
-              {status.conflicts === 1 ? 'Hay 1 conflicto pendiente.' : `Hay ${status.conflicts} conflictos pendientes.`}{' '}
-              Los cambios locales se conservan hasta que decidas.
-            </p>
-            <IonButton routerLink="/trabajo/conflictos" fill="outline">
-              Revisar conflictos
-            </IonButton>
           </section>
-        )}
 
-        <section aria-labelledby="sync-navegacion">
-          <h2 id="sync-navegacion">Datos de trabajo</h2>
-          <IonList>
-            <IonItem routerLink="/trabajo/galpones" detail={true}>
-              <IonLabel>
-                <h3>Galpones de trabajo</h3>
-                <p>Consulta local disponible incluso sin conexión.</p>
-              </IonLabel>
-            </IonItem>
-          </IonList>
-        </section>
+          <SectionCard title="Sincronizar ahora">
+            <p className="texto-ayuda">
+              La sincronización no bloquea la consulta local. Si falla, tus datos siguen disponibles y puedes
+              reintentar.
+            </p>
+            {pilot ? (
+              <>
+                {auth.user ? (
+                  <div>
+                    <p>
+                      Sesión: <strong>{auth.user.username}</strong> ·{' '}
+                      {auth.role === 'admin' ? 'Administrador' : 'Consulta'} · instalación {auth.deviceId?.slice(0, 8)}
+                    </p>
+                    {auth.role === 'viewer' && (
+                      <p className="texto-ayuda">
+                        Esta cuenta solo consulta: puede descargar cambios, pero no escribir, resolver conflictos ni
+                        enviar pendientes. La outbox se conserva.
+                      </p>
+                    )}
+                    <IonButton fill="clear" size="small" routerLink="/trabajo/acceso">
+                      Ver perfil / cambiar usuario
+                    </IonButton>
+                  </div>
+                ) : (
+                  <>
+                    <p className="texto-ayuda">
+                      Inicia sesión para sincronizar. Trabajo sigue disponible para consulta.
+                    </p>
+                    <IonButton fill="outline" routerLink="/trabajo/acceso">
+                      Iniciar sesión
+                    </IonButton>
+                  </>
+                )}
+                {authError && (
+                  <p role="alert">
+                    {authError}{' '}
+                    <IonButton fill="clear" size="small" routerLink="/trabajo/acceso">
+                      Ir a acceso
+                    </IonButton>
+                  </p>
+                )}
+              </>
+            ) : (
+              <>
+                <IonInput
+                  label="Token de laboratorio"
+                  labelPlacement="stacked"
+                  fill="outline"
+                  type="password"
+                  autocomplete="off"
+                  spellcheck={false}
+                  value={token}
+                  disabled={syncing}
+                  onIonInput={(event) => {
+                    setToken(event.detail.value ?? '');
+                    if (scopeMismatch) setOutcome({ kind: 'none' });
+                  }}
+                />
+                <p className="texto-ayuda">
+                  Solo se mantiene en memoria mientras la app está abierta. No se guarda en la base ni en el
+                  repositorio.
+                </p>
+              </>
+            )}
+            <IonButton expand="block" onClick={sync} disabled={!canRun} aria-busy={syncing}>
+              {syncing ? (
+                <>
+                  <IonSpinner name="dots" /> Sincronizando…
+                </>
+              ) : canRetry ? (
+                'Reintentar'
+              ) : (
+                'Sincronizar'
+              )}
+            </IonButton>
+            {!pilot && !syncing && !token.trim() && (
+              <p className="texto-ayuda">Ingresa el token de laboratorio para habilitar la sincronización.</p>
+            )}
+            {!pilot && token.trim() !== '' && !syncing && (
+              <IonButton fill="clear" size="small" onClick={() => setToken('')}>
+                Borrar token
+              </IonButton>
+            )}
+            {result && (
+              <p role="status">
+                Se recibieron {result.appliedRemoteRecords} registro(s) y se enviaron {result.pushedResults} cambio(s).
+              </p>
+            )}
+          </SectionCard>
+
+          {status && status.conflicts > 0 && (
+            <SectionCard title="Conflictos por revisar">
+              <p>
+                {status.conflicts === 1
+                  ? 'Hay 1 conflicto pendiente.'
+                  : `Hay ${status.conflicts} conflictos pendientes.`}{' '}
+                Los cambios locales se conservan hasta que decidas.
+              </p>
+              <IonButton routerLink="/trabajo/conflictos" fill="outline">
+                Revisar conflictos
+              </IonButton>
+            </SectionCard>
+          )}
+
+          <SectionCard title="Datos de trabajo">
+            <IonList>
+              <IonItem routerLink="/trabajo/galpones" detail={true}>
+                <IonLabel>
+                  <h3>Galpones de trabajo</h3>
+                  <p>Consulta local disponible incluso sin conexión.</p>
+                </IonLabel>
+              </IonItem>
+            </IonList>
+          </SectionCard>
+        </PageFrame>
       </IonContent>
     </IonPage>
   );

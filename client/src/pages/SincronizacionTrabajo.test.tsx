@@ -22,11 +22,8 @@ vi.mock('@ionic/react', () => ({
   IonBackButton: ({ text }: any) => <button>{text}</button>,
   IonTitle: ({ children }: any) => <h1>{children}</h1>,
   IonContent: ({ children }: any) => <main>{children}</main>,
-  IonChip: ({ children }: any) => <span>{children}</span>,
-  IonSpinner: () => <span aria-hidden="true" />,
   IonList: ({ children }: any) => <div>{children}</div>,
   IonItem: ({ children, routerLink }: any) => <a href={routerLink}>{children}</a>,
-  IonLabel: ({ children }: any) => <div>{children}</div>,
   IonInput: ({ label, value, onIonInput, disabled }: any) => (
     <input
       aria-label={label}
@@ -45,6 +42,11 @@ vi.mock('@ionic/react', () => ({
       </button>
     ),
   useIonViewWillEnter: vi.fn(),
+
+  IonIcon: ({ icon: _icon }: any) => null,
+  IonSpinner: () => null,
+  IonChip: ({ children }: any) => <span>{children}</span>,
+  IonLabel: ({ children }: any) => <span>{children}</span>,
 }));
 
 const TOKEN = 'lab-token-sintetico-abcdefghijklmnopqrstuvwxyz';

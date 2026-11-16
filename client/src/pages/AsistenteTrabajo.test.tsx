@@ -49,6 +49,9 @@ vi.mock('@ionic/react', () => ({
   IonCardContent: ({ children }: any) => <div>{children}</div>,
   IonList: ({ children }: any) => <div>{children}</div>,
   IonItem: ({ children }: any) => <div>{children}</div>,
+  IonIcon: ({ icon: _icon }: any) => <span data-icon={_icon} />,
+  IonSpinner: () => <span>...</span>,
+  IonChip: ({ children }: any) => <span>{children}</span>,
   IonLabel: ({ children }: any) => <span>{children}</span>,
 }));
 
