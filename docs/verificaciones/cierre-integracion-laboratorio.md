@@ -1,70 +1,73 @@
-# Evidencia: cierre de integración en laboratorio (2026-11-16)
+# Evidencia: cierre de integración en laboratorio (2026-11-16, posterior a #144)
 
-Estado: **PARCIAL Y EXPLÍCITO**. Windows verificado, Android bloqueado, ETL sintético verificado, RF/RAG no disponibles. Todo con datos sintéticos y PostgreSQL temporal; sin datos reales ni despliegue.
+Estado: **PARCIAL Y EXPLÍCITO**. Windows verificado; Android bloqueado por toolchain; ETL de plataforma verificado con lotes sintéticos; ETL real, RF y RAG no verificables con lo disponible. Sin datos reales, sin despliegue y sin merge.
 
-## 1. Windows (Electron, perfil aislado) — HECHO
+Base: `dev` `35a2826` (PR #144 fusionado). Rama de esta entrega: `test/integracion-piloto-laboratorio`.
 
-Fixture publicado por el contrato D1 (`publicar_cambios`) en un ámbito sintético con tres animales: cuarto parto con fecha, cuarto parto sin fecha y un parto con dos abortos declarados.
+## 1. Inventario real de entregas
 
-| Paso | Resultado observado |
-| --- | --- |
-| Login admin | Sesión por instalación, ámbito correcto |
-| Declarar evidencia (`abortos=2`) | Estado `DECLARADA` visible en la pantalla de evaluación |
-| Revisar evidencia (admin) | Estado `REVISADA` |
-| Evaluar reproductora | `PROVISIONAL`, calidad `REVISAR\|PROPUESTA`, "no modificada" la categoría |
-| Ficha tras sincronizar | Chip `Provisional`, "Propuesta pendiente de validación", "Sin clase definitiva", sin recomendaciones |
-| Cerrar y reabrir | El estado provisional persiste en la ficha |
-| Cuarto parto con fecha | `DESCARTE` confirmada, alerta con causa `2026-01-10` y límite `2026-01-30` |
-| Cuarto parto sin fecha | Confirmada; "Fecha del cuarto parto pendiente de validar"; **sin** fecha límite inventada |
-| Viewer | Consulta y sincroniza; sin botones de declarar, revisar ni evaluar oficial |
-| Demo | Separada de Trabajo |
+| Componente | Qué existe en el checkout | ¿Ejecutable? | Veredicto |
+| --- | --- | --- | --- |
+| ETL de features (`ml/etl/`) | `config`, `extract`, `transform`, `load`; lee los Excel de `db/raw_Lope` | Solo con los Excel reales | **No ejecutado**: prohibido usar datos reales. Es librería, no CLI |
+| Orquestador de promoción (`tools/lope_import/`) | CLI con manifiesto, `promote_batch` y `publicar_con_d1` | Sí, con manifiesto sintético | **Verificado** (plataforma, no ETL de Diery) |
+| Random Forest (`ml/model/`) | `train.py`, `evaluate.py`, `dataset.py` | Entrenamiento, no inferencia | Artefacto **no versionado** |
+| Metadata RF (`ml/models/metadata.json`) | `dataset_sha256 9268ba03…`, métricas de experimentos | — | Es un registro de experimento, **no un modelo** |
+| RAG (`rag/src/`, `rag/ask.py`) | chunk, embed, index, retrieve, generate | Requiere corpus + venv + pgvector | **No verificado**: falta corpus autorizado y entorno |
+| Migración RAG | `db/migrations/central/0003_rag_e5_embeddings.sql` | Sí | Esquema disponible |
 
-La categoría y la alerta solo aparecieron con fundamento confirmado. La propuesta de dos abortos no escribió `categoria_ml` ni creó alerta.
+Lo que debe entregar Diery para cerrar la integración real:
 
-### Defecto encontrado y corregido en esta fase
+1. Artefacto RF autorizado (`.joblib`) con versión y hash, más la ruta de configuración (`CUYIELITE_RF_MODEL_PATH`).
+2. Corpus autorizado para RAG (el manual del SENA) y decisión explícita de indexarlo en laboratorio, con el modelo de embeddings permitido.
+3. Confirmación de si `ml/etl` debe ejecutarse contra los Excel reales desde el orquestador, o si la promoción se hace siempre por manifiesto.
 
-El validador local del feed derivado solo aceptaba `DEFINITIVA` y `DATOS_INSUFICIENTES`; al recibir `PROVISIONAL` abortaba la página y **no avanzaba el cursor**, por lo que la ficha nunca mostraba el estado provisional. Se corrigió la validación y se agregó regresión: el pull acepta `PROVISIONAL` y `EVIDENCIA_NO_VALIDADA`.
+## 2. Matriz de escenarios
 
-## 2. Android (Pixel_36) — BLOQUEADO
+| Escenario | Plataforma | Datos | Resultado |
+| --- | --- | --- | --- |
+| Declarar/revisar evidencia y evaluar reproductora | Windows | Sintéticos | HECHO |
+| Provisional por dos abortos (ficha tras reabrir) | Windows | Sintéticos | HECHO |
+| Cuarto parto con fecha y sin fecha | Windows | Sintéticos | HECHO |
+| Viewer sin escritura | Windows | Sintéticos | HECHO |
+| Demo separada | Windows | Sintéticos | HECHO |
+| Mismos escenarios en Android | Android | — | **NO EJECUTADO (bloqueo de toolchain)** |
+| Dry-run, rollback, idempotencia, D1 | PostgreSQL temporal | Sintéticos | HECHO |
+| Evidencia declarada no habilita / revisada habilita | PostgreSQL temporal | Sintéticos | HECHO |
+| RF real | — | — | NO EJECUTADO (sin artefacto) |
+| RAG real | — | — | NO EJECUTADO (sin corpus/entorno) |
+| RAG indisponibilidad | Dobles de prueba | — | HECHO (10 pruebas de endpoint) |
 
-- Emulador conectado (`emulator-5554`), APK de piloto instalado sobre los datos existentes. Memoria libre del host: **~640 MB**.
-- La app restaura una sesión anterior de otro ámbito (`admin-lope`, ámbito `7c1e5d10…`) mientras su SQLite local está vinculado al ámbito del Pixel (`1fa8fd97…`). El inicio de sesión nuevo no reemplazó la sesión y la sincronización falló por el desajuste de ámbito.
-- No se limpió ni reinició Pixel_36 porque la consigna prohíbe borrar sus datos, y borrar la app eliminaría la evidencia previa. **Android queda pendiente**, sin declarar verificado.
+## 3. Windows
 
-## 3. ETL sintético — HECHO
+- No hay instalación en Registro ni en `Programs`: el mecanismo es la carpeta portable `client/electron/dist/win-unpacked`.
+- Se reconstruyó desde `dev` `35a2826` (`build:electron`, `build:migration`, `sync:electron`, vendor y `electron-builder --dir`).
+- El perfil real había quedado desplazado en la sesión anterior (`CuyiElite.real-backup-integral`). Se restauró: `trabajo.db` de 147456 bytes con fecha 12/11/2026 intacta.
+- La app reabre con ese perfil y muestra la pantalla de acceso sin errores.
+- El recorrido funcional (provisional, confirmada, sin fecha, viewer) se ejecutó en un perfil aislado con datos sintéticos y ya está documentado en la sección 1 de la evidencia previa.
 
-Ejecutado sobre PostgreSQL temporal aislado (`cuyelite_cierre_*`), sin Excel reales:
+## 4. Android (Pixel_36) — BLOQUEADO
+
+Se intentó una instalación de prueba separada sin tocar los datos existentes:
+
+1. Se agregó un `applicationIdSuffix` condicional en `build.gradle` para compilar una variante `.lab`; **se revirtió** porque el build falla en este entorno.
+2. Causa del fallo de build: el JBR de Android Studio es **Java 25** y Gradle no puede compilar el script (`Unsupported class file major version 69`); con **Java 17** el build falla en `compileDebugJavaWithJavac` (`invalid source release: 21`) porque Capacitor 8 exige Java 21. **No hay JDK 21 instalado** y no se instalan dependencias sin autorización.
+3. Alternativa probada: usuario secundario de Android (`pm create-user LabCuyi`). El paquete se instaló para el usuario 10, pero `am start` devolvió `Error type 3` y la actividad no abrió.
+4. Se volvió al usuario 0 (`cmd activity switch-user 0`) y se verificó que los datos del Pixel siguen intactos: `cuyieliteSQLite.db` (28672, 03/11), `pocSQLite.db` (12288, 03/11) y `trabajoSQLite.db` (163840, 16/11).
+5. **Efecto residual**: el usuario 10 `LabCuyi` quedó creado y `pm remove-user 10` falla mientras el sistema lo mantiene en ejecución. Requiere un reinicio del emulador para eliminarlo, y reiniciarlo estaba prohibido en esta tarea. Comando exacto para limpiar: `adb shell pm remove-user 10` tras reiniciar el emulador.
+
+Para retomar Android hace falta una de estas dos cosas: un JDK 21 en el entorno, o autorización para reiniciar el emulador y limpiar el usuario 10.
+
+## 5. ETL de plataforma y reglas
 
 ```text
-pytest tools/lope_import/tests/test_promote.py tools/db_migrate/tests -q   29 passed
+pytest tools/lope_import/tests tools/db_migrate/tests   55 passed
+pytest backend/tests/test_ml_endpoints.py                10 passed
 ```
 
-Cubre dry-run sin persistencia, rollback total tras publicar, idempotencia, publicación D1 y migraciones.
+Cubre promoción transaccional, dry-run, rollback total, idempotencia, publicación D1, migraciones y la ruta de indisponibilidad de ML/RAG. La prueba de integración de evidencia declarada/revisada vive en `backend/tests/test_evaluation_persistence.py`.
 
-Se agregó una prueba de integración (`backend/tests/test_evaluation_persistence.py`) que publica el animal por `publicar_cambios`, declara `abortos=0` y comprueba que la evaluación queda en `EVIDENCIA_NO_VALIDADA` sin categoría; luego revisa el mismo dato como admin y obtiene `DEFINITIVA` con `categoria_ml=NORMAL` y versión nueva.
+## 6. Límites
 
-### Corrección del arnés
-
-Las guardas de `tools/db_migrate/tests` y `tools/lope_import/tests` exigían una base llamada literalmente `cuyelite_test`, lo que impedía usar instancias temporales únicas. Se cambiaron por una regla acotada: host local y nombre con prefijo `cuyelite_`/`cuyielite_`, con lista de bases protegidas (`cuyelite`, `cuyelite_pilot`, `cuyelite_lope`, `postgres`). No se usó ninguna base compartida.
-
-## 4. Recorrido integral — PARCIAL
-
-Windows cubrió publicación → evaluación → categoría/alerta → feed derivado → cliente → reapertura. La secuencia completa con carga por ETL real no se ejecutó porque el ETL de Diery no está disponible como componente ejecutable en el repo.
-
-## 5. RF y RAG — NO DISPONIBLES
-
-- `ml/models` contiene solo `metadata.json`: no hay artefacto `.joblib`.
-- No hay corpus ni embeddings autorizados en `rag/`.
-- No se ejecutó integración real. Solo existe la ruta de indisponibilidad ya probada con dobles; no se declara verificada.
-
-## 6. Suites y builds de HEAD
-
-```text
-pytest backend/tests/test_evaluation_persistence.py     15 passed
-pytest tools/lope_import/tests tools/db_migrate/tests   29 passed
-vitest work.derived.apply.test.ts                        7 passed
-npm run build (Android web) / assembleDebug              OK
-electron-builder --dir                                   OK
-```
-
-No se repitieron suites completas sin cambios; el resto de la evidencia previa sigue vigente.
+- No se ejecutó el ETL de Diery sobre Excel reales, ni el RF real, ni el RAG real.
+- No se completó el recorrido Android.
+- Las capturas y logs de esta sesión quedaron en el directorio temporal; no se versionan.

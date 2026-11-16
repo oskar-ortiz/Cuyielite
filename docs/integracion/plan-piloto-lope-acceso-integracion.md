@@ -16,6 +16,12 @@ Actualización: 2026-11-15. Plan recomendado por Codex a partir de respuestas de
 No se declara aprobación del diseño ni cierre del piloto. El código de acceso vive en la rama `feat/piloto-auth-integracion`; no se fusiona aquí.
 
 
+## 0. Estado posterior a #144 (2026-11-16)
+
+HECHO: acceso admin/viewer, evaluacion oficial/provisional con evidencia revisable, feed derivado v3 de solo lectura, UI de ficha y evaluacion, herramienta de alertas antiguas. Verificado en Windows con datos sinteticos.
+
+PENDIENTE: recorrido Android (bloqueado por falta de JDK 21 y por el usuario de prueba residual del emulador), ETL real de Diery sobre Excel, artefacto RF, corpus RAG y despliegue. Ver `docs/verificaciones/cierre-integracion-laboratorio.md`.
+
 ## 1. Base que se conserva
 
 Conservar PostgreSQL central, SQLite de Trabajo, Demo separada, publicación D1, sincronización v1/v2, cursores independientes, outbox/inbox, referencias, recibos y resolución explícita de conflictos. Oskar confirmó los merges hasta #132; no se volvieron a auditar.
