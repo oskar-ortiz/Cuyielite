@@ -1,3 +1,4 @@
+import { pullDerivedUntilCheckpoint } from './work.derived.apply.js';
 import type { MigrationDb } from './work.migration.js';
 import { prepareEligible, sendPrepared, type FrozenRequest, type SyncProtocol } from './work.sync.client.js';
 import { initializeWorkSyncDatabase } from './work.sync.migration.js';
@@ -73,6 +74,9 @@ export interface SyncCycleResult {
   pending: number;
   conflicts: number;
   rejected: number;
+  derivedApplied: number;
+  derivedPages: number;
+  derivedAvailable: boolean;
 }
 
 async function sendWithRetry<T>(
@@ -168,6 +172,31 @@ export async function runSyncCycle(
 
     const after = await syncPage();
     const afterV2 = syncPageV2 ? await syncPageV2() : null;
+    // Feed derivado: solo lectura, disponible también para el viewer. Un servidor
+    // anterior sin protocolo 3 no rompe la sincronización de dominio.
+    let derivedApplied = 0;
+    let derivedPages = 0;
+    let derivedAvailable = false;
+    if (transport.pullDerived) {
+      try {
+        const derived = await pullDerivedUntilCheckpoint(
+          db,
+          context.scope_id,
+          (cursor, pageLimit) => transport.pullDerived!(token, cursor, pageLimit),
+          limit,
+        );
+        derivedApplied = derived.applied;
+        derivedPages = derived.pages;
+        derivedAvailable = true;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (/HTTP 404|HTTP 400/.test(message)) {
+          derivedAvailable = false;
+        } else {
+          throw error;
+        }
+      }
+    }
     const counts = await one(
       db,
       'SELECT COUNT(*) AS pending, ' +
@@ -190,6 +219,9 @@ export async function runSyncCycle(
       pending: Number(counts?.pending ?? 0),
       conflicts: Number(counts?.conflicts ?? 0),
       rejected: Number(counts?.rejected ?? 0),
+      derivedApplied,
+      derivedPages,
+      derivedAvailable,
     };
   } finally {
     activeDatasets.delete(identity.datasetId);
