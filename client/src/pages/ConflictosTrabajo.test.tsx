@@ -26,10 +26,8 @@ vi.mock('@ionic/react', () => ({
   IonBackButton: ({ text }: any) => <button>{text}</button>,
   IonTitle: ({ children }: any) => <h1>{children}</h1>,
   IonContent: ({ children }: any) => <main>{children}</main>,
-  IonChip: ({ children }: any) => <span>{children}</span>,
   IonList: ({ children }: any) => <div>{children}</div>,
   IonItem: ({ children }: any) => <div>{children}</div>,
-  IonLabel: ({ children }: any) => <div>{children}</div>,
   IonSelect: ({ label, value, onIonChange, children }: any) => (
     <select
       aria-label={label}
@@ -60,7 +58,12 @@ vi.mock('@ionic/react', () => ({
     </button>
   ),
   useIonViewWillEnter: vi.fn(),
-}));
+
+  IonIcon: ({ icon: _icon }: any) => null,
+  IonSpinner: () => null,
+  IonChip: ({ children }: any) => <span>{children}</span>,
+  IonLabel: ({ children }: any) => <span>{children}</span>,
+})); 
 
 const review = {
   entity: 'galpon' as const,

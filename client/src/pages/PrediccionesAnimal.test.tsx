@@ -48,11 +48,13 @@ vi.mock('@ionic/react', () => ({
   IonCardHeader: ({ children }: any) => <div>{children}</div>,
   IonCardTitle: ({ children }: any) => <h2>{children}</h2>,
   IonCardContent: ({ children }: any) => <div>{children}</div>,
-  IonChip: ({ children }: any) => <span>{children}</span>,
   IonList: ({ children }: any) => <div>{children}</div>,
   IonItem: ({ children }: any) => <div>{children}</div>,
+  IonIcon: ({ icon: _icon }: any) => <span data-icon={_icon} />,
+  IonSpinner: () => <span>...</span>,
+  IonChip: ({ children }: any) => <span>{children}</span>,
   IonLabel: ({ children }: any) => <span>{children}</span>,
-}));
+})); 
 
 vi.mock('../data/ml.transport', async (importOriginal) => {
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports

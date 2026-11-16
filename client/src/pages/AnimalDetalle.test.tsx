@@ -25,15 +25,18 @@ vi.mock('@ionic/react', () => ({
   IonButton: ({ children }: any) => <button type="button">{children}</button>,
   IonBackButton: () => null,
   IonItem: ({ children }: any) => <li>{children}</li>,
-  IonLabel: ({ children }: any) => <span>{children}</span>,
   IonList: ({ children }: any) => <ul>{children}</ul>,
+  IonIcon: ({ icon: _icon }: any) => <span data-icon={_icon} />,
+  IonSpinner: () => <span>...</span>,
   IonChip: ({ children }: any) => <span>{children}</span>,
+  IonLabel: ({ children }: any) => <span>{children}</span>,
   useIonViewWillEnter: () => undefined,
-}));
+})); 
 
 vi.mock('../data/auth.session', () => ({
   snapshot: () => ({ canWrite: false, user: { username: 'consulta-lope', role: 'viewer' }, role: 'viewer' }),
-}));
+
+  IonLabel: ({ children }: any) => <span>{children}</span>,}));
 
 vi.mock('../data/work.domain.factory', () => ({
   getDomainRepository: () => ({
