@@ -55,6 +55,7 @@ def lab(monkeypatch):
     with psycopg.connect(url) as conn:
         conn.execute("DELETE FROM sync_derived_changes WHERE scope_id=%s", (scope_id,))
         conn.execute("DELETE FROM sync_changes WHERE scope_id=%s", (scope_id,))
+        conn.execute("DELETE FROM evidencias_evaluacion WHERE scope_id=%s", (scope_id,))
         conn.execute("DELETE FROM alertas WHERE scope_id=%s", (scope_id,))
         conn.execute("DELETE FROM partos WHERE scope_id=%s", (scope_id,))
         conn.execute("DELETE FROM cuyes WHERE scope_id=%s", (scope_id,))

@@ -35,7 +35,7 @@ from backend.app.services.publication import (
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DDL_DIR = REPO_ROOT / "db" / "ddl" / "central"
 SIGNING_KEY = "synthetic-test-key-never-for-production-0123456789"
-MAX_EXPECTED_MIGRATION = "0007_evaluacion_alertas.sql"
+MAX_EXPECTED_MIGRATION = "0008_evidencia_revisable.sql"
 
 
 def _base_url() -> str:
