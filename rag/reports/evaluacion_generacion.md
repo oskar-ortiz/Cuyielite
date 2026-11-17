@@ -1,6 +1,11 @@
 # Evaluación de generación RAG
 
-- Estado: completada; respuestas medidas localmente, pendientes de calificación manual.
+- Estado de generación: completada; respuestas medidas localmente.
+- Estado de calificación: calificación completa en la tabla (25/25); trazabilidad incompleta.
+- Conteos: 23 correcta, 2 parcial, 0 incorrecta, 0 pendiente (n=25).
+- Criterios: correcta = respuesta respaldada por el manual y sus fuentes (una pregunta fuera de corpus debe abstenerse); parcial = pertinente pero incompleta o débilmente sustentada; incorrecta = falsa, no sustentada o no se abstiene cuando corresponde.
+- Fecha de calificación: No registrada en el informe.
+- Revisor de calificación: No identificado en el informe.
 - Preguntas: 25 (20 del corpus y 5 fuera de corpus).
 - Proveedor: `ollama`.
 - Modelo configurado: `qwen2.5:7b-instruct`.

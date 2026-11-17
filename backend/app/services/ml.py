@@ -152,16 +152,16 @@ def load_candidate_model(path: str | None = None) -> Any | None:
     configured = path if path is not None else os.environ.get("CUYIELITE_RF_MODEL_PATH")
     if not configured:
         return None
-    if not os.path.exists(configured):
-        raise MlFalloInterno("El artefacto del modelo está configurado pero no existe")
     try:
-        import joblib  # type: ignore[import-not-found]
+        from ml.model.artifact import ModelArtifactError, load_verified_model
     except ImportError as error:
-        raise MlFalloInterno("joblib no está disponible para cargar el modelo") from error
+        raise MlFalloInterno(
+            "No está disponible el verificador del artefacto RF."
+        ) from error
     try:
-        return joblib.load(configured)
-    except Exception as error:  # artefacto defectuoso ≠ ausencia
-        raise MlFalloInterno("No se pudo cargar el artefacto del modelo") from error
+        return load_verified_model(configured)
+    except ModelArtifactError as error:
+        raise MlFalloInterno(str(error)) from error
 
 
 def _real_hembra(datos: dict[str, Any]) -> Any:

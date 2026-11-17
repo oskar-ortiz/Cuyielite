@@ -1,0 +1,47 @@
+contract: rag_validation_questions/v1
+preguntas:
+  - pregunta: ""
+    paginas_esperadas: []
+    fuera_de_corpus: false
+  - pregunta: ""
+    paginas_esperadas: []
+    fuera_de_corpus: false
+  - pregunta: ""
+    paginas_esperadas: []
+    fuera_de_corpus: false
+  - pregunta: ""
+    paginas_esperadas: []
+    fuera_de_corpus: false
+  - pregunta: ""
+    paginas_esperadas: []
+    fuera_de_corpus: false
+  - pregunta: ""
+    paginas_esperadas: []
+    fuera_de_corpus: false
+  - pregunta: ""
+    paginas_esperadas: []
+    fuera_de_corpus: false
+  - pregunta: ""
+    paginas_esperadas: []
+    fuera_de_corpus: false
+  - pregunta: ""
+    paginas_esperadas: []
+    fuera_de_corpus: false
+  - pregunta: ""
+    paginas_esperadas: []
+    fuera_de_corpus: false
+  - pregunta: ""
+    paginas_esperadas: []
+    fuera_de_corpus: true
+  - pregunta: ""
+    paginas_esperadas: []
+    fuera_de_corpus: true
+  - pregunta: ""
+    paginas_esperadas: []
+    fuera_de_corpus: true
+  - pregunta: ""
+    paginas_esperadas: []
+    fuera_de_corpus: true
+  - pregunta: ""
+    paginas_esperadas: []
+    fuera_de_corpus: true

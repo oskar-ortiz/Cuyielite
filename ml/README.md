@@ -111,6 +111,35 @@ del endpoint. Por esto, el Random Forest es solo apoyo exploratorio hasta
 alinear las etiquetas del ETL con esos criterios; sus probabilidades no deben
 anular las reglas.
 
+### Entrenamiento autorizado y artefacto verificable
+
+`ml.model.train` genera el modelo B y, por defecto, registra en
+`ml/models/metadata.json` el SHA-256, fecha, semilla, versiones, métricas y
+conteos agregados. El artefacto `*.joblib` está ignorado por Git; configura la
+ruta autorizada antes de entrenar:
+
+```powershell
+$env:CUYIELITE_RF_MODEL_PATH = "RUTA_AUTORIZADA\candidate_random_forest_b.joblib"
+.\.venv\Scripts\python.exe -m ml.model.train `
+  --data-dir "RUTA_AUTORIZADA\features" `
+  --model-dir "ml\models"
+```
+
+La carpeta de datos debe contener `features_crias_etiquetadas.csv` y
+`features_reproductoras_etiquetadas.csv`. No ejecutes el entrenamiento con datos
+reales hasta contar con autorización y respaldo verificable. Al cargar el modelo,
+el backend compara su hash con el de metadata y falla explícitamente si falta o
+no coincide. Para una instalación fuera de la ruta predeterminada, se puede
+configurar `CUYIELITE_RF_METADATA_PATH` con la ubicación autorizada de metadata.
+
+La validación experta ciega y sus comandos están en
+[`ml/validacion_experta/README.md`](./validacion_experta/README.md). Las pruebas
+de artefacto, metadatos y métricas usan datos sintéticos:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest ml\tests\test_model.py ml\tests\test_artifact.py ml\tests\test_validacion_experta.py -q
+```
+
 Validación de estas funciones:
 
 ```powershell

@@ -32,6 +32,7 @@ DEFAULT_PARAM_GRID = {
 }
 METRICS = ("precision", "recall", "f1")
 LABEL_ORDER = ("NORMAL", "ELITE")
+RANDOM_SEED = 42
 ELITE_F1_SCORER = make_scorer(
     f1_score,
     pos_label="ELITE",
@@ -67,7 +68,7 @@ def build_pipeline(features: tuple[str, ...]) -> Pipeline:
     preprocessor = ColumnTransformer(transformers, remainder="drop")
     classifier = RandomForestClassifier(
         class_weight="balanced",
-        random_state=42,
+        random_state=RANDOM_SEED,
         n_jobs=1,
     )
     return Pipeline([("preprocessor", preprocessor), ("classifier", classifier)])
@@ -231,7 +232,7 @@ def evaluate_experiment(
     *,
     n_splits: int = 5,
     inner_splits: int = 3,
-    random_state: int = 42,
+    random_state: int = RANDOM_SEED,
     param_grid: dict[str, tuple[Any, ...]] | None = None,
 ) -> dict[str, Any]:
     """Tune and evaluate with mother groups held out from every fold."""
@@ -344,7 +345,7 @@ def fit_final_model(
     groups: pd.Series,
     *,
     inner_splits: int = 5,
-    random_state: int = 42,
+    random_state: int = RANDOM_SEED,
     param_grid: dict[str, tuple[Any, ...]] | None = None,
 ) -> GridSearchCV:
     """Tune and refit the deployable B model with mother-grouped folds."""

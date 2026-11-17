@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import hashlib
 from collections.abc import Sequence
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
 from psycopg import Connection
 
-from rag.src.chunk import Chunk
+if TYPE_CHECKING:
+    from rag.src.chunk import Chunk
 
 
 class PassageEmbedder(Protocol):

@@ -8,14 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-import psycopg
-import yaml
-
-from rag.src.embed import E5Embedder
-from rag.src.chunk import chunk_pages
-from rag.src.extract import extract_pages
-from rag.src.lexical import BM25Retriever
-from rag.src.retrieve import retrieve, validate_top_k
+from rag.eval.metrics import calculate_metrics
 
 
 RAG_DIR = Path(__file__).resolve().parents[1]
@@ -54,25 +47,6 @@ def _partition_cases(
     if not valid_cases or not out_of_corpus_cases:
         raise ValueError("Se requieren preguntas válidas y preguntas fuera de corpus")
     return valid_cases, out_of_corpus_cases
-
-
-def calculate_metrics(
-    cases: list[dict[str, Any]],
-    retrieved_pages: list[list[int]],
-) -> dict[str, float]:
-    if len(cases) != len(retrieved_pages) or not cases:
-        raise ValueError("Se requiere una lista no vacía de resultados, uno por pregunta")
-    expected = [set(case["paginas_esperadas"]) for case in cases]
-    metrics: dict[str, float] = {}
-    for cutoff in (1, 3, 5):
-        hits = sum(bool(expected_pages.intersection(pages[:cutoff])) for expected_pages, pages in zip(expected, retrieved_pages))
-        metrics[f"hit@{cutoff}"] = hits / len(cases)
-    reciprocal_ranks = []
-    for expected_pages, pages in zip(expected, retrieved_pages):
-        rank = next((position for position, page in enumerate(pages, start=1) if page in expected_pages), None)
-        reciprocal_ranks.append(1 / rank if rank is not None else 0.0)
-    metrics["MRR"] = sum(reciprocal_ranks) / len(reciprocal_ranks)
-    return metrics
 
 
 def calibrate_threshold(
@@ -149,6 +123,8 @@ def _unique_pages(results: list[Any]) -> list[int]:
 
 
 def _load_cases() -> list[dict[str, Any]]:
+    import yaml
+
     with QUESTIONS_FILE.open("r", encoding="utf-8") as file:
         data = yaml.safe_load(file)
     if not isinstance(data, dict) or not isinstance(data.get("preguntas"), list):
@@ -166,9 +142,11 @@ def _load_cases() -> list[dict[str, Any]]:
 
 def run_evaluation(
     cases: list[dict[str, Any]],
-    connection: psycopg.Connection[Any],
-    embedder: E5Embedder,
+    connection: Any,
+    embedder: Any,
 ) -> tuple[dict[str, float], ThresholdCalibration]:
+    from rag.src.retrieve import retrieve
+
     valid_cases, out_of_corpus_cases = _partition_cases(cases)
     valid_results = [
         retrieve(
@@ -261,6 +239,10 @@ def write_report(
 
 
 def run_lexical_evaluation(cases: list[dict[str, Any]]) -> dict[str, float]:
+    from rag.src.chunk import chunk_pages
+    from rag.src.extract import extract_pages
+    from rag.src.lexical import BM25Retriever
+
     repository_root = RAG_DIR.parent
     pdf_path = repository_root / "db" / "raw_Lope" / "produccion_cuyes.pdf"
     chunks = chunk_pages(extract_pages(pdf_path))
@@ -290,6 +272,11 @@ def main() -> None:
                 raise RuntimeError("Configura RAG_DATABASE_URL para evaluar PostgreSQL")
             embedding_note = "no se configuró RAG_DATABASE_URL."
         else:
+            import psycopg
+
+            from rag.src.embed import E5Embedder
+            from rag.src.retrieve import validate_top_k
+
             validate_top_k(5)
             embedder = E5Embedder()
             with psycopg.connect(url) as connection:

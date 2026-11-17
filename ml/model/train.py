@@ -3,13 +3,22 @@
 import argparse
 from datetime import date
 import json
+import os
 from pathlib import Path
 import platform
 from typing import Any
 
 import joblib
+import numpy
+import pandas
 import sklearn
 
+from ml.model.artifact import (
+    DEFAULT_MODEL_PATH,
+    METADATA_PATH_ENV,
+    MODEL_PATH_ENV,
+    write_model_metadata,
+)
 from ml.model.dataset import (
     FEATURES_A,
     FEATURES_B,
@@ -17,13 +26,32 @@ from ml.model.dataset import (
     load_dataset,
     reproductive_label_counts,
 )
-from ml.model.evaluate import evaluate_experiment, fit_final_model
+from ml.model.evaluate import RANDOM_SEED, evaluate_experiment, fit_final_model
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DATA_DIR = REPOSITORY_ROOT / "ml" / "data"
 DEFAULT_MODEL_DIR = REPOSITORY_ROOT / "ml" / "models"
 DEFAULT_REPORT = REPOSITORY_ROOT / "ml" / "reports" / "informe_metricas.md"
+
+
+def _aggregate_dataset_stats(stats: dict[str, Any]) -> dict[str, Any]:
+    allowed = {
+        "rows_total",
+        "rows_eligible_before_dedup",
+        "rows_used",
+        "class_counts",
+        "excluded_no_aplica",
+        "excluded_review",
+        "excluded_duplicate_conflict",
+        "excluded_other_unlabeled",
+        "duplicate_rows_removed",
+        "cross_source_duplicate_ids",
+        "rows_without_usable_identity",
+        "rows_excluded_missing_mother",
+        "mother_groups",
+    }
+    return {key: stats[key] for key in allowed if key in stats}
 
 
 def _markdown_table(headers: list[str], rows: list[list[Any]]) -> str:
@@ -253,6 +281,7 @@ def train(
     data_dir: Path = DEFAULT_DATA_DIR,
     model_dir: Path = DEFAULT_MODEL_DIR,
     report_path: Path = DEFAULT_REPORT,
+    artifact_path: Path | None = None,
 ) -> dict[str, Any]:
     dataset: CandidateDataset = load_dataset(data_dir / "features_crias_etiquetadas.csv")
     if dataset.groups is None:
@@ -269,30 +298,43 @@ def train(
         data_dir / "features_reproductoras_etiquetadas.csv"
     )
     final_search = fit_final_model(
-        dataset.features_b, dataset.labels, FEATURES_B, dataset.groups
+        dataset.features_b,
+        dataset.labels,
+        FEATURES_B,
+        dataset.groups,
+        random_state=RANDOM_SEED,
     )
 
     model_dir.mkdir(parents=True, exist_ok=True)
-    model_path = model_dir / "candidate_random_forest_b.joblib"
+    configured_artifact = (
+        artifact_path
+        or (Path(os.environ[MODEL_PATH_ENV]).expanduser() if os.getenv(MODEL_PATH_ENV) else None)
+    )
+    model_path = configured_artifact or model_dir / DEFAULT_MODEL_PATH.name
+    model_path.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(final_search.best_estimator_, model_path)
 
     metadata = {
         "model": "RandomForestClassifier",
         "primary_experiment": "B_nacimiento",
         "date": date.today().isoformat(),
+        "random_seed": RANDOM_SEED,
         "versions": {
             "python": platform.python_version(),
             "scikit_learn": sklearn.__version__,
+            "numpy": numpy.__version__,
+            "pandas": pandas.__version__,
+            "joblib": joblib.__version__,
         },
         "dataset_sha256": dataset.sha256,
-        "dataset": dataset.stats,
+        "dataset": _aggregate_dataset_stats(dataset.stats),
         "protocol": {
             "outer": "StratifiedGroupKFold",
             "outer_folds": 5,
             "inner_cv": "StratifiedGroupKFold",
             "inner_folds": 3,
             "scoring": "f1 (pos_label=ELITE)",
-            "random_state": 42,
+            "random_state": RANDOM_SEED,
             "grouping": "MADRE No. (código crudo)",
             "search_grid": {
                 "n_estimators": [100, 200],
@@ -310,11 +352,10 @@ def train(
     }
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(render_report(metadata), encoding="utf-8")
-    (model_dir / "metadata.json").write_text(
-        json.dumps(metadata, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
+    metadata_path = Path(
+        os.getenv(METADATA_PATH_ENV, str(model_dir / "metadata.json"))
     )
-    return metadata
+    return write_model_metadata(model_path, metadata, metadata_path)
 
 
 def main() -> None:
@@ -323,9 +364,15 @@ def main() -> None:
     )
     parser.add_argument("--data-dir", type=Path, default=DEFAULT_DATA_DIR)
     parser.add_argument("--model-dir", type=Path, default=DEFAULT_MODEL_DIR)
+    parser.add_argument(
+        "--artifact",
+        type=Path,
+        default=None,
+        help=f"Ruta del artefacto RF (también configurable con {MODEL_PATH_ENV}).",
+    )
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
     args = parser.parse_args()
-    metadata = train(args.data_dir, args.model_dir, args.report)
+    metadata = train(args.data_dir, args.model_dir, args.report, args.artifact)
     print(
         json.dumps(
             {

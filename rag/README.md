@@ -89,7 +89,28 @@ rag\.venv\Scripts\python -m rag.eval.evaluate_generation
 ```
 
 El informe queda en `rag/reports/evaluacion_generacion.md`; sus respuestas se
-acortan y la columna de calificación se deja vacía.
+acortan y la columna de calificación se deja vacía. Para recalcular estado y
+conteos después de que el revisor edite esa columna, sin ejecutar RAG ni cambiar
+calificaciones:
+
+```powershell
+rag\.venv\Scripts\python -m rag.eval.evaluate_generation --refresh-review-summary
+```
+
+La fecha y el revisor no se infieren; deben quedar registrados por quien hizo la
+revisión.
+
+La validación independiente usa `rag/eval/preguntas_validacion.yaml`. Completa
+10 preguntas nuevas con sus páginas esperadas y 5 fuera de corpus sin páginas;
+la plantilla vacía no se puede evaluar. Requiere `RAG_DATABASE_URL` y aplica el
+umbral actual de `RAG_MIN_SIMILARITY` o el predeterminado, sin recalibrarlo:
+
+```powershell
+rag\.venv\Scripts\python -m rag.eval.evaluate_validation
+```
+
+El informe separado `rag/reports/evaluacion_validacion.md` contiene hit@1/3/5,
+MRR y tasas de abstención por conjunto, sin preguntas ni fragmentos.
 
 La línea base léxica no requiere PostgreSQL ni modelos:
 
