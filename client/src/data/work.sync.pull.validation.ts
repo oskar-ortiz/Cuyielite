@@ -171,7 +171,9 @@ const DATA_VALIDATORS: Record<Entity, (data: Record<string, unknown>) => boolean
     isDecimal(data.peso_gramos) &&
     isTextOrNull(data.etapa, 20) &&
     isUuidOrNull(data.parto_id) &&
-    isUuidOrNull(data.evento_id),
+    isUuidOrNull(data.evento_id) &&
+    // Espejo de la restricción central pesajes_contexto_exclusivo_chk (0005).
+    !(data.parto_id !== null && data.evento_id !== null),
   eventos: (data) =>
     isUuid(data.cuy_id) &&
     typeof data.tipo === 'string' &&

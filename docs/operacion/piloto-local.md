@@ -9,7 +9,7 @@ Estado: **OPERATIVO EN ESTA MÁQUINA**. No autoriza una carga real de datos del 
 | Base de la aplicación | `cuyielite`, contenedor `cuyielite-db-1`, imagen `pgvector/pgvector:pg16`, volumen persistente `pgdata` |
 | Puerto de la base | `5434` (variable `DB_PORT`). El puerto 5432 ya está ocupado por el PostgreSQL nativo de Windows y el 5433 por `cuyielite-s3-test`; ninguno de los dos se tocó |
 | Base del corpus RAG | `cuyielite_rag`, misma instancia, bootstrap y migraciones propios; separada de los registros productivos |
-| Esquema | bootstrap `db/ddl/central/*.sql` + migraciones `0001`–`0009` (8 aplicadas; `0005` no existe en el repositorio) |
+| Esquema | bootstrap `db/ddl/central/*.sql` + migraciones `0001`-`0009` (las 9 aplicadas, incluida `0005_pesajes_check.sql`) |
 | Ámbito | Un solo `sync_scopes` llamado **Centro Lope** para ambos galpones. El UUID se entrega en el archivo privado de credenciales, no se versiona |
 | Cuentas de la app | `lope.admin` (admin) y `lope.viewer` (viewer), contraseñas aleatorias |
 | Acceso técnico del ETL | Rol PostgreSQL `cuyielite_etl`, separado de las cuentas personales; contraseña aleatoria |
@@ -69,7 +69,7 @@ Un único punto de control, con tres acciones:
 .\scripts\piloto-local.ps1 restore-check  # CREATE DATABASE ... TEMPLATE cuyielite
 ```
 
-`restore-check` **nunca** restaura sobre la base principal: crea `cuyielite_pilot_restaurado`, comprueba conteos, ámbitos y migraciones, y deja esa base aislada para su revisión. Comprobado en esta entrega: `cuyes=0; ambitos=Centro Lope; migraciones=8`.
+`restore-check` **nunca** restaura sobre la base principal: crea `cuyielite_pilot_restaurado`, comprueba conteos, ámbitos y migraciones, y deja esa base aislada para su revisión. Comprobado en la entrega anterior: `cuyes=0; ambitos=Centro Lope; migraciones=8`. Esa base es una instantánea previa a `0005` y se conserva como evidencia; las bases activas `cuyielite` y `cuyielite_rag` tienen 9 migraciones.
 
 ## 5. RAG del piloto
 
