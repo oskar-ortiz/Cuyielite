@@ -72,6 +72,8 @@ No asigna ámbito a filas históricas. No modifica `0001`–`0003` ni recalcula 
 
 Al revisar la base de D1, `origin/dev` contenía `0001`–`0003`. Diery confirmó después que el CHECK de pesajes será `0005_*`, independiente de D1, porque utiliza `pesajes.parto_id` y `pesajes.evento_id` ya presentes desde `0001_lope_domain.sql`. Por tanto, D1 conserva `0004_publicacion_dominio.sql`. La primitiva rechaza ambos vínculos de pesaje; el CHECK de base se incorporará con la migración de Diery. Antes de fusionar, comprobar que `dev` no haya incorporado otra migración con el mismo número.
 
+> Actualización 2026-11-16: la migración de Diery ya está en `dev` como `0005_pesajes_check.sql` (PR #157, commit `5d1ac64`) y se aplicó al piloto con el runner oficial; no hay otra migración con ese número.
+
 ## Errores de contrato
 
 | Código | Condición |

@@ -801,6 +801,8 @@ posteriores para incluir el ámbito en la clave única.
 
 D1 implementó en laboratorio la primitiva y la migración `0004_publicacion_dominio.sql`, sin publicar filas históricas sin ámbito ni activar nuevas entidades en sync v1. Diery confirmó que su CHECK de pesajes usará `0005_*` y es independiente: utiliza columnas presentes desde `0001`. La migración `0005_*` todavía no se ha publicado; no se atribuye su CHECK a D1.
 
+> Actualización 2026-11-16: `0005_pesajes_check.sql` ya fue fusionada en `dev` (PR #157, commit `5d1ac64`) y aplicada al piloto local con el runner oficial. El párrafo anterior conserva el estado de la decisión original.
+
 El contrato `lope_promocion/v1` acordado no es aún el JSON de entrada del CLI; completar ese adaptador y fijar las versiones reales de parser/mapeo pertenece a D1B. El promotor y las pruebas sintéticas no reemplazan la revisión humana de correspondencias. Catálogos incompletos y `AB` con cantidad continúan en su frente de datos; conservar crudos/NULL mientras tanto. Actualizar ADR 0004 con `R = REEMPLAZO` en el corte documental correspondiente, sin volver a preguntar su significado ya comunicado.
 
 La publicación de entidades nuevas no se activa sobre un servicio v1 que las rechaza: D1 se prueba aislado; D2 habilita el transporte compatible antes de conectar la promoción real.
