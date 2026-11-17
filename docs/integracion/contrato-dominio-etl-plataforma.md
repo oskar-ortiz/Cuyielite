@@ -235,13 +235,17 @@ Regla de ejemplo: una correspondencia `AMBIGUO` no lleva `entidad_id` aceptado; 
 `lope_import_audit/v1` y produce `lope_import_review/v1`. Es una salida
 intermedia, no es entrada de `promote` ni publica datos:
 
-- Para `cuyes`, propone solo código, sexo, fecha ISO, color y ojos que existan en
-  la auditoría. La correspondencia, UUID y `poza_id` quedan pendientes.
+- Para `cuyes`, propone código, sexo, fecha ISO, color y ojos disponibles; los
+  demás campos publicables se completan con `null`. `poza_id` queda `null`
+  porque la poza histórica no demuestra ubicación actual; la correspondencia y
+  UUID sí quedan pendientes.
 - Para `partos`, propone la fecha solo si es ISO y conserva el código de la
-  madre y el T.C.N. original. `madre_id`, `numero_parto` y los tres conteos
-  quedan `null` hasta revisión; nunca interpreta automáticamente `4+1M`.
+  madre y el T.C.N. original. `madre_id` queda pendiente de conciliación;
+  `numero_parto` queda `null` porque NUPAR no está en esta auditoría. Los tres
+  conteos quedan `null` hasta revisión; nunca interpreta automáticamente `4+1M`.
 - El peso reproductivo numérico se propone como `pesajes.etapa = MONTA`, pero
-  `cuy_id` y fecha quedan pendientes. No se inventa el vínculo al animal.
+  `cuy_id` queda pendiente. `fecha_pesaje` queda `null` porque no está en la
+  fuente y el esquema lo permite; no se inventa el vínculo al animal.
 - No infiere `eventos` ni `parto_crias`: las fuentes auditadas no bastan para
   crear esos vínculos.
 

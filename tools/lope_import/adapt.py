@@ -20,6 +20,12 @@ class AdaptacionError(ValueError):
     """Invalid or incomplete audit input for generating a review draft."""
 
 
+def _empty_proposed_fields(entity: str) -> dict[str, Any]:
+    from backend.app.services.publication import PUBLISHABLE_FIELDS
+
+    return {field: None for field in PUBLISHABLE_FIELDS[entity]}
+
+
 def _iso_date(value: Any) -> str | None:
     if not isinstance(value, str):
         return None
@@ -90,12 +96,20 @@ def _validate_audit(report: Any) -> tuple[list[Mapping[str, Any]], list[Mapping[
 def _animal_proposal(candidate: Mapping[str, Any]) -> dict[str, Any]:
     raw_birth_date = candidate.get("fecha_nacimiento")
     birth_date = _iso_date(raw_birth_date)
-    review_required = [
-        "aceptar_correspondencia_y_resolver_uuid",
-        "resolver_poza_id_con_evidencia_y_ambito",
-    ]
+    review_required = ["revisar_y_resolver_correspondencia"]
     if raw_birth_date is not None and birth_date is None:
         review_required.append("validar_fecha_nacimiento")
+    proposed_fields = _empty_proposed_fields("cuyes")
+    proposed_fields.update(
+        {
+            "codigo_identificacion": candidate.get("animal_no"),
+            "sexo": candidate.get("sexo"),
+            "fecha_nacimiento": birth_date,
+            "color_codigo": candidate.get("color"),
+            "ojos_codigo": candidate.get("ojos"),
+            "poza_id": None,
+        }
+    )
     return {
         "origin_ref": candidate["origin_ref"],
         "entity": "cuyes",
@@ -107,13 +121,10 @@ def _animal_proposal(candidate: Mapping[str, Any]) -> dict[str, Any]:
             "color": candidate.get("color"),
             "ojos": candidate.get("ojos"),
         },
-        "proposed_fields": {
-            "codigo_identificacion": candidate.get("animal_no"),
-            "sexo": candidate.get("sexo"),
-            "fecha_nacimiento": birth_date,
-            "color_codigo": candidate.get("color"),
-            "ojos_codigo": candidate.get("ojos"),
-        },
+        "proposed_fields": proposed_fields,
+        "review_notes": [
+            "poza_id y campos sin evidencia quedan null; no se infiere ubicación actual ni estado.",
+        ],
         "review_required": review_required,
     }
 
@@ -123,13 +134,20 @@ def _parto_proposal(
     parto: Mapping[str, Any],
 ) -> dict[str, Any]:
     raw_date = parto.get("fecha")
-    review_required = [
-        "resolver_madre_id_y_correspondencia",
-        "resolver_numero_parto_desde_fuente_revisada",
-        "conservar_tcn_original_y_dejar_conteos_pendientes",
-    ]
+    review_required = ["resolver_madre_id_y_correspondencia"]
     if raw_date is not None and _iso_date(raw_date) is None:
         review_required.append("validar_fecha_parto")
+    proposed_fields = _empty_proposed_fields("partos")
+    proposed_fields.update(
+        {
+            "madre_id": None,
+            "fecha_parto": _iso_date(raw_date),
+            "numero_parto": None,
+            "nacidos_vivos": None,
+            "nacidos_muertos": None,
+            "tamano_camada_nacida": None,
+        }
+    )
     return {
         "origin_ref": parto["origin_ref"],
         "entity": "partos",
@@ -140,14 +158,11 @@ def _parto_proposal(
             "fecha": raw_date,
             "tcn_original": parto.get("tcn"),
         },
-        "proposed_fields": {
-            "madre_id": None,
-            "fecha_parto": _iso_date(raw_date),
-            "numero_parto": None,
-            "nacidos_vivos": None,
-            "nacidos_muertos": None,
-            "tamano_camada_nacida": None,
-        },
+        "proposed_fields": proposed_fields,
+        "review_notes": [
+            "numero_parto queda null porque NUPAR no está en esta auditoría.",
+            "T.C.N. se conserva en source_fields.tcn_original; los conteos quedan null hasta revisión.",
+        ],
         "review_required": review_required,
     }
 
@@ -159,21 +174,12 @@ def _weight_proposal(block: Mapping[str, Any]) -> dict[str, Any] | None:
     decimal_weight = to_decimal(raw_weight)
     if decimal_weight is not None and not decimal_weight.is_finite():
         decimal_weight = None
-    review_required = [
-        "resolver_cuy_id_y_correspondencia",
-        "confirmar_fecha_o_nulabilidad_en_esquema",
-    ]
+    review_required = ["resolver_cuy_id_y_correspondencia"]
     if decimal_weight is None:
         review_required.append("validar_peso_gramos")
-    return {
-        "origin_ref": block["peso_origin_ref"],
-        "entity": "pesajes",
-        "status": "PENDIENTE_REVISION",
-        "source_fields": {
-            "madre_codigo": block.get("hembra"),
-            "peso_original": raw_weight,
-        },
-        "proposed_fields": {
+    proposed_fields = _empty_proposed_fields("pesajes")
+    proposed_fields.update(
+        {
             "cuy_id": None,
             "fecha_pesaje": None,
             "peso_gramos": (
@@ -182,7 +188,20 @@ def _weight_proposal(block: Mapping[str, Any]) -> dict[str, Any] | None:
             "etapa": "MONTA",
             "parto_id": None,
             "evento_id": None,
+        }
+    )
+    return {
+        "origin_ref": block["peso_origin_ref"],
+        "entity": "pesajes",
+        "status": "PENDIENTE_REVISION",
+        "source_fields": {
+            "madre_codigo": block.get("hembra"),
+            "peso_original": raw_weight,
         },
+        "proposed_fields": proposed_fields,
+        "review_notes": [
+            "fecha_pesaje queda null: el bloque no aporta fecha de monta.",
+        ],
         "review_required": review_required,
     }
 
