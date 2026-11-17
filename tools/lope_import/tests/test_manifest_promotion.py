@@ -560,3 +560,76 @@ def test_manifiesto_por_archivo_usa_el_formato_acordado(labio, tmp_path):
         resultado = promover_manifiesto(conn, labio["scope"], payload, dry_run=False)
         conn.commit()
     assert resultado.changed_count == 6
+
+
+def test_review_con_decision_humana_se_promueve(labio):
+    from tools.lope_import.adapt import adapt_audit
+    from tools.lope_import.decisions import build_manifest, create_decisions_template
+
+    huella = _huella(labio["scope"], "review-humana")
+    file_id = f"sha256:{huella}"
+    origin_ref = f"{file_id}:Individual:C2:ANIMAL:cuyes"
+    audit = {
+        "contract": "lope_import_audit/v1",
+        "parser_version": "p1.0.0",
+        "mapeo_version": "m1.0.0",
+        "files": [
+            {
+                "file_id": file_id,
+                "sha256_before": huella,
+                "sha256_after": huella,
+            }
+        ],
+        "candidates": [
+            {
+                "kind": "animal",
+                "file_id": file_id,
+                "origin_ref": origin_ref,
+                "animal_no": "SYN-001",
+                "sexo": "H",
+                "fecha_nacimiento": "2026-01-01",
+                "color": "B",
+                "ojos": "1",
+            }
+        ],
+        "errors": [],
+        "warnings": [],
+        "summary": {"files_unchanged": True},
+    }
+    review = adapt_audit(audit)
+    review_bytes = json.dumps(review, ensure_ascii=False).encode("utf-8")
+    review_sha256 = hashlib.sha256(review_bytes).hexdigest()
+    decisions = create_decisions_template(
+        review, review_sha256, lote_id=uuid.uuid4()
+    )
+    decision = decisions["decisions"][0]
+    decision.update(
+        {
+            "estado": "ACEPTADO",
+            "revisor": "revisor-sintetico",
+            "evidencia": "Ficha sintética conciliada.",
+            "entidad_id": str(uuid.uuid4()),
+        }
+    )
+    decision["after"]["galpon_origen_id"] = str(labio["galpon"])
+    decision["after"]["estado"] = "ACTIVO"
+    manifest = build_manifest(
+        review,
+        decisions,
+        review_sha256,
+        scope_id=labio["scope"],
+        config_alias="LOPE-SINTETICO",
+    )
+
+    with psycopg.connect(labio["url"]) as conn:
+        resultado = promover_manifiesto(
+            conn, labio["scope"], manifest, dry_run=False
+        )
+        conn.commit()
+    assert resultado.changed_count == 1
+    with psycopg.connect(labio["url"]) as conn:
+        publicado = conn.execute(
+            "SELECT codigo_identificacion, estado FROM cuyes WHERE id=%s",
+            (decision["entidad_id"],),
+        ).fetchone()
+        assert publicado == ("SYN-001", "ACTIVO")

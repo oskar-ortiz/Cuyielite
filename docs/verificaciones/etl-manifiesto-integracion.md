@@ -1,6 +1,6 @@
 # Evidencia: integración sintética del contrato ETL con la publicación (2026-11-16)
 
-Estado: **integración sintética verificada**. El manifiesto `lope_promocion/v1` atraviesa el orquestador real (`promote_batch`), el publicador real (`publicar_cambios` sobre la misma conexión) y el pull v2 contra PostgreSQL temporal aislado, con datos sintéticos. La confirmación final del contrato y el puente desde `lope_import_review/v1` siguen pendientes.
+Estado: **contrato aprobado e integración sintética verificada**. `lope_import_review/v1` pasa por decisiones humanas sintéticas a `lope_promocion/v1`, el orquestador real (`promote_batch`), el publicador real (`publicar_cambios` sobre la misma conexión) y el pull v2 contra PostgreSQL temporal aislado. No se usaron archivos reales.
 
 Validación local: rama `feat/lope-orquestador-promocion`; no se usaron archivos reales.
 
@@ -26,13 +26,13 @@ Reglas aplicadas: el ámbito se resuelve del contexto autorizado y el del manifi
 
 ## 3. Comandos reproducibles (sin secretos)
 
-```bash
+```powershell
 docker run -d --rm --name cuyelite-etl-lab -e POSTGRES_USER=cuyielite \
-  -e POSTGRES_PASSWORD=<temporal> -e POSTGRES_DB=postgres -p 55446:5432 pgvector/pgvector:pg16
+  -e POSTGRES_PASSWORD=synthetic-local-only -e POSTGRES_DB=postgres -p 55446:5432 pgvector/pgvector:pg16
 docker exec cuyelite-etl-lab pg_isready -U cuyielite -d postgres
 
 # PowerShell; el nombre de la base se usa para validar que el destino sea aislado.
-$env:TEST_DATABASE_URL = 'postgresql://cuyielite:<temporal>@127.0.0.1:55446/cuyelite_test'
+$env:TEST_DATABASE_URL = 'postgresql://cuyielite:synthetic-local-only@127.0.0.1:55446/cuyelite_test'
 $env:DATABASE_URL = $env:TEST_DATABASE_URL
 & .\.venv\Scripts\python.exe -m pip install -r tools\lope_import\requirements.txt -r backend\requirements.txt
 & .\.venv\Scripts\python.exe -m pytest -q tools\lope_import\tests tools\db_migrate\tests
@@ -40,7 +40,7 @@ docker stop cuyelite-etl-lab
 ```
 
 La suite crea bases desechables propias a partir de `TEST_DATABASE_URL` y aplica el bootstrap central más **todas** las migraciones vigentes, incluida la nueva `0009`.
-Resultado de la última ejecución: **71 passed**. El contenedor temporal se detuvo al terminar.
+Resultado de la última ejecución: **77 passed**. El contenedor temporal se detuvo al terminar.
 
 ## 4. Matriz de casos
 
@@ -59,11 +59,12 @@ Resultado de la última ejecución: **71 passed**. El contenedor temporal se det
 | Fallo de publicación revierte dominio y lote | reales + publicador falso | **HECHO** |
 | Referencias cruzadas entre ámbitos | reales | **HECHO** (rechazo) |
 | Manifiesto por archivo con el formato acordado | reales | **HECHO** |
+| Propuesta `review/v1` + decisiones humanas -> manifiesto -> publicación | reales + decisiones sintéticas | **HECHO** |
 | Evidencia DECLARADA no habilita evaluación oficial | backend | **HECHO** en la suite de evaluación existente |
 
 ## 5. Componentes reales frente a dobles
 
-- Reales: `promote_batch`, `publicar_cambios`, `pull_changes` v2, PostgreSQL, el adaptador del manifiesto.
+- Reales: adaptador de decisiones, adaptador del manifiesto, `promote_batch`, `publicar_cambios`, `pull_changes` v2 y PostgreSQL.
 - Doble: solo el publicador que falla a propósito, para comprobar la reversión total.
 
 ## 6. Semántica de replay verificada

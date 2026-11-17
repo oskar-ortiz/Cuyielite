@@ -1,8 +1,8 @@
 # Handoff para Diery — promoción del contrato ETL
 
-Estado: **el promotor y el manifiesto están probados con datos sintéticos**. Falta la conciliación humana de propuestas, el puente desde `lope_import_review/v1` y los requisitos de carga real descritos abajo.
+Estado: **contrato aprobado por Diery; promotor y flujo de decisiones probados con datos sintéticos**. No se han revisado archivos reales ni autorizado una carga real.
 
-## 1. Formato de entrada integrado (pendiente de confirmación final)
+## 1. Formato de entrada aprobado
 
 `lope_promocion/v1` (ejemplo sintético integrado en `docs/integracion/contrato-dominio-etl-plataforma.md` §9.8):
 
@@ -42,6 +42,36 @@ Estado: **el promotor y el manifiesto están probados con datos sintéticos**. F
 
 Las cinco entidades admitidas son `cuyes`, `partos`, `pesajes`, `eventos` y `parto_crias`. `before` y `after` llevan exactamente los campos publicables de la entidad, con los `null` explícitos; `parto_crias` no lleva `deleted_at`.
 
+### 1.1 Conciliación humana en `lope_import_review_decisions/v1`
+
+Crear una plantilla desde un reporte de revisión:
+
+```bash
+python -m tools.lope_import decisions template <review.json> --output <decisiones.json>
+```
+
+La plantilla conserva un `lote_id` estable y está enlazada al hash exacto del
+reporte. Editar las entradas `decisions` (campo `estado`):
+
+- `ACEPTADO`: completar `revisor`, `evidencia`, `entidad_id` (UUID estable) y
+  todos los campos de `after`. Para una fila nueva, `before` y
+  `expected_version` quedan `null`; para corregir una fila existente, completar
+  el snapshot `before` vigente y su `expected_version`.
+- `RECHAZADO`, `AMBIGUO` o `PENDIENTE`: conservar revisor y evidencia cuando
+  corresponda. Nunca se convierten en registros publicables.
+
+Construir el manifiesto solo después de la revisión:
+
+```bash
+python -m tools.lope_import decisions build-manifest <review.json> <decisiones.json> --scope-id <UUID-autorizado> --config-alias <alias> --output <manifiesto.json>
+```
+
+El conversor no consulta ni modifica la base; el orquestador vuelve a validar
+`before` y `expected_version` dentro de la transacción. Cada manifiesto admite
+un solo archivo fuente porque la clave de idempotencia contiene una sola
+`huella_archivo`; separar auditorías de varios archivos en manifiestos
+independientes. Mantener reporte, decisiones y manifiesto fuera del repositorio.
+
 ## 2. Función o comando existente que debes usar
 
 ```bash
@@ -77,7 +107,7 @@ El orquestador escribe el dominio y confirma el lote; `publicar_cambios` publica
 
 ## 6. Qué falta para una carga real
 
-1. Completar la revisión humana de cada propuesta, incluidos UUID estables, `before`, `expected_version`, `after`, evidencia y revisor. El adaptador de revisión a manifiesto todavía no existe.
+1. Diery debe completar y verificar las decisiones humanas de los archivos autorizados; el flujo ya existe, pero aquí solo se probaron decisiones sintéticas.
 2. Confirmar el catálogo de `eventos.tipo` y el uso de `detalle`.
 3. Confirmar la fuente de `abortos` y del peso de monta para las evaluaciones oficiales.
 4. Revisar si `UNIQUE(origen_id, estado)` permite el historial de correspondencias requerido por lotes y versiones posteriores.

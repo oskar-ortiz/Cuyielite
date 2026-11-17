@@ -490,12 +490,13 @@ las referencias de candidatos tampoco son aún las filas finales de
 `importacion_origenes`. El adaptador de `lope_promocion/v1` ya valida el
 manifiesto, registra lote, orígenes y correspondencias aceptadas dentro de la
 transacción del orquestador y delega la publicación a `publicar_cambios`.
-Todavía no existe un puente automático de `lope_import_review/v1` al
-manifiesto: la conciliación humana debe resolver identidad, `before`,
-`expected_version` y campos `after`. La prueba sintética crea seis
-correspondencias aceptadas (`parser_version=mapeo_version="synthetic"`), con
-dos cuyes y una fila de cada entidad restante. Las versiones sintéticas no
-son versiones de producción.
+`tools.lope_import.decisions` crea una plantilla separada
+`lope_import_review_decisions/v1` y construye el manifiesto desde las decisiones
+explícitas. No asigna automáticamente identidades: una aceptación requiere UUID,
+revisor, evidencia y campos `after` completos; una corrección requiere además
+`before` y `expected_version`. La prueba sintética cubre el recorrido de una
+propuesta hasta la publicación y un manifiesto con seis correspondencias para
+las cinco entidades. Las versiones sintéticas no son versiones de producción.
 
 La llamada de publicación ocurre dentro de la transacción de `promote_batch`:
 
@@ -525,8 +526,8 @@ carga real sigue bloqueada hasta completar la integración del orquestador,
 autorizar el ámbito y registrar el respaldo.
 ### 9.8 Manifiesto de promoción `lope_promocion/v1`
 
-**Estado: integrado y probado con datos sintéticos; pendiente de confirmación
-final de Diery.** Esto no conecta la carga real ni la autoriza.
+**Estado: contrato aprobado por Diery e integrado; probado con datos
+sintéticos.** Esto no conecta la carga real ni la autoriza.
 
 El manifiesto separa cuatro identidades:
 
@@ -536,7 +537,8 @@ El manifiesto separa cuatro identidades:
 - `idempotency_key`: la tupla ya respaldada por `UNIQUE(huella_archivo,
   parser_version, mapeo_version)` en `importacion_lotes`. El `lote_id` persistido
   al crear el lote debe conservarse y reutilizarse en el reintento; una tupla
-  existente con otro `lote_id` se rechaza.
+  existente con otro `lote_id` se rechaza. Cada manifiesto representa un archivo
+  fuente, porque la clave lleva una sola huella.
 - Origen estable: huella, hoja, celda, fila, rol y tipo de entidad. `origen_id`
   se resuelve por esa clave única y se reutiliza; no depende de las versiones.
 - Identidad de dominio: `entity` + UUID `id`. Un UUID aceptado se conserva entre
