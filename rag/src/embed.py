@@ -50,3 +50,30 @@ class E5Embedder:
             return []
         vectors = self._model.encode(texts, normalize_embeddings=True, show_progress_bar=False)
         return [[float(value) for value in vector] for vector in vectors]
+
+
+_SHARED_EMBEDDER: E5Embedder | None = None
+_SHARED_MODEL_NAME: str | None = None
+
+
+def get_embedder() -> TextEmbedder:
+    """Reutiliza un único embedder por proceso y modelo.
+
+    Cargar `SentenceTransformer` en cada petición recarga cientos de MB de
+    pesos y provoca picos de memoria que hicieron fallar consultas consecutivas
+    en el piloto. El modelo y el prefijo no cambian entre peticiones: solo
+    cambia la configuración si se reinicia el proceso con otra variable.
+    """
+    global _SHARED_EMBEDDER, _SHARED_MODEL_NAME
+    model_name = os.getenv("RAG_EMBEDDING_MODEL", DEFAULT_MODEL)
+    if _SHARED_EMBEDDER is None or _SHARED_MODEL_NAME != model_name:
+        _SHARED_EMBEDDER = E5Embedder(model_name)
+        _SHARED_MODEL_NAME = model_name
+    return _SHARED_EMBEDDER
+
+
+def reset_embedder_for_tests() -> None:
+    """Permite comprobar el ciclo de vida sin descargar ni cargar pesos."""
+    global _SHARED_EMBEDDER, _SHARED_MODEL_NAME
+    _SHARED_EMBEDDER = None
+    _SHARED_MODEL_NAME = None

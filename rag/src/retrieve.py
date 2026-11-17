@@ -10,7 +10,7 @@ from typing import Protocol
 import psycopg
 from psycopg import Connection
 
-from rag.src.embed import E5Embedder, TextEmbedder
+from rag.src.embed import E5Embedder, TextEmbedder, get_embedder
 from rag.src.index import vector_literal
 
 
@@ -121,7 +121,8 @@ def consultar(
     database_url = dsn or os.getenv("RAG_DATABASE_URL")
     if not database_url:
         raise RuntimeError("Configura RAG_DATABASE_URL para consultar PostgreSQL")
-    selected_embedder = embedder or E5Embedder()
+    # Reutilizar el embedder evita recargar el modelo en cada petición HTTP.
+    selected_embedder = embedder or get_embedder()
     min_similarity = float(os.getenv("RAG_MIN_SIMILARITY", str(DEFAULT_MIN_SIMILARITY)))
     with psycopg.connect(database_url) as connection:
         results = retrieve(connection, pregunta, selected_embedder, top_k, min_similarity)
