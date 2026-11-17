@@ -5,11 +5,17 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 
 import App from './App';
+import { initializeAuthSession } from './data/auth.session';
 
 const container = document.getElementById('root');
 const root = createRoot(container!);
-root.render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);
+
+initializeAuthSession()
+  .catch(() => undefined)
+  .finally(() => {
+    root.render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>,
+    );
+  });

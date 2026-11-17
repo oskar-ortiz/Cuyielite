@@ -1,6 +1,5 @@
 import {
   IonBackButton,
-  IonButton,
   IonButtons,
   IonContent,
   IonHeader,
@@ -13,6 +12,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { FieldErrors, FormActions, PageFrame, PageIntro, PageState, SectionCard } from '../components/AppUi';
 import type { Poza } from '../data/galpones.repository';
 import { getGalponesRepositoryFor } from '../data/galpones.repository.scope';
 import { normalizePoza, validatePoza } from '../data/galpones.validation';
@@ -20,6 +20,8 @@ import { normalizePoza, validatePoza } from '../data/galpones.validation';
 interface EditarPozaProps {
   mode?: 'demo' | 'trabajo';
 }
+
+const fieldHints = ['código', 'tipo', 'capacidad'];
 
 const EditarPoza: React.FC<EditarPozaProps> = ({ mode = 'demo' }) => {
   const navigate = useNavigate();
@@ -32,7 +34,7 @@ const EditarPoza: React.FC<EditarPozaProps> = ({ mode = 'demo' }) => {
   const [loading, setLoading] = useState<boolean>(!!id && !!pozaId);
   const [notFound, setNotFound] = useState<boolean>(!id || !pozaId);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   const dirtyRef = useRef(false);
@@ -48,7 +50,7 @@ const EditarPoza: React.FC<EditarPozaProps> = ({ mode = 'demo' }) => {
     const requestId = ++requestIdRef.current;
     setLoading(true);
     setLoadError(null);
-    setSaveError(null);
+    setErrors([]);
     setNotFound(false);
     setPoza(null);
     const repo = getGalponesRepositoryFor(mode);
@@ -96,7 +98,7 @@ const EditarPoza: React.FC<EditarPozaProps> = ({ mode = 'demo' }) => {
     const input = { codigo, tipo, capacidadMaxima: Number(capacidad) };
     const validation = validatePoza(input);
     if (!validation.ok) {
-      setSaveError(validation.errors.join('; '));
+      setErrors(validation.errors);
       return;
     }
     const normalized = normalizePoza(input);
@@ -109,12 +111,12 @@ const EditarPoza: React.FC<EditarPozaProps> = ({ mode = 'demo' }) => {
       return;
     }
     setSaving(true);
-    setSaveError(null);
+    setErrors([]);
     try {
       await getGalponesRepositoryFor(mode).updatePoza(id, pozaId, normalized);
       navigate(`${basePath}/${id}`);
     } catch (e) {
-      setSaveError(String(e));
+      setErrors([String(e)]);
     } finally {
       setSaving(false);
     }
@@ -128,8 +130,10 @@ const EditarPoza: React.FC<EditarPozaProps> = ({ mode = 'demo' }) => {
             <IonTitle>Cargando…</IonTitle>
           </IonToolbar>
         </IonHeader>
-        <IonContent fullscreen>
-          <p className="estado-vacio">Cargando poza…</p>
+        <IonContent fullscreen className="app-content">
+          <PageFrame narrow>
+            <PageState kind="loading" title="Cargando poza…" />
+          </PageFrame>
         </IonContent>
       </IonPage>
     );
@@ -146,8 +150,12 @@ const EditarPoza: React.FC<EditarPozaProps> = ({ mode = 'demo' }) => {
             <IonTitle>Error</IonTitle>
           </IonToolbar>
         </IonHeader>
-        <IonContent fullscreen>
-          <p className="estado-vacio">Error al cargar la poza: {loadError}</p>
+        <IonContent fullscreen className="app-content">
+          <PageFrame narrow>
+            <PageState kind="error" title="Error al cargar la poza">
+              <p>{loadError}</p>
+            </PageState>
+          </PageFrame>
         </IonContent>
       </IonPage>
     );
@@ -164,8 +172,10 @@ const EditarPoza: React.FC<EditarPozaProps> = ({ mode = 'demo' }) => {
             <IonTitle>Poza no encontrada</IonTitle>
           </IonToolbar>
         </IonHeader>
-        <IonContent fullscreen>
-          <p className="estado-vacio">No existe una poza con ese identificador.</p>
+        <IonContent fullscreen className="app-content">
+          <PageFrame narrow>
+            <PageState kind="empty" title="No existe una poza con ese identificador." />
+          </PageFrame>
         </IonContent>
       </IonPage>
     );
@@ -181,42 +191,69 @@ const EditarPoza: React.FC<EditarPozaProps> = ({ mode = 'demo' }) => {
           <IonTitle>{mode === 'trabajo' ? 'Editar poza · Trabajo' : 'Editar poza'}</IonTitle>
         </IonToolbar>
       </IonHeader>
-      <IonContent className="ion-padding">
-        <IonInput
-          label="Código"
-          labelPlacement="stacked"
-          value={codigo}
-          onIonInput={(e) => {
-            dirtyRef.current = true;
-            setCodigo(String(e.detail.value ?? ''));
-          }}
-          maxlength={50}
-        />
-        <IonInput
-          label="Tipo"
-          labelPlacement="stacked"
-          value={tipo}
-          onIonInput={(e) => {
-            dirtyRef.current = true;
-            setTipo(String(e.detail.value ?? ''));
-          }}
-          maxlength={50}
-        />
-        <p className="estado-vacio">Sugerencias: cría, engorde, reproducción</p>
-        <IonInput
-          label="Capacidad máxima"
-          labelPlacement="stacked"
-          type="number"
-          value={capacidad}
-          onIonInput={(e) => {
-            dirtyRef.current = true;
-            setCapacidad(String(e.detail.value ?? '0'));
-          }}
-        />
-        {saveError && <p className="estado-vacio">{saveError}</p>}
-        <IonButton expand="block" onClick={submit} disabled={saving}>
-          {saving ? 'Guardando…' : 'Guardar'}
-        </IonButton>
+      <IonContent fullscreen className="app-content">
+        <PageFrame narrow>
+          <PageIntro
+            eyebrow={mode === 'trabajo' ? 'Base de trabajo' : 'Datos de demostración'}
+            title="Editar poza"
+            description="Actualiza los datos permitidos. El galpón al que pertenece no cambia."
+          />
+          <form
+            noValidate
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submit();
+            }}
+          >
+            <SectionCard title="Datos de la poza">
+              <IonInput
+                label="Código"
+                labelPlacement="stacked"
+                fill="outline"
+                value={codigo}
+                onIonInput={(e) => {
+                  dirtyRef.current = true;
+                  setCodigo(String(e.detail.value ?? ''));
+                }}
+                maxlength={50}
+                disabled={saving}
+              />
+              <FieldErrors errors={errors.filter((error) => error.toLowerCase().includes('código'))} />
+              <IonInput
+                label="Tipo"
+                labelPlacement="stacked"
+                fill="outline"
+                value={tipo}
+                onIonInput={(e) => {
+                  dirtyRef.current = true;
+                  setTipo(String(e.detail.value ?? ''));
+                }}
+                maxlength={50}
+                disabled={saving}
+              />
+              <p className="texto-ayuda">Sugerencias: cría, engorde, reproducción</p>
+              <FieldErrors errors={errors.filter((error) => error.toLowerCase().includes('tipo'))} />
+              <IonInput
+                label="Capacidad máxima"
+                labelPlacement="stacked"
+                fill="outline"
+                type="number"
+                inputmode="numeric"
+                value={capacidad}
+                onIonInput={(e) => {
+                  dirtyRef.current = true;
+                  setCapacidad(String(e.detail.value ?? '0'));
+                }}
+                disabled={saving}
+              />
+              <FieldErrors errors={errors.filter((error) => error.toLowerCase().includes('capacidad'))} />
+            </SectionCard>
+            <FieldErrors
+              errors={errors.filter((error) => !fieldHints.some((hint) => error.toLocaleLowerCase().includes(hint)))}
+            />
+            <FormActions saving={saving} />
+          </form>
+        </PageFrame>
       </IonContent>
     </IonPage>
   );

@@ -1,6 +1,5 @@
 import {
   IonBackButton,
-  IonButton,
   IonButtons,
   IonContent,
   IonHeader,
@@ -14,6 +13,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import { FieldErrors, FormActions, PageFrame, PageIntro, PageState, SectionCard } from '../components/AppUi';
 import type { Galpon } from '../data/galpones.repository';
 import { getGalponesRepositoryFor } from '../data/galpones.repository.scope';
 import { normalizeGalpon, validateGalpon } from '../data/galpones.validation';
@@ -21,6 +21,8 @@ import { normalizeGalpon, validateGalpon } from '../data/galpones.validation';
 interface EditarGalponProps {
   mode?: 'demo' | 'trabajo';
 }
+
+const fieldHints = ['nombre', 'ubicación'];
 
 const EditarGalpon: React.FC<EditarGalponProps> = ({ mode = 'demo' }) => {
   const navigate = useNavigate();
@@ -32,7 +34,7 @@ const EditarGalpon: React.FC<EditarGalponProps> = ({ mode = 'demo' }) => {
   const [loading, setLoading] = useState<boolean>(!!id);
   const [notFound, setNotFound] = useState<boolean>(!id);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   const dirtyRef = useRef(false);
@@ -47,7 +49,7 @@ const EditarGalpon: React.FC<EditarGalponProps> = ({ mode = 'demo' }) => {
     const requestId = ++requestIdRef.current;
     setLoading(true);
     setLoadError(null);
-    setSaveError(null);
+    setErrors([]);
     setNotFound(false);
     setGalpon(null);
     const repo = getGalponesRepositoryFor(mode);
@@ -83,7 +85,6 @@ const EditarGalpon: React.FC<EditarGalponProps> = ({ mode = 'demo' }) => {
       requestIdRef.current = -1;
     };
   }, [load]);
-
   useIonViewWillEnter(() => {
     dirtyRef.current = false;
     load();
@@ -94,7 +95,7 @@ const EditarGalpon: React.FC<EditarGalponProps> = ({ mode = 'demo' }) => {
     const input = { nombre, ubicacion: ubicacion.trim() === '' ? null : ubicacion };
     const validation = validateGalpon(input);
     if (!validation.ok) {
-      setSaveError(validation.errors.join('; '));
+      setErrors(validation.errors);
       return;
     }
     const normalized = normalizeGalpon(input);
@@ -103,12 +104,12 @@ const EditarGalpon: React.FC<EditarGalponProps> = ({ mode = 'demo' }) => {
       return;
     }
     setSaving(true);
-    setSaveError(null);
+    setErrors([]);
     try {
       await getGalponesRepositoryFor(mode).updateGalpon(id, normalized);
       navigate(`${basePath}/${id}`);
     } catch (e) {
-      setSaveError(String(e));
+      setErrors([String(e)]);
     } finally {
       setSaving(false);
     }
@@ -122,8 +123,10 @@ const EditarGalpon: React.FC<EditarGalponProps> = ({ mode = 'demo' }) => {
             <IonTitle>Cargando…</IonTitle>
           </IonToolbar>
         </IonHeader>
-        <IonContent fullscreen>
-          <p className="estado-vacio">Cargando galpón…</p>
+        <IonContent fullscreen className="app-content">
+          <PageFrame narrow>
+            <PageState kind="loading" title="Cargando galpón…" />
+          </PageFrame>
         </IonContent>
       </IonPage>
     );
@@ -140,8 +143,12 @@ const EditarGalpon: React.FC<EditarGalponProps> = ({ mode = 'demo' }) => {
             <IonTitle>Error</IonTitle>
           </IonToolbar>
         </IonHeader>
-        <IonContent fullscreen>
-          <p className="estado-vacio">Error al cargar el galpón: {loadError}</p>
+        <IonContent fullscreen className="app-content">
+          <PageFrame narrow>
+            <PageState kind="error" title="Error al cargar el galpón">
+              <p>{loadError}</p>
+            </PageState>
+          </PageFrame>
         </IonContent>
       </IonPage>
     );
@@ -158,8 +165,10 @@ const EditarGalpon: React.FC<EditarGalponProps> = ({ mode = 'demo' }) => {
             <IonTitle>Galpón no encontrado</IonTitle>
           </IonToolbar>
         </IonHeader>
-        <IonContent fullscreen>
-          <p className="estado-vacio">No existe un galpón con ese identificador.</p>
+        <IonContent fullscreen className="app-content">
+          <PageFrame narrow>
+            <PageState kind="empty" title="No existe un galpón con ese identificador." />
+          </PageFrame>
         </IonContent>
       </IonPage>
     );
@@ -175,31 +184,54 @@ const EditarGalpon: React.FC<EditarGalponProps> = ({ mode = 'demo' }) => {
           <IonTitle>{mode === 'trabajo' ? 'Editar galpón · Trabajo' : 'Editar galpón'}</IonTitle>
         </IonToolbar>
       </IonHeader>
-      <IonContent className="ion-padding">
-        <IonInput
-          label="Nombre"
-          labelPlacement="stacked"
-          value={nombre}
-          onIonInput={(e) => {
-            dirtyRef.current = true;
-            setNombre(String(e.detail.value ?? ''));
-          }}
-          maxlength={120}
-        />
-        <IonTextarea
-          label="Ubicación (opcional)"
-          labelPlacement="stacked"
-          value={ubicacion}
-          onIonInput={(e) => {
-            dirtyRef.current = true;
-            setUbicacion(String(e.detail.value ?? ''));
-          }}
-          maxlength={255}
-        />
-        {saveError && <p className="estado-vacio">{saveError}</p>}
-        <IonButton expand="block" onClick={submit} disabled={saving}>
-          {saving ? 'Guardando…' : 'Guardar'}
-        </IonButton>
+      <IonContent fullscreen className="app-content">
+        <PageFrame narrow>
+          <PageIntro
+            eyebrow={mode === 'trabajo' ? 'Base de trabajo' : 'Datos de demostración'}
+            title="Editar galpón"
+            description="Actualiza los datos del galpón. Si no hay cambios efectivos, no se modifica la fecha."
+          />
+          <form
+            noValidate
+            onSubmit={(event) => {
+              event.preventDefault();
+              void submit();
+            }}
+          >
+            <SectionCard title="Datos del galpón">
+              <IonInput
+                label="Nombre"
+                labelPlacement="stacked"
+                fill="outline"
+                value={nombre}
+                onIonInput={(e) => {
+                  dirtyRef.current = true;
+                  setNombre(String(e.detail.value ?? ''));
+                }}
+                maxlength={120}
+                disabled={saving}
+              />
+              <FieldErrors errors={errors.filter((error) => error.toLowerCase().includes('nombre'))} />
+              <IonTextarea
+                label="Ubicación (opcional)"
+                labelPlacement="stacked"
+                fill="outline"
+                value={ubicacion}
+                onIonInput={(e) => {
+                  dirtyRef.current = true;
+                  setUbicacion(String(e.detail.value ?? ''));
+                }}
+                maxlength={255}
+                disabled={saving}
+              />
+              <FieldErrors errors={errors.filter((error) => error.toLowerCase().includes('ubicación'))} />
+            </SectionCard>
+            <FieldErrors
+              errors={errors.filter((error) => !fieldHints.some((hint) => error.toLocaleLowerCase().includes(hint)))}
+            />
+            <FormActions saving={saving} />
+          </form>
+        </PageFrame>
       </IonContent>
     </IonPage>
   );

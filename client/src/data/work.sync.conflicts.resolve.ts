@@ -1,5 +1,10 @@
-import { normalizeGalpon, normalizePoza, validateGalpon, validatePoza } from './galpones.validation.js';
 import type { MigrationDb } from './work.migration.js';
+import {
+  conflictConfig,
+  sameEditableData,
+  validateRetryValues,
+  type ConflictEntity,
+} from './work.sync.conflicts.config.js';
 import {
   readConflictReview,
   type ConflictResolutionResult,
@@ -7,12 +12,9 @@ import {
 } from './work.sync.conflicts.review.js';
 import { initializeWorkSyncDatabase } from './work.sync.migration.js';
 import { applyCentralBusinessRecord } from './work.sync.pull.js';
+import type { PullRecord } from './work.sync.pull.validation.js';
 
 type Row = Record<string, unknown>;
-
-function exactKeys(value: Record<string, unknown>, keys: string[]): boolean {
-  return Object.keys(value).sort().join(',') === [...keys].sort().join(',');
-}
 
 async function one(db: MigrationDb, sql: string, params: unknown[] = []): Promise<Row | null> {
   return ((await db.query(sql, params)).values?.[0] as Row | undefined) ?? null;
@@ -60,14 +62,101 @@ async function discardReviewedChain(db: MigrationDb, operationId: string): Promi
   return Number(count?.count ?? 0);
 }
 
+async function requireActive(db: MigrationDb, table: string, id: unknown, label: string): Promise<void> {
+  if (typeof id !== 'string' || id.length === 0) throw new Error(`${label} es obligatorio`);
+  const row = await one(db, `SELECT 1 AS ok FROM ${table} WHERE id=? AND deleted_at IS NULL`, [id]);
+  if (!row) throw new Error(`${label} no existe en la base de trabajo`);
+}
+
+async function validateLocalReferences(
+  db: MigrationDb,
+  entity: ConflictEntity,
+  data: Record<string, unknown>,
+  recordId: string,
+): Promise<void> {
+  if (entity === 'cuyes') {
+    await requireActive(db, 'pozas', data.poza_id, 'La poza actual');
+    if (data.galpon_origen_id) await requireActive(db, 'galpones', data.galpon_origen_id, 'El galpón de origen');
+    if (data.padre_id) await requireActive(db, 'cuyes', data.padre_id, 'El padre');
+    if (data.madre_id) await requireActive(db, 'cuyes', data.madre_id, 'La madre');
+    if (data.padre_id === recordId || data.madre_id === recordId) {
+      throw new Error('Un animal no puede ser su propio padre o madre');
+    }
+    return;
+  }
+  if (entity === 'partos') {
+    await requireActive(db, 'cuyes', data.madre_id, 'La madre');
+    return;
+  }
+  if (entity === 'pesajes') {
+    await requireActive(db, 'cuyes', data.cuy_id, 'El animal');
+    if (data.parto_id) await requireActive(db, 'partos', data.parto_id, 'El parto');
+    if (data.evento_id) await requireActive(db, 'eventos', data.evento_id, 'El evento');
+    return;
+  }
+  if (entity === 'eventos') {
+    await requireActive(db, 'cuyes', data.cuy_id, 'El animal');
+    if (data.macho_id) await requireActive(db, 'cuyes', data.macho_id, 'El macho');
+    if (data.poza_origen_id) await requireActive(db, 'pozas', data.poza_origen_id, 'La poza de origen');
+    if (data.poza_destino_id) await requireActive(db, 'pozas', data.poza_destino_id, 'La poza de destino');
+    return;
+  }
+  if (entity === 'parto_crias') {
+    await requireActive(db, 'partos', data.parto_id, 'El parto');
+    await requireActive(db, 'cuyes', data.cuy_id, 'La cría');
+    const parto = await one(db, 'SELECT madre_id FROM partos WHERE id=?', [data.parto_id]);
+    if (parto?.madre_id === data.cuy_id) throw new Error('La madre no puede ser cría de su propio parto');
+    const other = await one(db, 'SELECT 1 AS ok FROM parto_crias WHERE cuy_id=? AND id<>?', [data.cuy_id, recordId]);
+    if (other) throw new Error('La cría ya está vinculada a otro parto');
+  }
+}
+
+async function updateLocalBusinessRow(
+  db: MigrationDb,
+  entity: ConflictEntity,
+  recordId: string,
+  data: Record<string, unknown>,
+): Promise<void> {
+  const config = conflictConfig(entity);
+  const keys = Object.keys(data);
+  if (keys.length === 0) return;
+  const assignments = keys.map((key) => `${key}=?`).join(',');
+  const values = keys.map((key) => data[key] ?? null);
+  if (entity === 'parto_crias') {
+    await db.run(`UPDATE ${config.table} SET ${assignments} WHERE id=?`, [...values, recordId]);
+    return;
+  }
+  await db.run(`UPDATE ${config.table} SET ${assignments},updated_at=? WHERE id=?`, [
+    ...values,
+    new Date().toISOString(),
+    recordId,
+  ]);
+}
+
+async function applyCentralForConflict(
+  db: MigrationDb,
+  entity: ConflictEntity,
+  record: PullRecord,
+  missingServerFields: string[],
+): Promise<void> {
+  if (entity !== 'cuyes' || missingServerFields.length === 0) {
+    await applyCentralBusinessRecord(db, entity, record);
+    return;
+  }
+  const local = await one(db, 'SELECT categoria_ml,ultimo_peso_g FROM cuyes WHERE id=?', [record.id]);
+  const data = { ...record.data };
+  for (const field of missingServerFields) data[field] = local?.[field] ?? null;
+  await applyCentralBusinessRecord(db, entity, { ...record, data });
+}
+
 export async function resolveConflictKeepCentral(
   db: MigrationDb,
   review: ConflictReview,
 ): Promise<ConflictResolutionResult> {
   return transaction(db, async () => {
-    const { record } = await readConflictReview(db, review);
+    const { record, missingServerFields } = await readConflictReview(db, review);
     const discarded = await discardReviewedChain(db, review.conflictOperationId);
-    await applyCentralBusinessRecord(db, review.entity, record);
+    await applyCentralForConflict(db, review.entity, record, missingServerFields);
     await db.run(
       'UPDATE sync_record_state SET local_head_operation_id=NULL WHERE entity=? AND record_id=? AND local_head_operation_id=?',
       [review.entity, review.recordId, review.expectedHeadOperationId],
@@ -84,40 +173,17 @@ export async function resolveConflictRetry(
   if (!input || typeof input !== 'object' || Array.isArray(input)) {
     throw new Error('Datos para reintento inválidos');
   }
-  const expectedKeys = review.entity === 'galpon' ? ['nombre', 'ubicacion'] : ['codigo', 'tipo', 'capacidad_maxima'];
-  if (!exactKeys(input, expectedKeys)) throw new Error('Datos para reintento inválidos');
   return transaction(db, async () => {
-    const { record } = await readConflictReview(db, review);
+    const { record, missingServerFields } = await readConflictReview(db, review);
     if (record.deleted_at !== null) throw new Error('El registro central fue eliminado; conserva la versión central');
-    let data: Record<string, unknown>;
-    if (review.entity === 'galpon') {
-      const galponInput = { nombre: input.nombre, ubicacion: input.ubicacion } as {
-        nombre: string;
-        ubicacion: string | null;
-      };
-      const validation = validateGalpon(galponInput);
-      if (!validation.ok) throw new Error(validation.errors.join('; '));
-      data = normalizeGalpon(galponInput);
-    } else {
-      const pozaInput = {
-        codigo: input.codigo,
-        tipo: input.tipo,
-        capacidadMaxima: input.capacidad_maxima,
-      } as { codigo: string; tipo: string; capacidadMaxima: number };
-      const validation = validatePoza(pozaInput);
-      if (!validation.ok) throw new Error(validation.errors.join('; '));
-      const normalized = normalizePoza(pozaInput);
-      data = {
-        galpon_id: record.data.galpon_id,
-        codigo: normalized.codigo,
-        tipo: normalized.tipo,
-        capacidad_maxima: normalized.capacidadMaxima,
-      };
-    }
-    const centralData = record.data;
-    if (Object.keys(data).every((key) => data[key] === centralData[key])) {
+    const validation = validateRetryValues(review.entity, input, record);
+    if (validation.ok === false) throw new Error(validation.errors.join('; '));
+    const data = validation.data;
+    await validateLocalReferences(db, review.entity, data, review.recordId);
+
+    if (sameEditableData(review.entity, data, record.data)) {
       const discarded = await discardReviewedChain(db, review.conflictOperationId);
-      await applyCentralBusinessRecord(db, review.entity, record);
+      await applyCentralForConflict(db, review.entity, record, missingServerFields);
       await db.run(
         'UPDATE sync_record_state SET local_head_operation_id=NULL WHERE entity=? AND record_id=? AND local_head_operation_id=?',
         [review.entity, review.recordId, review.expectedHeadOperationId],
@@ -126,25 +192,10 @@ export async function resolveConflictRetry(
     }
 
     const discarded = await discardReviewedChain(db, review.conflictOperationId);
-    await applyCentralBusinessRecord(db, review.entity, record);
+    await applyCentralForConflict(db, review.entity, record, missingServerFields);
+    await updateLocalBusinessRow(db, review.entity, review.recordId, data);
     const now = new Date().toISOString();
     const newOperationId = operationId();
-    if (review.entity === 'galpon') {
-      await db.run('UPDATE galpones SET nombre=?,ubicacion=?,updated_at=? WHERE id=?', [
-        data.nombre,
-        data.ubicacion,
-        now,
-        review.recordId,
-      ]);
-    } else {
-      await db.run('UPDATE pozas SET codigo=?,tipo=?,capacidad_maxima=?,updated_at=? WHERE id=?', [
-        data.codigo,
-        data.tipo,
-        data.capacidad_maxima,
-        now,
-        review.recordId,
-      ]);
-    }
     await db.run(
       `INSERT INTO sync_outbox(operation_id,entity,record_id,action,business_snapshot,base_anchor,
         predecessor_id,parent_create_id,state,created_at)

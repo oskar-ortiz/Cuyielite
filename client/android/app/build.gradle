@@ -24,6 +24,13 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
+        debug {
+            // Variante de laboratorio: mismo código, paquete y almacenamiento
+            // propios, para no tocar una instalación con datos reales.
+            if (project.hasProperty("labAppId")) {
+                applicationIdSuffix ".lab"
+            }
+        }
     }
 }
 

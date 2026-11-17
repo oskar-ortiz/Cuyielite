@@ -13,7 +13,7 @@ import os
 from pathlib import Path
 import re
 import sys
-from typing import Any, Protocol
+from typing import Any, Callable, Protocol
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -46,6 +46,9 @@ REFERENCE_ENTITIES = {
     },
     "parto_crias": {"parto_id": "partos", "cuy_id": "cuyes"},
 }
+# Tablas que no llevan `updated_at` ni `deleted_at`; el publicador central ya las
+# trata de forma especifica.
+TABLES_WITHOUT_TIMESTAMPS = frozenset({"parto_crias"})
 RECORD_KEYS = frozenset(
     {
         "correspondencia_id",
@@ -347,6 +350,12 @@ def _write_domain_row(
 
     assignments = ", ".join(f"{field} = %s" for field in fields)
     values = tuple(record.after[field] for field in fields)
+    if table in TABLES_WITHOUT_TIMESTAMPS:
+        conn.execute(
+            f"UPDATE {table} SET {assignments} WHERE id = %s",
+            (*values, record.id),
+        )
+        return
     conn.execute(
         f"UPDATE {table} SET {assignments}, updated_at = now() WHERE id = %s",
         (*values, record.id),
@@ -361,12 +370,18 @@ def promote_batch(
     publicador: Publicador = publicar_con_d1,
     *,
     dry_run: bool = True,
+    preparar: Callable[[Any, UUID, UUID], Sequence[Mapping[str, Any]]] | None = None,
 ) -> ResultadoPromocion:
-    """Promote all accepted rows atomically; dry-run always rolls back."""
+    """Promote all accepted rows atomically; dry-run always rolls back.
+
+    ``preparar`` permite que el lote, los orígenes y las correspondencias se
+    registren dentro de esta misma transacción (manifiesto ``lope_promocion/v1``)
+    antes de leer el lote. Devuelve los registros a promover.
+    """
     _ensure_connection_ready(conn)
     authorized_scope_id = _uuid(scope_id, "scope_id")
     lote_id = _uuid(batch_id, "batch_id")
-    normalized = _normalize_records(records)
+    normalized = _normalize_records(records) if records else []
 
     with conn.transaction(force_rollback=dry_run):
         scope = conn.execute(
@@ -375,6 +390,9 @@ def promote_batch(
         ).fetchone()
         if scope is None:
             raise PromocionError("El ámbito autorizado no existe")
+
+        if preparar is not None:
+            normalized = _normalize_records(preparar(conn, authorized_scope_id, lote_id))
 
         batch = conn.execute(
             "SELECT estado FROM importacion_lotes WHERE id = %s FOR UPDATE",
@@ -527,10 +545,21 @@ def _reject_raw_source(path: Path) -> None:
         raise PromocionError("No se admite leer fuentes privadas de Lope")
 
 
-def _load_manifest(path: Path) -> list[Mapping[str, Any]]:
+def _load_manifest(path: Path) -> Mapping[str, Any]:
     _reject_raw_source(path)
     payload = json.loads(path.read_text(encoding="utf-8"))
-    if not isinstance(payload, Mapping) or set(payload) != {"records"}:
+    if not isinstance(payload, Mapping):
+        raise PromocionError("El manifiesto debe ser un objeto")
+    return payload
+
+
+def _es_manifiesto_promocion(payload: Mapping[str, Any]) -> bool:
+    return "contract_version" in payload
+
+
+def _records_legacy(payload: Mapping[str, Any]) -> list[Mapping[str, Any]]:
+    """Manifiesto heredado: únicamente la lista `records`."""
+    if set(payload) != {"records"}:
         raise PromocionError("El manifiesto debe contener únicamente records")
     if not isinstance(payload["records"], list):
         raise PromocionError("records debe ser una lista")
@@ -542,7 +571,11 @@ def _build_parser() -> argparse.ArgumentParser:
         description="Promueve correspondencias Lope aceptadas en una transacción."
     )
     parser.add_argument("--manifiesto", required=True, help="JSON de registros aceptados")
-    parser.add_argument("--batch-id", required=True, help="UUID del lote revisado")
+    parser.add_argument(
+        "--batch-id",
+        default=None,
+        help="UUID del lote revisado (formato heredado; el manifiesto acordado lo trae)",
+    )
     parser.add_argument(
         "--scope-id",
         required=True,
@@ -582,17 +615,28 @@ def main(argv: list[str] | None = None) -> int:
             commit=args.commit,
             permitir_base_real=args.permitir_base_real,
         )
-        records = _load_manifest(Path(args.manifiesto))
+        payload = _load_manifest(Path(args.manifiesto))
         from psycopg import connect
 
         with connect(database_url, autocommit=False) as conn:
-            result = promote_batch(
-                conn,
-                args.scope_id,
-                args.batch_id,
-                records,
-                dry_run=not args.commit,
-            )
+            if _es_manifiesto_promocion(payload):
+                from .manifest import promover_manifiesto
+
+                result = promover_manifiesto(
+                    conn,
+                    args.scope_id,
+                    payload,
+                    dry_run=not args.commit,
+                )
+            else:
+                records = _records_legacy(payload)
+                result = promote_batch(
+                    conn,
+                    args.scope_id,
+                    args.batch_id,
+                    records,
+                    dry_run=not args.commit,
+                )
     except Exception as error:
         print(
             f"Promoción cancelada ({type(error).__name__}); no se publicaron detalles.",

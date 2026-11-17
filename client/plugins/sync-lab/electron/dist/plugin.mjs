@@ -2,7 +2,7 @@
 // SQL: aporta el token en memoria y, en el caso de push, el cuerpo congelado.
 // La peticion HTTP y las operaciones de sincronizacion sobre SQLite ocurren
 // siempre en el proceso principal, contra el loopback fijo del laboratorio.
-import { app } from 'electron';
+import { app, safeStorage } from 'electron';
 import { DatabaseSync } from 'node:sqlite';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -13,13 +13,23 @@ import { runSyncCycle } from './work.sync.coordinator.js';
 import { listConflictCases, resolveConflictKeepCentral, resolveConflictRetry } from './work.sync.conflicts.js';
 import { initializeWorkSyncDatabase } from './work.sync.migration.js';
 import { readWorkSyncStatus } from './work.sync.status.js';
+import { readAlertasDerivadas, readCategoriaDerivada } from './work.derived.apply.js';
 
 const LAB_BASE_URL = 'http://127.0.0.1:8000';
+const AUTH_BASE_URL = (process.env.CUYIELITE_API_URL || LAB_BASE_URL).replace(/\/+$/, '');
+const SESSION_PATH = path.join(app.getPath('userData'), 'auth-session.bin');
 
 const ROUTES = Object.freeze({
   context: '/sync/context',
   push: '/sync/push',
   pull: '/sync/pull',
+  contextV2: '/sync/v2/context',
+  pushV2: '/sync/v2/push',
+  pullV2: '/sync/v2/pull',
+  pullDerived: '/sync/v3/pull',
+  hembra: '/ml/predict/hembra',
+  candidata: '/ml/predict/candidata',
+  assistant: '/assistant/query',
 });
 
 const WORK_DB_DIR = path.join(app.getPath('userData'), 'cuyielite-work');
@@ -65,6 +75,45 @@ function assertToken(token) {
   }
 }
 
+function assertAllowedApi(url) {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error('Destino de API invalido');
+  }
+  if (parsed.protocol === 'https:') return;
+  if (parsed.protocol === 'http:' && (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost')) return;
+  throw new Error('Destino de API no autorizado');
+}
+
+async function authRequest(route, body, token) {
+  const url = AUTH_BASE_URL + route;
+  assertAllowedApi(url);
+  const res = await fetch(url, {
+    method: body === undefined ? 'GET' : 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    redirect: 'error',
+    signal: AbortSignal.timeout(15_000),
+  });
+  assertAllowedApi(res.url);
+  if (!res.ok) {
+    let detail = `AUTH_HTTP_${res.status}`;
+    try {
+      const payload = await res.json();
+      if (payload && typeof payload.detail === 'string') detail = payload.detail;
+    } catch {
+      // mantener código HTTP
+    }
+    throw new Error(`HTTP ${res.status} ${detail}`);
+  }
+  return res.json();
+}
+
 async function request(route, token, init) {
   assertToken(token);
   const url = LAB_BASE_URL + route;
@@ -88,7 +137,7 @@ async function request(route, token, init) {
 class SyncLab {
   static __capacitorElectronPlugin = {
     name: 'SyncLab',
-    methods: ['context', 'push', 'pull', 'bind', 'prepare', 'send', 'sync', 'status', 'listConflicts', 'keepCentral', 'retryConflict'],
+    methods: ['context', 'push', 'pull', 'contextV2', 'pushV2', 'pullV2', 'pullDerived', 'categoriaDerivada', 'alertasDerivadas', 'evaluationContext', 'evaluateReproductora', 'evaluateCandidata', 'declareEvidence', 'reviewEvidence', 'bind', 'prepare', 'send', 'sync', 'status', 'listConflicts', 'keepCentral', 'retryConflict', 'authLogin', 'authRefresh', 'authLogout', 'authChangePassword', 'authMe', 'authSessionSave', 'authSessionRead', 'authSessionClear', 'predictHembra', 'predictCandidata', 'assistantQuery'],
   };
 
   async load() {}
@@ -114,6 +163,91 @@ class SyncLab {
     const params = new URLSearchParams({ limit: String(limit) });
     if (cursor !== null) params.set('cursor', cursor);
     return request(`${ROUTES.pull}?${params.toString()}`, token, { method: 'GET' });
+  }
+
+  async contextV2({ token }) {
+    return request(ROUTES.contextV2, token, { method: 'GET' });
+  }
+
+  async pushV2({ token, body }) {
+    if (body === null || typeof body !== 'object') {
+      throw new Error('Solicitud de sincronizacion v2 invalida');
+    }
+    return request(ROUTES.pushV2, token, { method: 'POST', body: JSON.stringify(body) });
+  }
+
+  async pullV2({ token, cursor, limit }) {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      throw new Error('Limite pull v2 invalido');
+    }
+    if (cursor !== null && (typeof cursor !== 'string' || cursor.length > 4096)) {
+      throw new Error('Cursor pull v2 invalido');
+    }
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor !== null) params.set('cursor', cursor);
+    return request(`${ROUTES.pullV2}?${params.toString()}`, token, { method: 'GET' });
+  }
+
+  async pullDerived({ token, cursor, limit }) {
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+      throw new Error('Limite pull derivado invalido');
+    }
+    if (cursor !== null && (typeof cursor !== 'string' || cursor.length > 4096)) {
+      throw new Error('Cursor pull derivado invalido');
+    }
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (cursor !== null) params.set('cursor', cursor);
+    return request(`${ROUTES.pullDerived}?${params.toString()}`, token, { method: 'GET' });
+  }
+
+  async evaluationContext({ token, cuyId }) {
+    return request('/evaluaciones/reproductoras/' + encodeURIComponent(cuyId), token, { method: 'GET' });
+  }
+
+  async evaluateReproductora({ token, cuyId, body }) {
+    return request('/evaluaciones/reproductoras/' + encodeURIComponent(cuyId), token, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async evaluateCandidata({ token, cuyId, body }) {
+    return request('/evaluaciones/candidatas/' + encodeURIComponent(cuyId), token, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async declareEvidence({ token, cuyId, body }) {
+    return request('/evaluaciones/' + encodeURIComponent(cuyId) + '/evidencias', token, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async reviewEvidence({ token, cuyId, body }) {
+    return request('/evaluaciones/' + encodeURIComponent(cuyId) + '/evidencias/revision', token, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+  }
+
+  async categoriaDerivada({ cuyId }) {
+    const db = openWorkDb();
+    try {
+      return await readCategoriaDerivada(makeAdapter(db), cuyId);
+    } finally {
+      db.close();
+    }
+  }
+
+  async alertasDerivadas({ cuyId }) {
+    const db = openWorkDb();
+    try {
+      return await readAlertasDerivadas(makeAdapter(db), cuyId);
+    } finally {
+      db.close();
+    }
   }
 
   async bind({ token }) {
@@ -148,13 +282,15 @@ class SyncLab {
     try {
       const adapter = makeAdapter(db);
       await initializeWorkSyncDatabase(adapter);
-      return await sendPrepared(adapter, (frozen) => this.push({ token, body: frozen }));
+      return await sendPrepared(adapter, (frozen) =>
+        frozen.protocol_version === 2 ? this.pushV2({ token, body: frozen }) : this.push({ token, body: frozen }),
+      );
     } finally {
       db.close();
     }
   }
 
-  async sync({ token }) {
+  async sync({ token, allowPush = true }) {
     const db = openWorkDb();
     try {
       const adapter = makeAdapter(db);
@@ -162,7 +298,11 @@ class SyncLab {
         context: (value) => this.context({ token: value }),
         push: (value, body) => this.push({ token: value, body }),
         pull: (value, cursor, limit) => this.pull({ token: value, cursor, limit }),
-      }, token);
+        contextV2: (value) => this.contextV2({ token: value }),
+        pushV2: (value, body) => this.pushV2({ token: value, body }),
+        pullV2: (value, cursor, limit) => this.pullV2({ token: value, cursor, limit }),
+        pullDerived: (value, cursor, limit) => this.pullDerived({ token: value, cursor, limit }),
+      }, token, { allowPush });
     } finally {
       db.close();
     }
@@ -202,6 +342,56 @@ class SyncLab {
     } finally {
       db.close();
     }
+  }
+
+  async authLogin({ body }) {
+    return authRequest('/auth/login', body);
+  }
+
+  async authRefresh({ body }) {
+    return authRequest('/auth/refresh', body);
+  }
+
+  async authLogout({ body }) {
+    return authRequest('/auth/logout', body);
+  }
+
+  async authChangePassword({ token, body }) {
+    return authRequest('/auth/change-password', body, token);
+  }
+
+  async authMe({ token }) {
+    return authRequest('/auth/me', undefined, token);
+  }
+
+  async authSessionSave({ value }) {
+    if (!safeStorage.isEncryptionAvailable()) throw new Error('Almacenamiento seguro no disponible');
+    fs.mkdirSync(path.dirname(SESSION_PATH), { recursive: true });
+    fs.writeFileSync(SESSION_PATH, safeStorage.encryptString(String(value)), { mode: 0o600 });
+    return { ok: true };
+  }
+
+  async authSessionRead() {
+    if (!fs.existsSync(SESSION_PATH)) return { value: null };
+    if (!safeStorage.isEncryptionAvailable()) throw new Error('Almacenamiento seguro no disponible');
+    return { value: safeStorage.decryptString(fs.readFileSync(SESSION_PATH)) };
+  }
+
+  async authSessionClear() {
+    if (fs.existsSync(SESSION_PATH)) fs.unlinkSync(SESSION_PATH);
+    return { ok: true };
+  }
+
+  async predictHembra({ token, body }) {
+    return request(ROUTES.hembra, token, { method: 'POST', body: JSON.stringify(body) });
+  }
+
+  async predictCandidata({ token, body }) {
+    return request(ROUTES.candidata, token, { method: 'POST', body: JSON.stringify(body) });
+  }
+
+  async assistantQuery({ token, body }) {
+    return request(ROUTES.assistant, token, { method: 'POST', body: JSON.stringify(body) });
   }
 }
 

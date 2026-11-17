@@ -1,5 +1,6 @@
 import { Capacitor } from '@capacitor/core';
 
+import { requireCanWriteLocal } from './auth.session';
 import { adaptWorkConnection, getWorkConnection } from './work.database.android';
 import {
   listConflictCases,
@@ -22,9 +23,11 @@ const androidRepository: ConflictRepository = {
     return listConflictCases(adaptWorkConnection(await getWorkConnection()));
   },
   async keepCentral(review) {
+    requireCanWriteLocal();
     return resolveConflictKeepCentral(adaptWorkConnection(await getWorkConnection()), review);
   },
   async retry(review, input) {
+    requireCanWriteLocal();
     return resolveConflictRetry(adaptWorkConnection(await getWorkConnection()), review, input);
   },
 };
@@ -34,9 +37,11 @@ const electronRepository: ConflictRepository = {
     return (await SyncLab.listConflicts()).cases;
   },
   async keepCentral(review) {
+    requireCanWriteLocal();
     return SyncLab.keepCentral({ review });
   },
   async retry(review, input) {
+    requireCanWriteLocal();
     return SyncLab.retryConflict({ review, input });
   },
 };

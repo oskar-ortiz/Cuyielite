@@ -487,13 +487,15 @@ referencias por huella/hoja/celda/rol y candidatos crudos. El comando `adapt`
 los convierte en `lope_import_review/v1`, con propuestas no publicables y
 pendientes de revisión. No emite UUID de dominio ni correspondencias aceptadas;
 las referencias de candidatos tampoco son aún las filas finales de
-`importacion_origenes`. El promotor no interpreta esos candidatos. La prueba
-sintética crea el lote y seis correspondencias aceptadas
-(`parser_version=mapeo_version="synthetic"`), con dos cuyes y una fila de cada
-entidad restante, y luego invoca `publicar_con_d1`. El mapeo de propuestas a
-`lope_promocion/v1`, la creación/revisión de correspondencias y la integración
-con el orquestador de Diery siguen pendientes; las versiones sintéticas no son
-versiones de producción.
+`importacion_origenes`. El adaptador de `lope_promocion/v1` ya valida el
+manifiesto, registra lote, orígenes y correspondencias aceptadas dentro de la
+transacción del orquestador y delega la publicación a `publicar_cambios`.
+Todavía no existe un puente automático de `lope_import_review/v1` al
+manifiesto: la conciliación humana debe resolver identidad, `before`,
+`expected_version` y campos `after`. La prueba sintética crea seis
+correspondencias aceptadas (`parser_version=mapeo_version="synthetic"`), con
+dos cuyes y una fila de cada entidad restante. Las versiones sintéticas no
+son versiones de producción.
 
 La llamada de publicación ocurre dentro de la transacción de `promote_batch`:
 
@@ -521,6 +523,275 @@ La prueba crea y elimina una base `cuyielite_lope_promote_<uuid>`; no lee los
 Excel privados. La prueba de auditoría construye su propio libro sintético. La
 carga real sigue bloqueada hasta completar la integración del orquestador,
 autorizar el ámbito y registrar el respaldo.
+### 9.8 Manifiesto de promoción `lope_promocion/v1`
+
+**Estado: integrado y probado con datos sintéticos; pendiente de confirmación
+final de Diery.** Esto no conecta la carga real ni la autoriza.
+
+El manifiesto separa cuatro identidades:
+
+- `scope_id`: ámbito que el orquestador resuelve desde su configuración
+  autorizada. El valor del manifiesto no sustituye la autorización ni se confía
+  sin validación.
+- `idempotency_key`: la tupla ya respaldada por `UNIQUE(huella_archivo,
+  parser_version, mapeo_version)` en `importacion_lotes`. El `lote_id` persistido
+  al crear el lote debe conservarse y reutilizarse en el reintento; una tupla
+  existente con otro `lote_id` se rechaza.
+- Origen estable: huella, hoja, celda, fila, rol y tipo de entidad. `origen_id`
+  se resuelve por esa clave única y se reutiliza; no depende de las versiones.
+- Identidad de dominio: `entity` + UUID `id`. Un UUID aceptado se conserva entre
+  reintentos y versiones; una chapa no es un ID estable.
+
+Solo las correspondencias `ACEPTADO` entran en `registros`. Una correspondencia
+ambigua o pendiente no crea ni publica una entidad. Para cada registro,
+`after` y `before` deben contener exactamente los campos publicables de la
+entidad, incluidos los valores `null`; no incluyen `id`, `scope_id` ni columnas
+técnicas. `before=null` y `expected_version=null` son obligatorios para una
+primera publicación. Para una corrección, `before` debe ser el snapshot vigente
+y `expected_version` la versión leída bajo bloqueo. El orquestador inserta o
+actualiza primero el dominio y luego llama a `publicar_cambios` con esa misma
+conexión y transacción.
+
+Ejemplo enteramente sintético (UUID, huella y evidencia no corresponden a
+datos reales). Muestra una corrección revisada de una cuy ya publicada y nuevas
+filas relacionadas en las cinco entidades:
+
+```json
+{
+  "contract_version": "lope_promocion/v1",
+  "batch": {
+    "lote_id": "00000000-0000-4000-8000-000000000002",
+    "idempotency_key": {
+      "huella_archivo": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "parser_version": "p1.0.0",
+      "mapeo_version": "m1.0.0"
+    }
+  },
+  "scope": {
+    "scope_id": "00000000-0000-4000-8000-000000000001",
+    "config_alias": "LOPE-G1-SINTETICO"
+  },
+  "correspondencias_aceptadas": [
+    {
+      "origen_id": "00000000-0000-4000-8000-000000000801",
+      "origen": {
+        "hoja": "Individual",
+        "celda": "A2",
+        "fila": 2,
+        "rol": "ANIMAL",
+        "entidad_tipo": "cuyes"
+      },
+      "estado": "ACEPTADO",
+      "entidad_id": "00000000-0000-4000-8000-000000000101",
+      "revisor": "revisor-sintetico",
+      "evidencia": "Corrección revisada; se reutiliza la cuy ya existente."
+    },
+    {
+      "origen_id": "00000000-0000-4000-8000-000000000802",
+      "origen": {
+        "hoja": "Individual",
+        "celda": "A3",
+        "fila": 3,
+        "rol": "ANIMAL",
+        "entidad_tipo": "cuyes"
+      },
+      "estado": "ACEPTADO",
+      "entidad_id": "00000000-0000-4000-8000-000000000102",
+      "revisor": "revisor-sintetico",
+      "evidencia": "Ficha sintética revisada; identidad nueva."
+    },
+    {
+      "origen_id": "00000000-0000-4000-8000-000000000803",
+      "origen": {
+        "hoja": "Reproductivo",
+        "celda": "E4",
+        "fila": 4,
+        "rol": "PARTO_01",
+        "entidad_tipo": "partos"
+      },
+      "estado": "ACEPTADO",
+      "entidad_id": "00000000-0000-4000-8000-000000000201",
+      "revisor": "revisor-sintetico",
+      "evidencia": "Fecha y camada sintéticas revisadas."
+    },
+    {
+      "origen_id": "00000000-0000-4000-8000-000000000804",
+      "origen": {
+        "hoja": "Reproductivo",
+        "celda": "B2",
+        "fila": 2,
+        "rol": "EMPADRE",
+        "entidad_tipo": "eventos"
+      },
+      "estado": "ACEPTADO",
+      "entidad_id": "00000000-0000-4000-8000-000000000301",
+      "revisor": "revisor-sintetico",
+      "evidencia": "Evento sintético; macho no resuelto, se conserva NULL."
+    },
+    {
+      "origen_id": "00000000-0000-4000-8000-000000000805",
+      "origen": {
+        "hoja": "Reproductivo",
+        "celda": "B2",
+        "fila": 2,
+        "rol": "PESAJE_MONTA",
+        "entidad_tipo": "pesajes"
+      },
+      "estado": "ACEPTADO",
+      "entidad_id": "00000000-0000-4000-8000-000000000401",
+      "revisor": "revisor-sintetico",
+      "evidencia": "Peso de monta sintético expresado en gramos."
+    },
+    {
+      "origen_id": "00000000-0000-4000-8000-000000000806",
+      "origen": {
+        "hoja": "Individual",
+        "celda": "A3",
+        "fila": 3,
+        "rol": "CRIA_DE_PARTO",
+        "entidad_tipo": "parto_crias"
+      },
+      "estado": "ACEPTADO",
+      "entidad_id": "00000000-0000-4000-8000-000000000501",
+      "revisor": "revisor-sintetico",
+      "evidencia": "Vínculo sintético madre-camada revisado."
+    }
+  ],
+  "registros": [
+    {
+      "entity": "cuyes",
+      "id": "00000000-0000-4000-8000-000000000101",
+      "expected_version": 1,
+      "before": {
+        "poza_id": null,
+        "galpon_origen_id": "00000000-0000-4000-8000-000000000010",
+        "codigo_identificacion": "H-007",
+        "sexo": "H",
+        "fecha_nacimiento": "2025-02-01",
+        "color_codigo": "B",
+        "ojos_codigo": "1",
+        "pelaje_original": "B",
+        "padre_id": null,
+        "madre_id": null,
+        "categoria_ml": null,
+        "ultimo_peso_g": 940.0,
+        "estado": "ACTIVO",
+        "deleted_at": null
+      },
+      "after": {
+        "poza_id": null,
+        "galpon_origen_id": "00000000-0000-4000-8000-000000000010",
+        "codigo_identificacion": "H-007",
+        "sexo": "H",
+        "fecha_nacimiento": "2025-02-01",
+        "color_codigo": "B",
+        "ojos_codigo": "1",
+        "pelaje_original": "B",
+        "padre_id": null,
+        "madre_id": null,
+        "categoria_ml": null,
+        "ultimo_peso_g": 950.0,
+        "estado": "ACTIVO",
+        "deleted_at": null
+      }
+    },
+    {
+      "entity": "cuyes",
+      "id": "00000000-0000-4000-8000-000000000102",
+      "expected_version": null,
+      "before": null,
+      "after": {
+        "poza_id": null,
+        "galpon_origen_id": "00000000-0000-4000-8000-000000000010",
+        "codigo_identificacion": "C-2026-001",
+        "sexo": "H",
+        "fecha_nacimiento": "2026-01-20",
+        "color_codigo": null,
+        "ojos_codigo": null,
+        "pelaje_original": null,
+        "padre_id": null,
+        "madre_id": "00000000-0000-4000-8000-000000000101",
+        "categoria_ml": null,
+        "ultimo_peso_g": null,
+        "estado": null,
+        "deleted_at": null
+      }
+    },
+    {
+      "entity": "partos",
+      "id": "00000000-0000-4000-8000-000000000201",
+      "expected_version": null,
+      "before": null,
+      "after": {
+        "madre_id": "00000000-0000-4000-8000-000000000101",
+        "fecha_parto": "2026-01-20",
+        "numero_parto": 4,
+        "nacidos_vivos": 1,
+        "nacidos_muertos": 0,
+        "tamano_camada_nacida": 1,
+        "deleted_at": null
+      }
+    },
+    {
+      "entity": "eventos",
+      "id": "00000000-0000-4000-8000-000000000301",
+      "expected_version": null,
+      "before": null,
+      "after": {
+        "cuy_id": "00000000-0000-4000-8000-000000000101",
+        "tipo": "EMPADRE",
+        "fecha": "2026-01-05",
+        "macho_id": null,
+        "poza_origen_id": null,
+        "poza_destino_id": null,
+        "detalle": null,
+        "deleted_at": null
+      }
+    },
+    {
+      "entity": "pesajes",
+      "id": "00000000-0000-4000-8000-000000000401",
+      "expected_version": null,
+      "before": null,
+      "after": {
+        "cuy_id": "00000000-0000-4000-8000-000000000101",
+        "fecha_pesaje": "2026-01-05",
+        "peso_gramos": 950.0,
+        "etapa": "MONTA",
+        "parto_id": null,
+        "evento_id": "00000000-0000-4000-8000-000000000301",
+        "deleted_at": null
+      }
+    },
+    {
+      "entity": "parto_crias",
+      "id": "00000000-0000-4000-8000-000000000501",
+      "expected_version": null,
+      "before": null,
+      "after": {
+        "parto_id": "00000000-0000-4000-8000-000000000201",
+        "cuy_id": "00000000-0000-4000-8000-000000000102",
+        "rol": "CRIA"
+      }
+    }
+  ]
+}
+```
+
+En cada correspondencia real se persiste el `lote_id` y las versiones del
+parser/mapeo conforme al esquema de soporte; se omiten en el JSON repetido para
+mantener una única fuente. El orden de `registros` no es una estrategia de
+escritura: el orquestador debe resolver dependencias, escribir las filas y
+verificar que cada `after` coincide exactamente con la fila final antes de
+llamar al publicador. La columna `scope_id` se escribe en dominio desde el
+ámbito autorizado, no se añade a `after`.
+
+**Acuerdo de Diery:** la clave existente de lote no incluye `scope_id`; se
+mantiene la tupla huella + versiones de parser y mapeo. Un reintento debe usar
+el ámbito original. Si la misma tupla llega con otro ámbito, el orquestador
+debe rechazarla, no reutilizar el lote silenciosamente. Habilitar el mismo
+archivo y versiones en ámbitos distintos requeriría una decisión y migración
+posteriores para incluir el ámbito en la clave única.
 
 ## 10. Coordinación pendiente, sin reabrir lo respondido
 

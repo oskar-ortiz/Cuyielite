@@ -1,8 +1,8 @@
 import {
   IonButton,
-  IonChip,
   IonContent,
   IonHeader,
+  IonIcon,
   IonItem,
   IonLabel,
   IonList,
@@ -11,13 +11,24 @@ import {
   IonToolbar,
   useIonViewWillEnter,
 } from '@ionic/react';
+import {
+  addOutline,
+  businessOutline,
+  chatboxEllipsesOutline,
+  locationOutline,
+  personCircleOutline,
+  swapHorizontalOutline,
+  syncOutline,
+  warningOutline,
+} from 'ionicons/icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { ModeChip, PageFrame, PageIntro, PageState, PendingChip, SectionCard } from '../components/AppUi';
+import { snapshot } from '../data/auth.session';
 import type { Galpon } from '../data/galpones.repository';
 import { getGalponesRepository } from '../data/galpones.repository.factory';
 import { getWorkGalponesReader } from '../data/work.galpones.repository';
 import { getWorkSyncRepository } from '../data/work.sync.repository';
-import './galpones.css';
 
 interface GalponesProps {
   mode?: 'demo' | 'trabajo';
@@ -26,10 +37,12 @@ interface GalponesProps {
 const Galpones: React.FC<GalponesProps> = ({ mode = 'demo' }) => {
   const workMode = mode === 'trabajo';
   const basePath = workMode ? '/trabajo/galpones' : '/galpones';
+  const newPath = workMode ? '/trabajo/galpones/nuevo' : '/galpones/nuevo';
   const [galpones, setGalpones] = useState<Galpon[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<number | null>(null);
+  const [canWrite, setCanWrite] = useState(() => snapshot().canWrite);
 
   const requestIdRef = useRef(0);
   const inFlightRef = useRef(false);
@@ -71,9 +84,10 @@ const Galpones: React.FC<GalponesProps> = ({ mode = 'demo' }) => {
     return () => {
       requestIdRef.current = -1;
     };
-  }, [load]);
+  }, [workMode, load]);
 
   useIonViewWillEnter(() => {
+    setCanWrite(snapshot().canWrite);
     load();
   });
 
@@ -82,53 +96,101 @@ const Galpones: React.FC<GalponesProps> = ({ mode = 'demo' }) => {
       <IonHeader>
         <IonToolbar>
           <IonTitle>{workMode ? 'Galpones · Trabajo' : 'Galpones'}</IonTitle>
-          <IonButton slot="end" routerLink={workMode ? '/trabajo/galpones/nuevo' : '/galpones/nuevo'}>
-            Nuevo
-          </IonButton>
         </IonToolbar>
       </IonHeader>
-      <IonContent fullscreen>
-        <div className="marcado-demo">
-          <IonChip color={workMode ? 'primary' : 'warning'}>
-            {workMode ? 'Base de trabajo' : 'Datos de demostración'}
-          </IonChip>
-          {workMode && pending !== null && pending > 0 && (
-            <IonChip color="warning">{pending === 1 ? '1 cambio pendiente' : `${pending} cambios pendientes`}</IonChip>
-          )}
-          <IonButton size="small" fill="clear" routerLink="/">
-            Cambiar modo
-          </IonButton>
-          {workMode && (
-            <>
-              <IonButton size="small" fill="clear" routerLink="/trabajo/sincronizacion">
-                Sincronización
+      <IonContent fullscreen className="app-content">
+        <PageFrame>
+          <PageIntro
+            eyebrow={workMode ? 'Operación local' : 'Exploración guiada'}
+            title="Galpones"
+            description={
+              workMode
+                ? 'Consulta la producción disponible en este dispositivo, incluso sin conexión.'
+                : 'Recorre los galpones de prueba y sus pozas.'
+            }
+            actions={
+              (!workMode || canWrite) && (
+                <IonButton routerLink={newPath}>
+                  <IonIcon slot="start" icon={addOutline} aria-hidden="true" />
+                  Nuevo
+                </IonButton>
+              )
+            }
+          />
+
+          <div className="context-bar">
+            <div className="context-status">
+              <ModeChip work={workMode} readOnly={workMode && !canWrite} />
+              {workMode && pending !== null && <PendingChip count={pending} />}
+            </div>
+            <nav className="context-actions" aria-label={workMode ? 'Herramientas de trabajo' : 'Navegación de modos'}>
+              <IonButton fill="clear" routerLink="/">
+                <IonIcon slot="start" icon={swapHorizontalOutline} aria-hidden="true" />
+                Cambiar modo
               </IonButton>
-              <IonButton size="small" fill="clear" routerLink="/trabajo/conflictos">
-                Revisar conflictos
-              </IonButton>
-            </>
+              {workMode && (
+                <>
+                  <IonButton fill="clear" routerLink="/trabajo/sincronizacion">
+                    <IonIcon slot="start" icon={syncOutline} aria-hidden="true" />
+                    Sincronización
+                  </IonButton>
+                  <IonButton fill="clear" routerLink="/trabajo/conflictos">
+                    <IonIcon slot="start" icon={warningOutline} aria-hidden="true" />
+                    Revisar conflictos
+                  </IonButton>
+                  <IonButton fill="clear" routerLink="/trabajo/asistente">
+                    <IonIcon slot="start" icon={chatboxEllipsesOutline} aria-hidden="true" />
+                    Asistente
+                  </IonButton>
+                  <IonButton fill="clear" routerLink="/trabajo/acceso">
+                    <IonIcon slot="start" icon={personCircleOutline} aria-hidden="true" />
+                    Acceso
+                  </IonButton>
+                </>
+              )}
+            </nav>
+          </div>
+
+          {loading ? (
+            <PageState kind="loading" title="Cargando galpones…" />
+          ) : error ? (
+            <PageState kind="error" title="Error al cargar galpones">
+              <p>{error}</p>
+            </PageState>
+          ) : galpones.length === 0 ? (
+            <PageState
+              kind="empty"
+              title={workMode ? 'La base de trabajo todavía no tiene galpones.' : 'No hay galpones registrados.'}
+              action={
+                (!workMode || canWrite) && (
+                  <IonButton routerLink={newPath} fill="outline">
+                    <IonIcon slot="start" icon={addOutline} aria-hidden="true" />
+                    Registrar el primero
+                  </IonButton>
+                )
+              }
+            />
+          ) : (
+            <SectionCard className="section-card--flush" ariaLabel="Listado de galpones">
+              <IonList className="app-list">
+                {galpones.map((galpon) => (
+                  <IonItem key={galpon.id} routerLink={`${basePath}/${galpon.id}`} detail={true}>
+                    <div className="app-list__title">
+                      <IonIcon className="app-list__icon" icon={businessOutline} aria-hidden="true" />
+                      <IonLabel>
+                        <h2>{galpon.nombre}</h2>
+                        <p>
+                          <IonIcon icon={locationOutline} aria-hidden="true" />{' '}
+                          {galpon.ubicacion ?? 'Sin ubicación registrada'}
+                        </p>
+                      </IonLabel>
+                    </div>
+                  </IonItem>
+                ))}
+              </IonList>
+            </SectionCard>
           )}
-        </div>
-        {loading ? (
-          <p className="estado-vacio">Cargando galpones…</p>
-        ) : error ? (
-          <p className="estado-vacio">Error al cargar galpones: {error}</p>
-        ) : galpones.length === 0 ? (
-          <p className="estado-vacio">
-            {workMode ? 'La base de trabajo todavía no tiene galpones.' : 'No hay galpones registrados.'}
-          </p>
-        ) : (
-          <IonList>
-            {galpones.map((galpon) => (
-              <IonItem key={galpon.id} routerLink={`${basePath}/${galpon.id}`} detail={true}>
-                <IonLabel>
-                  <h2>{galpon.nombre}</h2>
-                  <p>{galpon.ubicacion ?? 'Sin ubicación registrada'}</p>
-                </IonLabel>
-              </IonItem>
-            ))}
-          </IonList>
-        )}
+        </PageFrame>
       </IonContent>
     </IonPage>
   );

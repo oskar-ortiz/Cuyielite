@@ -7,6 +7,7 @@ type Row = Record<string, unknown>;
 // No modifica filas ni avanza cursores: la UI puede consultarla en cualquier momento.
 export interface WorkSyncStatus {
   scopeId: string | null;
+  deviceId: string;
   cursor: string | null;
   pending: number;
   prepared: number;
@@ -29,6 +30,7 @@ export async function readWorkSyncStatus(db: MigrationDb): Promise<WorkSyncStatu
     ).values?.[0] as Row | undefined) ?? {};
   return {
     scopeId: identity.scopeId,
+    deviceId: identity.deviceId,
     cursor: identity.cursor,
     pending: Number(row.pending ?? 0),
     prepared: Number(row.prepared ?? 0),

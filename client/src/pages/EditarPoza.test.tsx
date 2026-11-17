@@ -34,6 +34,11 @@ vi.mock('@ionic/react', () => ({
     </button>
   ),
   useIonViewWillEnter: vi.fn(),
+
+  IonIcon: ({ icon: _icon }: any) => null,
+  IonSpinner: () => null,
+  IonChip: ({ children }: any) => <span>{children}</span>,
+  IonLabel: ({ children }: any) => <span>{children}</span>,
 }));
 
 vi.mock('../data/galpones.repository.factory', () => ({
