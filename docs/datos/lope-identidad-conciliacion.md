@@ -44,9 +44,15 @@
 - **PENDIENTE** — Resolver cada correspondencia origen↔entidad con motivo,
   evidencia y revisor técnico designado. Responsable: Diery prepara las
   propuestas; Oskar/Lope designan al revisor; ese revisor decide.
-- **PENDIENTE** — Aunque la relación `parto_crias` está implementada, falta
-  evidencia de origen para cada vínculo cría–parto y aprobación de su rol.
-  Responsable: Diery aporta evidencia; revisor técnico valida.
+- **PENDIENTE** — Para aceptar un vínculo `parto_crias` real se debe:
+  (1) citar la fila de origen (archivo/huella, hoja, celda y fila) y evidencia
+  del vínculo cría–parto; (2) conciliar por separado `cuy_id` y `parto_id`,
+  resolviendo códigos ambiguos, duplicados o sin correspondencia; (3) aprobar
+  el `rol` observado —el default `CRIA` del DDL no lo demuestra—; y (4) decidir
+  con evidencia los conflictos con `UNIQUE(cuy_id)` o
+  `UNIQUE(parto_id, cuy_id)`, sin cambiar las restricciones vigentes.
+  Diery prepara la evidencia y el revisor técnico designado acepta, rechaza o
+  deja pendiente cada vínculo. No se modifica el contrato de transporte.
 - **PENDIENTE** — Confirmar la semántica de `R` por campo. `tools/lope_import`
   no implementa una regla para ese símbolo y la documentación previa presenta
   interpretaciones incompatibles. Responsable: Diery aporta la fuente primaria;

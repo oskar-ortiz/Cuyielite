@@ -78,9 +78,24 @@ promociones. Requiere revisión de Diery/Oskar.
 - **PENDIENTE** — Confirmar la fuente y significado del peso de monta frente a
   `PESO PARTO` y el peso del bloque reproductivo. Diery debe aportar evidencia
   de columna/fecha/contexto y el revisor debe validar antes de aceptar.
-- **PENDIENTE** — Definir evidencia y reglas para crear `parto_crias` desde las
-  filas de origen. La existencia de la tabla no demuestra qué cría pertenece a
-  qué parto. Diery prepara las propuestas; el revisor decide cada vínculo.
+- **PENDIENTE** — Resolver, antes de aceptar cada `parto_crias` real, estas
+  decisiones de dominio (sin cambios al contrato de transporte):
+  1. Identificar la fila de origen y la evidencia que vincula ese parto con esa
+     cría; registrar archivo/huella, hoja, celda y fila. La cercanía de filas o
+     un conteo del parto no prueban por sí solos el vínculo.
+  2. Conciliar la identidad de la cría con un `cuy_id` aceptado y el parto con
+     un `parto_id` aceptado; decidir explícitamente cada código ambiguo,
+     duplicado o sin correspondencia.
+  3. Aprobar el `rol` de cada vínculo con evidencia de la columna/contexto.
+     `CRIA` es el default del DDL, no evidencia de que ese valor corresponda;
+     acordar la semántica de otros roles si aparecen.
+  4. Resolver con evidencia los casos que contradigan la unicidad vigente
+     (un vínculo por `cuy_id`); dejar sin aceptar los casos no resueltos, sin
+     cambiar esa restricción.
+
+  Diery prepara cada propuesta; el revisor técnico designado acepta, rechaza o
+  deja pendiente con evidencia y motivo. Solo se promueven los vínculos
+  aceptados con `parto_id`, `cuy_id` y `rol` resueltos.
 
 ## Alcance no autorizado
 
