@@ -191,8 +191,20 @@ const PrediccionesAnimal: React.FC = () => {
 
   const run = useCallback(
     async (kind: 'hembra' | 'candidata') => {
-      if (!token.trim()) {
-        setError('Ingresa el token de laboratorio para consultar.');
+      // En el piloto la sesión activa aporta el bearer; pedir un token manual
+      // aquí impedía consultar aunque la sesión estuviera iniciada.
+      let bearer: string;
+      try {
+        bearer = await accessToken();
+      } catch {
+        bearer = '';
+      }
+      if (!bearer) {
+        setError(
+          AUTH_MODE === 'pilot'
+            ? 'Inicia sesión para consultar las predicciones.'
+            : 'Ingresa el token de laboratorio para consultar.',
+        );
         return;
       }
       const requestId = ++requestRef.current;
@@ -204,11 +216,11 @@ const PrediccionesAnimal: React.FC = () => {
         const transport = getMlTransport();
         if (kind === 'hembra') {
           const body = compact({ cuy_id: animalId, ...hembra });
-          const data = (await transport.predictHembra(token.trim(), body)) as HembraResult;
+          const data = (await transport.predictHembra(bearer, body)) as HembraResult;
           if (requestRef.current === requestId) setHembraResult(data);
         } else {
           const body = compact({ cuy_id: animalId, ...candidata });
-          const data = (await transport.predictCandidata(token.trim(), body)) as CandidataResult;
+          const data = (await transport.predictCandidata(bearer, body)) as CandidataResult;
           if (requestRef.current === requestId) setCandidataResult(data);
         }
       } catch (e) {
@@ -217,7 +229,7 @@ const PrediccionesAnimal: React.FC = () => {
         if (requestRef.current === requestId) setBusy(null);
       }
     },
-    [animalId, token, hembra, candidata],
+    [animalId, hembra, candidata, accessToken],
   );
 
   const aplicable = cuyo?.sexo === 'H' && cuyo.estado === 'ACTIVO';
@@ -251,15 +263,19 @@ const PrediccionesAnimal: React.FC = () => {
                 productivo, categoría ni alertas. Solo se evalúan datos publicados; los cambios locales pendientes no se
                 incluyen.
               </p>
-              <IonInput
-                fill="outline"
-                label="Token de laboratorio"
-                labelPlacement="stacked"
-                type="password"
-                value={token}
-                onIonInput={(e) => setToken(String(e.detail.value ?? ''))}
-                autocomplete="off"
-              />
+              {AUTH_MODE === 'lab' ? (
+                <IonInput
+                  fill="outline"
+                  label="Token de laboratorio"
+                  labelPlacement="stacked"
+                  type="password"
+                  value={token}
+                  onIonInput={(e) => setToken(String(e.detail.value ?? ''))}
+                  autocomplete="off"
+                />
+              ) : (
+                <p className="estado-vacio">Las consultas usan la sesión activa del piloto.</p>
+              )}
               {error && <p className="estado-vacio">{error}</p>}
 
               <IonCard>
