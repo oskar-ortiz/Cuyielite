@@ -1,47 +1,152 @@
 contract: rag_validation_questions/v1
 preguntas:
-  - pregunta: ""
+  - id: A1
+    grupo: valida
+    pregunta: ¿Cuál es la orientación recomendada para la construcción de un galpón de cuyes en clima frío y hacia qué puntos cardinales deben dar las ventanas para garantizar una iluminación óptima?
+    paginas_esperadas: [15]
+    fuera_de_corpus: false
+  - id: A2
+    grupo: valida
+    pregunta: ¿Qué elementos líquidos o sólidos se pueden utilizar en los pediluvios ubicados a la entrada del galpón y cuáles son sus concentraciones sugeridas?
+    paginas_esperadas: [18, 19, 69]
+    fuera_de_corpus: false
+  - id: A3
+    grupo: valida
+    pregunta: ¿Cada cuántos días se presenta el ciclo estral en las hembras de cuy y cuál es su temperatura rectal normal según las constantes fisiológicas?
+    paginas_esperadas: [71]
+    fuera_de_corpus: false
+  - id: A4
+    grupo: valida
+    pregunta: ¿De qué material, calibre y dimensiones deben ser las placas o aretes metálicos para la identificación individual de los animales, y en qué oreja se colocan según el sexo?
+    paginas_esperadas: [27]
+    fuera_de_corpus: false
+  - id: A5
+    grupo: valida
+    pregunta: ¿Cuánto tiempo dura el ayuno previo de los animales antes del proceso de faenado y sacrificio, y qué temperatura debe mantenerse en el depósito de escaldado?
+    paginas_esperadas: [79, 80]
+    fuera_de_corpus: false
+  - id: A6
+    grupo: valida
+    pregunta: ¿Cuál es el procedimiento paso a paso descrito en el manual para la elaboración de germinados de maíz destinados a la alimentación de los cuyes?
+    paginas_esperadas: [39, 40]
+    fuera_de_corpus: false
+  - id: A7
+    grupo: valida
+    pregunta: ¿Qué porcentaje máximo de melaza se puede utilizar en la formulación de bloques multinutricionales y qué función cumple dentro de la mezcla?
+    paginas_esperadas: [43]
+    fuera_de_corpus: false
+  - id: A8
+    grupo: valida
+    pregunta: ¿Qué trastorno digestivo se previene al utilizar el "oreador" para forrajes y por qué ocurre este problema con leguminosas muy tiernas?
+    paginas_esperadas: [20, 32]
+    fuera_de_corpus: false
+  - id: A9
+    grupo: valida
+    pregunta: ¿Cuáles son los síntomas clínicos característicos de la Yersiniosis ("pepa") y qué se observa en los órganos durante la necropsia?
+    paginas_esperadas: [71, 72]
+    fuera_de_corpus: false
+  - id: A10
+    grupo: valida
+    pregunta: ¿Cómo se debe preparar técnicamente el biol a partir de la orina de cuy en condiciones anaeróbicas y en qué proporción se diluye con agua para usarlo como abono foliar?
+    paginas_esperadas: [51]
+    fuera_de_corpus: false
+  - id: B1
+    grupo: valida
+    pregunta: ¿Cuál es el origen geográfico ancestral y la región de los Andes de donde son nativos los cuyes silvestres (Cavia porcellus)?
+    paginas_esperadas: [71, 85]
+    fuera_de_corpus: false
+  - id: B2
+    grupo: valida
+    pregunta: ¿Qué vitamina específica es indispensable que consuman los cuyes en su dieta diaria, ya que su organismo no la puede sintetizar por sí mismo (al igual que los humanos)?
+    paginas_esperadas: [32]
+    fuera_de_corpus: false
+  - id: B3
+    grupo: valida
+    pregunta: ¿Por qué razón biológica y nutricional los cuyes practican la cecotrofia (ingerir sus propias heces blandas nocturnas)?
+    paginas_esperadas: [31]
+    fuera_de_corpus: false
+  - id: B4
+    grupo: en_dominio_sin_respuesta
+    pregunta: ¿Cuál es la diferencia principal en la morfología del pelaje entre un cuy tipo 1 (peruano/andino), un cuy tipo 2 (abisinio) y un cuy tipo 3 (angora/merino)?
     paginas_esperadas: []
     fuera_de_corpus: false
-  - pregunta: ""
+  - id: B5
+    grupo: en_dominio_sin_respuesta
+    pregunta: ¿Qué significan los distintos sonidos que emiten los cuyes, como el característico silbido agudo (wheeking) o el ronroneo?
     paginas_esperadas: []
     fuera_de_corpus: false
-  - pregunta: ""
+  - id: B6
+    grupo: en_dominio_sin_respuesta
+    pregunta: ¿Cuál es la esperanza de vida promedio de un cuy doméstico cuando recibe cuidados óptimos de tenencia?
     paginas_esperadas: []
     fuera_de_corpus: false
-  - pregunta: ""
-    paginas_esperadas: []
+  - id: B7
+    grupo: valida
+    pregunta: ¿Cómo está estructurado el aparato digestivo del cuy y en qué parte específica ocurre la fermentación bacteriana de la fibra?
+    paginas_esperadas: [31, 32, 33]
     fuera_de_corpus: false
-  - pregunta: ""
-    paginas_esperadas: []
+  - id: B8
+    grupo: valida
+    pregunta: ¿A qué se debe que los cuyes sean clasificados como animales "precoces" al momento de nacer?
+    paginas_esperadas: [28]
     fuera_de_corpus: false
-  - pregunta: ""
-    paginas_esperadas: []
+  - id: B9
+    grupo: valida
+    pregunta: ¿Cuál es el nombre científico oficial con el que se clasifica taxonómicamente al cuy doméstico?
+    paginas_esperadas: [85]
     fuera_de_corpus: false
-  - pregunta: ""
-    paginas_esperadas: []
+  - id: B10
+    grupo: valida
+    pregunta: Además de Colombia, ¿en qué otros países de la cordillera de los Andes la crianza y consumo de cuyes tiene una profunda tradición cultural y alimentaria?
+    paginas_esperadas: [12, 85]
     fuera_de_corpus: false
-  - pregunta: ""
-    paginas_esperadas: []
-    fuera_de_corpus: false
-  - pregunta: ""
-    paginas_esperadas: []
-    fuera_de_corpus: false
-  - pregunta: ""
-    paginas_esperadas: []
-    fuera_de_corpus: false
-  - pregunta: ""
+  - id: AF1
+    grupo: fuera_de_corpus
+    pregunta: ¿Cuál es el calendario de vacunación obligatorio y la dosificación de la vacuna antirrábica para cachorros caninos de dos meses de edad?
     paginas_esperadas: []
     fuera_de_corpus: true
-  - pregunta: ""
+  - id: AF2
+    grupo: fuera_de_corpus
+    pregunta: ¿Cuáles son las variedades de café (como Castillo o Caturra) más resistentes a la roya y cuál es la densidad de siembra recomendada por hectárea en la zona andina colombiana?
     paginas_esperadas: []
     fuera_de_corpus: true
-  - pregunta: ""
+  - id: AF3
+    grupo: fuera_de_corpus
+    pregunta: ¿Cómo se implementa un decorador asíncrono en Python utilizando asyncio y FastAPI para manejar una cola de tareas en Redis?
     paginas_esperadas: []
     fuera_de_corpus: true
-  - pregunta: ""
+  - id: AF4
+    grupo: fuera_de_corpus
+    pregunta: ¿Cuál es el período de gestación exacto de una coneja de raza Nueva Zelanda y cuántas crías por camada se consideran estándar en la producción cunícola comercial?
     paginas_esperadas: []
     fuera_de_corpus: true
-  - pregunta: ""
+  - id: AF5
+    grupo: fuera_de_corpus
+    pregunta: ¿En qué año se fundó oficialmente la ciudad de San Juan de Pasto y cuáles fueron los principales acontecimientos históricos de su independencia?
+    paginas_esperadas: []
+    fuera_de_corpus: true
+  - id: BF1
+    grupo: fuera_de_corpus
+    pregunta: ¿En qué año se lanzó oficialmente al espacio el telescopio espacial James Webb y qué agencia espacial lideró principalmente su construcción?
+    paginas_esperadas: []
+    fuera_de_corpus: true
+  - id: BF2
+    grupo: fuera_de_corpus
+    pregunta: ¿Qué es una función de cierre (closure) en lenguajes de programación como JavaScript o Python y para qué se suele utilizar en el desarrollo de software?
+    paginas_esperadas: []
+    fuera_de_corpus: true
+  - id: BF3
+    grupo: fuera_de_corpus
+    pregunta: ¿Cuál es la capital actual de Kazajistán y qué nombre temporal llevó en honor a su expresidente Nursultán Nazarbáyev?
+    paginas_esperadas: []
+    fuera_de_corpus: true
+  - id: BF4
+    grupo: fuera_de_corpus
+    pregunta: ¿Quién fue el autor de la novela Cien años de soledad y en qué año se publicó por primera vez en Buenos Aires?
+    paginas_esperadas: []
+    fuera_de_corpus: true
+  - id: BF5
+    grupo: fuera_de_corpus
+    pregunta: ¿Cuáles son los principales gases que componen la atmósfera terrestre y qué porcentaje aproximado ocupa el nitrógeno en ella?
     paginas_esperadas: []
     fuera_de_corpus: true
