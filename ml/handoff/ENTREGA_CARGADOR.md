@@ -19,8 +19,12 @@
   apoyo opcional, no la decisión principal.
 - **CONFIRMADO** — `backend/app/services/ml.py::load_candidate_model` llama al
   verificador y adapta los errores; el backend no fue modificado en esta entrega.
-- **CONFIRMADO** — El selector de backend pasó:  
-  `.\.venv\Scripts\python.exe -m pytest backend\tests\test_ml_adapters.py backend\tests\test_ml_endpoints.py -q`  
+- **CONFIRMADO** — El selector de backend pasó con:
+
+  ```powershell
+  .\.venv\Scripts\python.exe -m pytest backend\tests\test_ml_adapters.py backend\tests\test_ml_endpoints.py -q
+  ```
+
   Resultado: `16 passed`.
 - **CONFIRMADO** — La suite que incluye las pruebas de artefacto y predicción
   pasó con `.\.venv\Scripts\python.exe -m pytest ml -q` (83 passed).
