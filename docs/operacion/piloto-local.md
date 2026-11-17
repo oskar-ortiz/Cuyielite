@@ -100,7 +100,11 @@ Por archivo se generan `auditoria-*.json`, `revision-*.json` y `decisiones-pendi
 
 Todas las decisiones quedan `PENDIENTE`, sin revisor ni aceptaciones. La promoción requiere decisiones humanas del revisor técnico designado; no se usa a Oskar, Diery ni la cuenta `admin` como revisor por defecto.
 
-## 7. Límites
+## 7. Preflight de Android
+
+`scripts/start-pixel.ps1` exige `RAM disponible >= 2560 MB` (parámetro `-AvdRamMb`) **y** margen de commit de al menos 4 GB antes de arrancar Pixel_36. Si solo hay margen de commit, el emulador arranca pero System UI entra en ANR y la app queda en pantalla negra: eso ocurrió con 239–654 MB de RAM disponible. El rechazo no cierra aplicaciones ni cambia el archivo de paginación. Estado observado el 2026-11-17: **bloqueado**, sin recorrido Android verificado; detalle en `docs/verificaciones/android-rag-preflight.md`.
+
+## 8. Límites
 
 - No se hicieron cargas reales ni promociones; las tablas de dominio del piloto están vacías.
 - RF sigue **no disponible**: Diery debe entregar el paquete reconciliado (artefacto, metadata e informe de métricas coincidentes y trazabilidad de las 805 filas). No se reentrenó ni se eligió un modelo sustituto.
