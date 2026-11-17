@@ -4,10 +4,12 @@ import os
 import subprocess
 import sys
 import tempfile
+import hashlib
+import json
 from pathlib import Path
 
 import openpyxl
-from pathlib import Path
+import pytest
 
 REPO_ROOT = str(Path(__file__).resolve().parents[3])
 
@@ -131,6 +133,7 @@ def test_individual_format_detected():
             data = json.load(f)
         animals = [c for c in data["candidates"] if hasattr(c, "animal_no") or (isinstance(c, dict) and "animal_no" in c)]
         assert len(animals) >= 3
+        assert animals[0]["ref"] == {"sheet": "Individual", "cell": "C2"}
 
 
 def test_individual_source_fields():
@@ -148,10 +151,179 @@ def test_individual_source_fields():
         with open(out) as f:
             data = json.load(f)
         # Verificar que los candidatos tienen campo source y field_origins
-        for c in data["candidates"]:
-            if isinstance(c, dict) and "animal_no" in c:
-                assert "source" in c
-                assert "field_origins" in c
+        animals = [
+            c
+            for c in data["candidates"]
+            if isinstance(c, dict) and "animal_no" in c
+        ]
+        for animal in animals:
+            assert "source" in animal
+            assert "field_origins" in animal
+        assert [animal["ref"]["cell"] for animal in animals] == ["C2", "C3", "C4"]
+
+
+def test_audit_contract_uses_versioned_hash_based_origins():
+    with tempfile.TemporaryDirectory() as tmp:
+        xlsx = os.path.join(tmp, "ind.xlsx")
+        out = os.path.join(tmp, "report.json")
+        _make_individual_xlsx(xlsx)
+        result = subprocess.run(
+            [sys.executable, "-m", "tools.lope_import", xlsx, "--output", out],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+        )
+        assert result.returncode == 0, result.stderr
+
+        with open(out, encoding="utf-8") as report_file:
+            data = json.load(report_file)
+        file_hash = hashlib.sha256(Path(xlsx).read_bytes()).hexdigest()
+
+        assert data["contract"] == "lope_import_audit/v1"
+        assert data["parser_version"] == "0.1.0"
+        assert data["mapeo_version"] == "0.1.0"
+        assert data["files"] == [
+            {
+                "file_id": f"sha256:{file_hash}",
+                "sha256_before": file_hash,
+                "sha256_after": file_hash,
+            }
+        ]
+        assert str(Path(xlsx)) not in Path(out).read_text(encoding="utf-8")
+        animal = next(candidate for candidate in data["candidates"] if candidate["kind"] == "animal")
+        assert animal["file_id"] == f"sha256:{file_hash}"
+        assert animal["origin_ref"] == (
+            f"sha256:{file_hash}:Individual:C2:ANIMAL:cuyes"
+        )
+        assert "records" not in data
+
+
+def test_reproductive_partos_have_stable_origin_refs():
+    with tempfile.TemporaryDirectory() as tmp:
+        xlsx = os.path.join(tmp, "repro.xlsx")
+        out = os.path.join(tmp, "report.json")
+        _make_reproductive_xlsx(xlsx)
+        result = subprocess.run(
+            [sys.executable, "-m", "tools.lope_import", xlsx, "--output", out],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+        )
+        assert result.returncode == 0, result.stderr
+
+        with open(out, encoding="utf-8") as report_file:
+            data = json.load(report_file)
+        file_hash = hashlib.sha256(Path(xlsx).read_bytes()).hexdigest()
+        block = next(candidate for candidate in data["candidates"] if candidate.get("kind") == "litter_block")
+
+        assert block["origin_ref"] == (
+            f"sha256:{file_hash}:Repro:A12:BLOQUE_REPRODUCTIVO:candidatos"
+        )
+        assert block["partos"][0]["origin_ref"] == (
+            f"sha256:{file_hash}:Repro:E12:PARTO:partos"
+        )
+        assert block["peso_origin_ref"] == (
+            f"sha256:{file_hash}:Repro:B12:PESAJE_MADRE:pesajes"
+        )
+
+
+def test_adapt_generates_review_only_domain_proposals():
+    with tempfile.TemporaryDirectory() as tmp:
+        individual = os.path.join(tmp, "ind.xlsx")
+        reproductive = os.path.join(tmp, "repro.xlsx")
+        audit_path = os.path.join(tmp, "audit.json")
+        review_path = os.path.join(tmp, "review.json")
+        _make_individual_xlsx(individual)
+        _make_reproductive_xlsx(reproductive)
+
+        audit_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "tools.lope_import",
+                individual,
+                reproductive,
+                "--output",
+                audit_path,
+            ],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+        )
+        assert audit_result.returncode == 0, audit_result.stderr
+        adapt_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "tools.lope_import",
+                "adapt",
+                audit_path,
+                "--output",
+                review_path,
+            ],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+        )
+        assert adapt_result.returncode == 0, adapt_result.stderr
+
+        with open(review_path, encoding="utf-8") as review_file:
+            review = json.load(review_file)
+        proposals = review["proposals"]
+        animals = [item for item in proposals if item["entity"] == "cuyes"]
+        partos = [item for item in proposals if item["entity"] == "partos"]
+        pesajes = [item for item in proposals if item["entity"] == "pesajes"]
+
+        assert review["contract"] == "lope_import_review/v1"
+        assert len(animals) == 3
+        assert len(partos) == 3
+        assert len(pesajes) == 2
+        assert all(item["status"] == "PENDIENTE_REVISION" for item in proposals)
+        assert all(item["proposed_fields"]["nacidos_vivos"] is None for item in partos)
+        assert all(item["proposed_fields"]["nacidos_muertos"] is None for item in partos)
+        assert all(
+            item["proposed_fields"]["tamano_camada_nacida"] is None
+            for item in partos
+        )
+        assert partos[0]["source_fields"]["tcn_original"] == "3"
+        assert pesajes[0]["proposed_fields"]["peso_gramos"] == "995"
+        assert pesajes[0]["proposed_fields"]["etapa"] == "MONTA"
+        assert review["summary"] == {
+            "proposal_count": 8,
+            "accepted_correspondences": 0,
+            "promotion_records": 0,
+        }
+        assert "scope_id" not in review
+        assert not any(
+            "correspondencia_id" in item or "id" in item for item in proposals
+        )
+        assert {item["entity"] for item in review["not_inferred"]} == {
+            "eventos",
+            "parto_crias",
+        }
+
+
+def test_adapt_rejects_audit_with_changed_source_files():
+    from tools.lope_import.adapt import AdaptacionError, adapt_audit
+
+    audit = {
+        "contract": "lope_import_audit/v1",
+        "parser_version": "0.1.0",
+        "mapeo_version": "0.1.0",
+        "files": [
+            {
+                "file_id": f"sha256:{'a' * 64}",
+                "sha256_before": "a" * 64,
+                "sha256_after": "a" * 64,
+            }
+        ],
+        "candidates": [],
+        "errors": [],
+        "warnings": [],
+        "summary": {"files_unchanged": False},
+    }
+    with pytest.raises(AdaptacionError, match="archivos modificados"):
+        adapt_audit(audit)
 
 
 def test_individual_rejects_institutional_rows():

@@ -18,7 +18,9 @@ from urllib.parse import urlparse
 from uuid import UUID
 
 
-PROMOTABLE_ENTITIES = frozenset({"cuyes", "partos", "pesajes", "eventos", "parto_crias"})
+PROMOTABLE_ENTITIES = frozenset(
+    {"cuyes", "partos", "pesajes", "eventos", "parto_crias"}
+)
 ENTITY_TABLES = {
     "cuyes": "cuyes",
     "partos": "partos",
@@ -26,7 +28,13 @@ ENTITY_TABLES = {
     "eventos": "eventos",
     "parto_crias": "parto_crias",
 }
-ENTITY_ORDER = {"cuyes": 0, "partos": 1, "eventos": 2, "pesajes": 3, "parto_crias": 4}
+ENTITY_ORDER = {
+    "cuyes": 0,
+    "partos": 1,
+    "eventos": 2,
+    "pesajes": 3,
+    "parto_crias": 4,
+}
 REFERENCE_ENTITIES = {
     "cuyes": {"padre_id": "cuyes", "madre_id": "cuyes"},
     "partos": {"madre_id": "cuyes"},

@@ -52,8 +52,8 @@ Diery indicó `cuyes`, `partos`, `pesajes`, `eventos` y `parto_crias` para las e
 | Sync actual | Protocolo v1 restringido a `galpon|poza`; cursor firmado, recibos, conflictos y outbox implementados y verificados. | Añadir `cuyes|partos|pesajes|eventos|parto_crias`. | Requiere extensión y compatibilidad de clientes. | Oskar | Mantener `galpon|poza`; diseñar negociación y cursor en D2. |
 | Endpoints ML | `ml.prediccion` implementado; no hay rutas HTTP en `backend/`. | `/ml/predict/hembra`, `/ml/predict/candidata`, `/assistant/query`. | Funciones compatibles; rutas propuestas; separar predicción temprana de clasificación completa. | Oskar integra; Diery aporta reglas/modelo/RAG. | Contrato y validaciones en `contrato-servicios-ml-rag.md`. |
 | RAG | `rag.src.retrieve.consultar` devuelve `respuesta`, `fuentes`, `modo` y `citas`; sin ruta FastAPI. | HTTP solo `{respuesta, fuentes}`; modo/citas internos. | Adaptación explícita definida por Diery. | Diery / Oskar | Filtrar salida HTTP y probar que no expone campos internos. |
-| Auditoría ETL | `tools/lope_import` emite un JSON privado con `files`, `candidates`, `warnings`, `errors`, `summary`; no emite `contract`, `parser_version` ni `mapeo_version`. | Formalizar `lope_import_audit/v1`. | Parcial: el contenido existe, el envelope versionado no. | Diery / Oskar | Formalizar sin romper el CLI; ver §5. |
-| Promoción ETL | El orquestador existe (`tools/lope_import`) y admite el manifiesto acordado `lope_promocion/v1`; ver `handoff-diery-promocion-manifiesto.md`. | Diery controla la transacción y llama `publicar_cambios` sobre la conexión abierta. | Frontera definida; implementación pendiente. | Diery promueve; Oskar publica. | Precisar evidencia before/after y versión esperada, §9. |
+| Auditoría ETL | `tools/lope_import` emite `lope_import_audit/v1` y el comando `adapt` produce propuestas `lope_import_review/v1`, sin rutas locales. | Mantener audit y revisión separados de la publicación. | Parcial: propuestas sin UUID, correspondencias aceptadas ni registros publicables. | Diery | Completar el paso review→`lope_promocion/v1`; ver §§4.3 y 9.7. |
+| Promoción ETL | Promotor transaccional sintético en `feat/lope-orquestador-promocion`; todavía no conectado a datos reales. | Diery controla la transacción y llama `publicar_cambios` sobre la conexión abierta. | Contrato ejercitado con datos sintéticos; faltan integración del ETL y revisión de correspondencias. | Diery promueve; Oskar publica. | Completar el manifiesto acordado y mantener ámbito autorizado/respaldo como gates, §9. |
 | `R` en DESTINO | El parser no conserva DESTINO; ADR 0004 lo deja pendiente. | `R` = REEMPLAZO, confirmado por Diery. | Diferencia documental. | Oskar actualiza ADR; Diery confirma. | Actualizar ADR 0004 y conservar DESTINO en la auditoría futura. |
 | `AB` con cantidad | El ETL ML lo marca `NO_INTERPRETADO_AB_CON_CANTIDAD`. | No interpretar hasta confirmar con Lope; cantidad NULL. | Compatible. | Diery / Lope | Mantener sin inferencia. |
 | Ojos 1/2 | Código se conserva; 1=negro, 2=rojo según ADR 0004. | Distinguir 1/2 confirmados de códigos desconocidos. | Compatible; catálogo normalizado pendiente. | Diery / Lope | Conservar código crudo y no clasificar códigos desconocidos. |
@@ -63,40 +63,55 @@ Diery indicó `cuyes`, `partos`, `pesajes`, `eventos` y `parto_crias` para las e
 
 ### 4.1 Auditoría de solo lectura
 
-`lope_import_audit` es la salida privada del CLI. No escribe en base de datos. Hoy el reporte serializa:
-
-- `files`: rutas de los archivos auditados.
-- `candidates`: candidatos de animal y bloques de camada.
-- `warnings` y `errors`: cadenas.
-- `summary`: huellas SHA-256 antes/después y `files_unchanged`.
-
-No emite `contract`, `parser_version` ni `mapeo_version`. Tampoco emite `kind` ni `promocion` en el candidato de animal. El bloque reproductivo usa `"type": "litter_block"`, su `ref` es una cadena y `partos[]` contiene `parto`, `fecha`, `tcn`, `ref` y `origin`; NUPAR no se conserva en la auditoría actual.
+`lope_import_audit/v1` es la salida privada y de solo lectura del CLI. No escribe
+en base de datos ni constituye una promoción. El reporte emite `contract`,
+`parser_version`, `mapeo_version`, archivos identificados por su SHA-256,
+`candidates`, `warnings`, `errors` y `summary.files_unchanged`. No expone rutas
+locales. Cada candidato incluye `file_id` y `origin_ref`; los animales llevan
+`kind: "animal"` y los bloques reproductivos conservan `type: "litter_block"`
+además de `kind: "litter_block"`. Cada parto extraído lleva su propio
+`origin_ref` basado en la celda de fecha. Las versiones actuales del código son
+parser `0.1.0` y mapeo `0.1.0`.
 
 Ejemplo válido con la forma actual (sin identificadores ficticios ni rutas privadas):
 
 ```json
 {
-  "files": ["registro-individual-sintetico.xlsx"],
+  "contract": "lope_import_audit/v1",
+  "parser_version": "0.1.0",
+  "mapeo_version": "0.1.0",
+  "files": [
+    {
+      "file_id": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "sha256_before": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "sha256_after": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    }
+  ],
   "candidates": [
     {
+      "kind": "animal",
       "animal_no": "C001",
       "sexo": "H",
       "fecha_nacimiento": "2025-03-12",
       "color": "B",
       "ojos": "1",
-      "ref": { "sheet": "HOJA-IND-SINTETICA", "cell": "A45" },
+      "ref": { "sheet": "HOJA-IND-SINTETICA", "cell": "C45" },
+      "file_id": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "origin_ref": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef:HOJA-IND-SINTETICA:C45:ANIMAL:cuyes",
       "source": "observado",
-      "field_origins": { "COLOR": "K45", "OJOS": "L45" },
+      "field_origins": { "T.C.N.V": "observado" },
       "extra_fields": {
-        "K45": { "formula": null, "cached": "B", "source": "observado" }
+        "P45": { "formula": null, "cached": "dato sintético", "source": "observado" }
       }
     },
     {
       "type": "litter_block",
+      "kind": "litter_block",
       "poza": "3",
       "macho": "045",
       "hembra": "C001",
       "peso": "980",
+      "peso_origin_ref": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef:HOJA-REP-SINTETICA:B12:PESAJE_MADRE:pesajes",
       "color": null,
       "ojos": "2",
       "partos": [
@@ -105,11 +120,14 @@ Ejemplo válido con la forma actual (sin identificadores ficticios ni rutas priv
           "fecha": "2026-01-20",
           "tcn": "4+1M",
           "ref": "HOJA-REP-SINTETICA!F12",
+          "origin_ref": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef:HOJA-REP-SINTETICA:F12:PARTO:partos",
           "origin": "observado"
         }
       ],
       "row": 12,
       "ref": "HOJA-REP-SINTETICA!A12",
+      "file_id": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "origin_ref": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef:HOJA-REP-SINTETICA:A12:BLOQUE_REPRODUCTIVO:candidatos",
       "source": "observado",
       "field_origins": {},
       "reconcilable": false,
@@ -121,24 +139,19 @@ Ejemplo válido con la forma actual (sin identificadores ficticios ni rutas priv
     "HOJA-REP-SINTETICA-2!B30: codigo coincidente '045' con HOJA-REP-SINTETICA-2!B12 - no fusionar sin validacion"
   ],
   "errors": [],
-  "summary": {
-    "sha256_before": { "registro-individual-sintetico.xlsx": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" },
-    "sha256_after": { "registro-individual-sintetico.xlsx": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" },
-    "files_unchanged": true
-  }
+  "summary": { "files_unchanged": true }
 }
 ```
 
 Los hashes del ejemplo son sintéticos y tienen formato SHA-256; no corresponden a archivos reales. Los identificadores de origen y las hojas son ficticios.
 
-Formalización propuesta `lope_import_audit/v1` (no implementada):
+Implementación actual de `lope_import_audit/v1`:
 
-- Agregar `contract: "lope_import_audit/v1"`, `parser_version` y `mapeo_version` al envelope.
-- Reemplazar rutas absolutas por un identificador de archivo y huella.
-- Agregar `kind: "animal"` a los candidatos de animal para uniformar con `"litter_block"`.
+- El identificador de origen combina huella del archivo, hoja, celda y rol/tipo; una huella o ubicación distinta requiere conciliación, no crea una entidad automáticamente.
+- `python -m tools.lope_import adapt <audit.json> --output <review.json>` genera propuestas de dominio pendientes de revisión; no crea correspondencias ni registros publicables.
 - Mantener el reporte fuera del repositorio y sin filas reales en Git.
 
-Estos cambios no deben presentarse como salida actual del CLI hasta que el código los emita.
+La salida de adaptación se describe en §4.3 y no debe confundirse con `lope_promocion/v1`.
 
 ### 4.2 Promoción al dominio
 
@@ -215,6 +228,27 @@ Ejemplo válido de promoción con una entidad aceptada y una ambigua:
 ```
 
 Regla de ejemplo: una correspondencia `AMBIGUO` no lleva `entidad_id` aceptado; siempre `null`. El UUID aceptado del ejemplo es sintético y con formato v4; no identifica una entidad real.
+
+### 4.3 Adaptación de auditoría a propuestas revisables
+
+`python -m tools.lope_import adapt <audit.json> --output <review.json>` valida
+`lope_import_audit/v1` y produce `lope_import_review/v1`. Es una salida
+intermedia, no es entrada de `promote` ni publica datos:
+
+- Para `cuyes`, propone solo código, sexo, fecha ISO, color y ojos que existan en
+  la auditoría. La correspondencia, UUID y `poza_id` quedan pendientes.
+- Para `partos`, propone la fecha solo si es ISO y conserva el código de la
+  madre y el T.C.N. original. `madre_id`, `numero_parto` y los tres conteos
+  quedan `null` hasta revisión; nunca interpreta automáticamente `4+1M`.
+- El peso reproductivo numérico se propone como `pesajes.etapa = MONTA`, pero
+  `cuy_id` y fecha quedan pendientes. No se inventa el vínculo al animal.
+- No infiere `eventos` ni `parto_crias`: las fuentes auditadas no bastan para
+  crear esos vínculos.
+
+Todas las propuestas tienen estado `PENDIENTE_REVISION`; el reporte incluye
+cero correspondencias aceptadas y cero registros de promoción. No contiene
+`scope_id`, UUID de dominio, `before` ni `expected_version`. El adaptador
+rechaza reportes con errores o con archivos que cambiaron durante la auditoría.
 
 ## 5. Diccionario de campos propuestos
 
@@ -376,7 +410,7 @@ publicar_cambios(conn, scope_id, registros)
 
 `conn` ya tiene una transacción activa, con autocommit deshabilitado. La función no abre otra conexión, no inicia una transacción independiente, no hace `commit`/`rollback` ni cierra la conexión. Propaga el error para que el orquestador revierta todo. No vuelve a escribir los campos de negocio ni decide identidades; actualiza metadatos de publicación y escribe historial/contador. El resultado devuelto es provisional hasta el COMMIT exterior.
 
-Estado de implementación en la rama `feat/d1-publicacion-dominio` (2026-11-10): primitiva implementada y verificada en laboratorio con 16 pruebas. Diery confirmó `0004` para D1 y `0005_*` para su CHECK independiente de pesajes. **No tiene llamador operativo**: solo la invocan pruebas y un orquestador sintético. La descarga de estas entidades quedó habilitada en D2 (`feat/d2-pull-dominio`): `GET /sync/pull` acepta `cuyes`, `partos`, `pesajes`, `eventos` y `parto_crias` además de `galpon|poza`, conserva los snapshots y el cursor firmado por ámbito. El push v1 no cambia. La frontera completa se verifica con una promoción sintética en `backend/tests/test_integracion_d1_d2.py`; el orquestador ETL real no está en este checkout y no se simula como integrado.
+Estado de implementación: la primitiva está en `dev`; el promotor transaccional de Lope está en `feat/lope-orquestador-promocion` (`601e124cae517b44b25b1dcd5639628a238117d0`). `tools/lope_import/promote.py` cubre `cuyes`, `partos`, `pesajes`, `eventos` y `parto_crias`, pero la integración de producción sigue siendo responsabilidad del orquestador de Diery. La auditoría ahora emite `lope_import_audit/v1`, versiones `0.1.0` y referencias de origen deterministas; todavía no se transforma directamente en entidades aceptadas ni en registros de publicación. La descarga de estas entidades quedó habilitada en D2 (`feat/d2-pull-dominio`): `GET /sync/pull` acepta las cinco además de `galpon|poza`, conserva snapshots y cursor firmado por ámbito. El push v1 no cambia.
 
 El ámbito se autoriza en la entrada confiable del orquestador; no basta recibir un UUID en el JSON. La función exige un ámbito existente, comprueba la pertenencia de filas y referencias y no mueve registros entre ámbitos. La numeración de la migración de ámbito/versiones se coordina con el CHECK de pesajes de Diery.
 
@@ -434,6 +468,55 @@ El orquestador evita UPDATE si no cambia el contenido efectivo; no debe refresca
 
 La promoción no es una operación de un dispositivo de campo. No se reutiliza `sync_receipts` salvo que se apruebe una identidad de escritor y su semántica. La idempotencia del ETL se apoya en `importacion_lotes`, orígenes y correspondencias.
 
+### 9.7 Promotor sintético disponible y límites de integración
+
+En `feat/lope-orquestador-promocion`, el CLI `python -m tools.lope_import promote`
+consume un JSON con la forma `{"records": [...]}`. Cada elemento contiene
+`correspondencia_id`, `entity`, `id`, `expected_version`, `before` y `after`.
+`batch_id` y `scope_id` se pasan como argumentos CLI; `scope_id` no se acepta
+dentro del registro. La correspondencia debe existir en la base con estado
+`ACEPTADO`, y los registros deben cubrir exactamente las correspondencias
+aceptadas del lote.
+
+El parser emite `lope_import_audit/v1`, `parser_version`, `mapeo_version`,
+referencias por huella/hoja/celda/rol y candidatos crudos. El comando `adapt`
+los convierte en `lope_import_review/v1`, con propuestas no publicables y
+pendientes de revisión. No emite UUID de dominio ni correspondencias aceptadas;
+las referencias de candidatos tampoco son aún las filas finales de
+`importacion_origenes`. El promotor no interpreta esos candidatos. La prueba
+sintética crea el lote y seis correspondencias aceptadas
+(`parser_version=mapeo_version="synthetic"`), con dos cuyes y una fila de cada
+entidad restante, y luego invoca `publicar_con_d1`. El mapeo de propuestas a
+`lope_promocion/v1`, la creación/revisión de correspondencias y la integración
+con el orquestador de Diery siguen pendientes; las versiones sintéticas no son
+versiones de producción.
+
+La llamada de publicación ocurre dentro de la transacción de `promote_batch`:
+
+```python
+with conn.transaction(force_rollback=dry_run):
+    # Escribir filas de dominio y validar correspondencias aceptadas.
+    publication_results = publicador(conn, authorized_scope_id, publication_records)
+```
+
+El publicador predeterminado convierte los registros a `RegistroPublicacion` y
+llama `publicar_cambios(conn, scope_id, registros)`. El CLI hace rollback por
+defecto; `--commit` solo se debe usar contra la base desechable de pruebas en
+esta fase.
+
+Prueba reproducible en PowerShell (PostgreSQL 16 con pgvector; el usuario debe
+poder crear y eliminar bases temporales):
+
+```powershell
+& .\.venv\Scripts\python.exe -m pip install -r tools\lope_import\requirements.txt pytest
+$env:TEST_DATABASE_URL = 'postgresql://<usuario>:<contraseña>@127.0.0.1:5432/cuyielite_test'
+& .\.venv\Scripts\python.exe -m pytest -q tools\lope_import\tests
+```
+
+La prueba crea y elimina una base `cuyielite_lope_promote_<uuid>`; no lee los
+Excel privados. La prueba de auditoría construye su propio libro sintético. La
+carga real sigue bloqueada hasta completar la integración del orquestador,
+autorizar el ámbito y registrar el respaldo.
 ### 9.7 Propuesta de manifiesto para revisar con Diery
 
 **Estado: ejemplo y clave acordados por Diery (2026-11-16).** Este acuerdo no
@@ -711,7 +794,7 @@ posteriores para incluir el ámbito en la clave única.
 
 D1 implementó en laboratorio la primitiva y la migración `0004_publicacion_dominio.sql`, sin publicar filas históricas sin ámbito ni activar nuevas entidades en sync v1. Diery confirmó que su CHECK de pesajes usará `0005_*` y es independiente: utiliza columnas presentes desde `0001`. La migración `0005_*` todavía no se ha publicado; no se atribuye su CHECK a D1.
 
-Diery acordó el formato `lope_promocion/v1` y la clave de lote descritos en §9.7. La prueba sintética de extremo a extremo con el orquestador ETL y la verificación con su herramienta real siguen pendientes en D1B; no conectar la carga real antes de superar esa prueba. Catálogos incompletos y `AB` con cantidad continúan en su frente de datos; conservar crudos/NULL mientras tanto. Actualizar ADR 0004 con `R = REEMPLAZO` en el corte documental correspondiente, sin volver a preguntar su significado ya comunicado.
+El contrato `lope_promocion/v1` acordado no es aún el JSON de entrada del CLI; completar ese adaptador y fijar las versiones reales de parser/mapeo pertenece a D1B. El promotor y las pruebas sintéticas no reemplazan la revisión humana de correspondencias. Catálogos incompletos y `AB` con cantidad continúan en su frente de datos; conservar crudos/NULL mientras tanto. Actualizar ADR 0004 con `R = REEMPLAZO` en el corte documental correspondiente, sin volver a preguntar su significado ya comunicado.
 
 La publicación de entidades nuevas no se activa sobre un servicio v1 que las rechaza: D1 se prueba aislado; D2 habilita el transporte compatible antes de conectar la promoción real.
 

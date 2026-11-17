@@ -56,7 +56,7 @@ Leyenda de estados:
 | Color | CONSERVADO RAW | `block["color"]` → `candidate["color"]` | Sin normalizar. |
 | Ojos | CONSERVADO RAW | `block["ojos"]` → `candidate["ojos"]` | Sin normalizar. |
 | Parto 1..N (fecha) | CONSERVADO RAW | `block["partos"][j]["fecha"]` | Sin normalizar. |
-| T.C.N. (por parto) | CONSERVADO RAW | `block["partos"][j]["tcn"]` | Texto preservado ("6M", "1+2M"). |
+| T.C.N. (por parto) | CONSERVADO RAW | `block["partos"][j]["tcn"]` | Texto preservado ("6M", "1+2M"); no se interpreta. Los conteos quedan NULL y pendientes de revisión humana. |
 
 `reconcile_litters` agrupa por poza, detecta códigos de hembra coincidentes y marca
 `reconcilable: False`. No fusiona.
@@ -105,7 +105,7 @@ Cada campo apunta a tabla/columna o relación concreta, o queda en preparación/
 | Color | Pelaje | cuyes.color_codigo | VARCHAR(20) | — | NULL permitido | VARCHAR(20) | TEXT | Conservar código |
 | Ojos | Ojos | cuyes.ojos_codigo | VARCHAR(20) | — | NULL permitido | VARCHAR(20) | TEXT | Conservar código |
 | Parto 1..N (fecha) | Fecha de parto | partos.fecha_parto | DATE | fecha civil | NULL permitido | DATE | TEXT ISO | Despivotar eventos; reconciliar con individual |
-| T.C.N. (por parto) | Nacidos vivos/muertos/total | partos.nacidos_vivos/muertos/tamano_camada | INTEGER | — | NULL permitido | INTEGER | INTEGER | Una camada, no una por cría |
+| T.C.N. (por parto) | Nacidos vivos/muertos/total | partos.nacidos_vivos/muertos/tamano_camada | INTEGER | — | NULL permitido | INTEGER | INTEGER | Conservar el texto original; conteos NULL hasta revisión humana. Una camada, no una por cría. |
 
 ## Vínculo cría ↔ parto de nacimiento
 

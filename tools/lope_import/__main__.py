@@ -6,6 +6,7 @@ import json
 import sys
 from pathlib import Path
 
+from . import AUDIT_CONTRACT, MAPPING_VERSION, __version__
 from .models import AuditReport, CandidateAnimal, CellRef
 from .normalize import to_text, sexo_from_code
 from .readers import (
@@ -26,7 +27,15 @@ def _sha256(path: str) -> str:
     return h.hexdigest()
 
 
-def audit_file(path: str, report: AuditReport):
+def _file_id(file_hash: str) -> str:
+    return f"sha256:{file_hash}"
+
+
+def _origin_ref(file_hash: str, sheet: str, cell: str, role: str, entity: str) -> str:
+    return f"{_file_id(file_hash)}:{sheet}:{cell}:{role}:{entity}"
+
+
+def audit_file(path: str, report: AuditReport, file_hash: str):
     """Audita un archivo Excel y agrega candidatos e incidencias al reporte."""
     wb_formula = load_workbook(path, data_only=False, read_only=True)
     wb_cached = load_workbook(path, data_only=True, read_only=False)
@@ -38,6 +47,8 @@ def audit_file(path: str, report: AuditReport):
             rows = read_individual_sheet(ws_f, ws_c)
             for r in rows:
                 animal_no = to_text(r.get("ANIMAL No."))
+                animal_cell = r.get("_ref_ANIMAL No.", f"A{r['_row']}")
+                sex_cell = r.get("_ref_SEXO", f"A{r['_row']}")
                 if animal_no:
                     field_origins = r.get("_field_origins", {})
                     pv = {coord: val for coord, val in r.get("_pv", {}).items() if val is not None}
@@ -56,22 +67,47 @@ def audit_file(path: str, report: AuditReport):
                         fecha_nacimiento=to_text(r.get("FECHA NACIMIENTO")),
                         color=to_text(r.get("COLOR")),
                         ojos=to_text(r.get("OJOS")),
-                        ref=CellRef(sheet=ws_f.title, cell=f"A{r['_row']}"),
+                        ref=CellRef(sheet=ws_f.title, cell=animal_cell),
                         source="observado",
+                        file_id=_file_id(file_hash),
+                        origin_ref=_origin_ref(
+                            file_hash, ws_f.title, animal_cell, "ANIMAL", "cuyes"
+                        ),
                     )
                     cand.field_origins = field_origins
                     cand.extra_fields = extra
                     report.candidates.append(cand)
                 if r.get("ANIMAL No.") is None:
-                    report.warnings.append(f"{ws_f.title}!A{r['_row']}: fila sin codigo de animal")
+                    report.warnings.append(f"{ws_f.title}!{animal_cell}: fila sin codigo de animal")
                 if r.get("SEXO") is None:
-                    report.warnings.append(f"{ws_f.title}!A{r['_row']}: sexo no informado")
+                    report.warnings.append(f"{ws_f.title}!{sex_cell}: sexo no informado")
         elif fmt == "reproductive":
             blocks = read_reproductive_blocks(ws_f, ws_c)
             recon = reconcile_litters(blocks)
             for b in blocks:
+                for parto in b["partos"]:
+                    _, parto_cell = parto["ref"].rsplit("!", 1)
+                    parto["origin_ref"] = _origin_ref(
+                        file_hash, ws_f.title, parto_cell, "PARTO", "partos"
+                    )
                 report.candidates.append({
                     "type": "litter_block",
+                    "kind": "litter_block",
+                    "file_id": _file_id(file_hash),
+                    "origin_ref": _origin_ref(
+                        file_hash,
+                        ws_f.title,
+                        f"A{b['row']}",
+                        "BLOQUE_REPRODUCTIVO",
+                        "candidatos",
+                    ),
+                    "peso_origin_ref": _origin_ref(
+                        file_hash,
+                        ws_f.title,
+                        f"B{b['row']}",
+                        "PESAJE_MADRE",
+                        "pesajes",
+                    ),
                     "poza": b["poza"],
                     "macho": b["macho"],
                     "hembra": b["hembra"],
@@ -105,6 +141,10 @@ def main(argv=None):
         from .promote import main as promote_main
 
         return promote_main(argv[1:])
+    if argv and argv[0] == "adapt":
+        from .adapt import main as adapt_main
+
+        return adapt_main(argv[1:])
 
     parser = argparse.ArgumentParser(description="Auditoria de solo lectura de fuentes Excel")
     parser.add_argument("files", nargs="+", help="Rutas explicitas de archivos Excel")
@@ -113,13 +153,23 @@ def main(argv=None):
 
     before = {f: _sha256(f) for f in args.files}
 
-    report = AuditReport(files=args.files)
+    report = AuditReport(
+        contract=AUDIT_CONTRACT,
+        parser_version=__version__,
+        mapeo_version=MAPPING_VERSION,
+    )
     for f in args.files:
-        audit_file(f, report)
+        audit_file(f, report, before[f])
 
     after = {f: _sha256(f) for f in args.files}
-    report.summary["sha256_before"] = before
-    report.summary["sha256_after"] = after
+    report.files = [
+        {
+            "file_id": _file_id(before[f]),
+            "sha256_before": before[f],
+            "sha256_after": after[f],
+        }
+        for f in args.files
+    ]
     report.summary["files_unchanged"] = before == after
 
     write_report(report, args.output)

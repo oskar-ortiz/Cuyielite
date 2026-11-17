@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Any
 
+from . import AUDIT_CONTRACT, MAPPING_VERSION, __version__
+
 
 @dataclass
 class CellRef:
@@ -20,6 +22,9 @@ class CandidateAnimal:
     ojos: str | None
     ref: CellRef
     source: str  # "formula" | "cached" | "literal"
+    kind: str = "animal"
+    file_id: str | None = None
+    origin_ref: str | None = None
     field_origins: dict = field(default_factory=dict)
     extra_fields: dict = field(default_factory=dict)
 
@@ -39,7 +44,10 @@ class CandidateLitter:
 
 @dataclass
 class AuditReport:
-    files: list[str] = field(default_factory=list)
+    contract: str = AUDIT_CONTRACT
+    parser_version: str = __version__
+    mapeo_version: str = MAPPING_VERSION
+    files: list[dict[str, str]] = field(default_factory=list)
     candidates: list[Any] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
