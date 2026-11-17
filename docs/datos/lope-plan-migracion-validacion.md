@@ -1,82 +1,82 @@
-# Plan de migración y validación — importación Lope
+# Plan de validación y compuertas para carga Lope
 
-Estado: PROPUESTA. No ejecutada. No se ha importado ni migrado ninguna base.
+| Campo | Valor |
+|---|---|
+| Versión | 1.0-propuesta |
+| Fecha | 2026-11-17 |
+| Commit base | `70eb84cec9251913a523a8928037451f4cad7c96` |
+| Estado | **PROPUESTA: pendiente de aprobación documental sobre esta versión** |
 
-## Precondiciones
+**PROPUESTO** — El plan describe compuertas y responsabilidades. La aprobación
+de esta lista corresponde a Diery/Oskar; no constituye autorización de carga.
 
-- Aprobación de Oskar y Diery sobre el diccionario, identidad y DDL propuesto.
-- Validación de dominio: identidad, unidades, catálogos, nulabilidad.
-- Base central de pruebas aislada (no cuyielite ni otra base preexistente).
-- Backup de la base central antes de cualquier carga real.
-- Parser Entrega A verificado: 19 pruebas (6 en test_basic.py, 13 en test_cli.py), 2609 candidatos.
+## Registro de aprobación
 
-## Transacción única de promoción (futuro, no ejecutada)
+| Revisor | Decisión | Evidencia/versión revisada | Fecha |
+|---|---|---|---|
+|  |  |  |  |
 
-Una sola transacción por lote. No existe una segunda publicación independiente.
+## Estado confirmado del flujo sintético
 
-Orden dentro de la transacción:
-1. Bloquear ámbito/contador (ADR 0006) y coordinar el lote (importacion_lotes).
-2. Verificar correspondencias revisadas (importacion_correspondencias, estado ACEPTADO).
-3. Escribir dominio (cuyes, partos, pesajes, eventos) según correspondencias.
-4. Asignar versiones (server_version = 1 para registros nuevos; existentes conservan versión).
-5. Incrementar contador de ámbito.
-6. Insertar snapshots en historial de cambios (inmutables).
-7. Actualizar correspondencias (entidad_id) y confirmar lote (estado APLICADO, aplicado_at).
-8. COMMIT.
+- **CONFIRMADO** — El código está separado en auditoría, adaptación,
+  decisiones, manifiesto y promoción. El contrato permite cinco entidades:
+  `cuyes`, `partos`, `pesajes`, `eventos` y `parto_crias`. Fuentes:
+  `tools/lope_import/{__main__,adapt,decisions,manifest,promote}.py`.
+- **CONFIRMADO** — El adaptador de publicación usa la conexión recibida por el
+  orquestador. El publicador registra versiones e historial; la promoción
+  conserva la escritura del dominio y la confirmación del lote en su
+  transacción. Fuentes: `tools/lope_import/promote.py`,
+  `backend/app/services/publication.py` y
+  `docs/verificaciones/etl-manifiesto-integracion.md`.
+- **CONFIRMADO** — La evidencia de integración sintética documenta dry-run,
+  replay/idempotencia, rollback y verificación con datos de prueba. Esto no es
+  evidencia de carga real ni aprobación de correspondencias. Fuente:
+  `docs/verificaciones/etl-manifiesto-integracion.md`.
+- **CONFIRMADO** — La evidencia de paridad registra la aplicación de 0005 en
+  el piloto y la validación equivalente de contexto exclusivo en el pull local.
+  No se consultó ni modificó ninguna base en esta tarea. Fuente:
+  `docs/verificaciones/piloto-paridad-documentacion.md`.
 
-Cualquier fallo en cualquier paso ejecuta ROLLBACK de todo: dominio, versiones, contador,
-historial, correspondencias y estado del lote. No quedan efectos parciales.
+## Compuertas obligatorias antes de carga real
 
-## Control de versiones
+- [ ] **PENDIENTE — Revisor técnico designado.** Falta nombramiento y alcance
+  escrito. Responsable: Oskar/Lope designa; registrar identidad por canal
+  autorizado, no en este documento.
+- [ ] **PENDIENTE — Decisiones humanas de correspondencias.** Cada decisión
+  requiere estado, revisor, evidencia y campos completos. Responsable: Diery
+  prepara propuestas; revisor técnico acepta, rechaza o marca ambigüedad.
+- [ ] **PENDIENTE — Dry-run revisado.** Falta revisión de conteos por entidad,
+  exclusiones, errores y diferencias antes de cualquier promoción.
+  Responsable: Diery ejecuta solo después de autorización; revisor valida el
+  resultado.
+- [ ] **PENDIENTE — Respaldo restaurable.** Falta respaldo para el objetivo de
+  carga y prueba de restauración verificable inmediatamente antes de la
+  promoción. Responsable: administrador autorizado; revisor confirma evidencia.
+- [ ] **PENDIENTE — Ámbito autorizado por canal privado.** Falta la autorización
+  y resolución de `scope_id` desde configuración autorizada. Responsable:
+  Oskar/administrador comparte por canal privado; no guardar el valor en Git.
 
-- Migraciones bajo db/migrations/central/ (nueva carpeta, no modificar db/ddl/).
-- Numeración secuencial (ej. 006_importacion.sql).
-- Herramienta: psql con ON_ERROR_STOP=1.
-- Schema_migrations con número, checksum y applied_at (rechazar cambio de checksum).
+## Controles de ejecución propuestos
 
-## Recuperación ante errores
+- **PROPUESTO** — Mantener una transacción por lote: el orquestador escribe
+  dominio y confirma el lote; `publicar_cambios` recibe la conexión abierta y
+  no ejecuta `COMMIT`. Requiere aprobación documental de Oskar/Diery sobre esta
+  versión.
+- **CONFIRMADO** — El manifiesto valida el ámbito contra el contexto autorizado,
+  la tupla de idempotencia y las correspondencias aceptadas. Fuente:
+  `tools/lope_import/manifest.py`.
+- **PENDIENTE** — Resolver las decisiones de datos antes de crear manifiestos
+  reales, incluyendo `parto_crias`, `R`, el catálogo de eventos, la fuente de
+  abortos y la fuente del peso de monta. Responsables y evidencia están en
+  `lope-diccionario-mapeo.md`.
+- **PROPUESTO** — Mantener reportes, decisiones y manifiestos reales fuera de
+  Git. Requiere aprobación de quienes custodian los datos.
 
-- Cualquier fallo revierte dominio, versiones, contador, historial y estado del lote.
-- La cola de revisión conserva lo excluido y el motivo.
-- Reintentar la misma carga no genera entidades, eventos ni UUID adicionales (idempotencia por lote).
+## Registro de ejecución de esta entrega
 
-## Dependencias pendientes de sincronización
-
-- Ámbito autorizado: el importador central debe usar el mecanismo de publicación de ADR 0006
-  (bloqueo del contador de ámbito, snapshot inmutable, recibo). No es un DEFAULT 1.
-- Versiones: registros nuevos aceptados reciben server_version = 1; registros existentes
-  conservan su versión. No reiniciar.
-- Contrato ampliado: la especificación actual de sync cubre solo galpones/pozas. Extenderla a
-  animales y eventos es una entrega explícita (Entrega E del plan de importación). No basta con
-  añadir server_version a las tablas.
-- No publicar una fila animal que el cliente aún no puede descargar/representar.
-
-## Casos de aceptación sintéticos (DISEÑADOS, NO EJECUTADOS)
-
-1. Chapa reutilizada: dos animales con mismo código en mismo galpón → dos entidades distintas.
-2. Fechas y parentescos ausentes: NULL conservado, no inventar datos.
-3. Pesos de madre y cría: PESO PARTO (pesaje con etapa PARTO, parto_id) no se asigna a cría.
-4. Parto repetido en filas de hermanos: un solo evento de parto.
-5. Importación repetida: no duplica entidades ni publicaciones (idempotencia por lote).
-6. Fallo intermedio: revierte la promoción (dominio, versiones, contador, historial, lote).
-7. Conservación de identidades existentes: registros preexistentes no se reinician a versión 1.
-8. Datos históricos: no inventar estado ACTIVO.
-9. Demo intacta: base demo sin seed real, trabajo sin seed.
-10. Mismos UUID y relaciones en Android/Windows cuando se implemente la descarga.
-
-## Compatibilidad con sincronización (ADR 0004-0009)
-
-- Importar una sola vez en PostgreSQL central.
-- Los clientes reciben los mismos UUID.
-- Registro nuevo aceptado: server_version = 1.
-- No reiniciar versiones de registros existentes.
-- Dato, versión, contador e historial deben publicarse atómicamente (misma transacción).
-- Un DEFAULT 1 no implementa sincronización.
-- La especificación actual de galpones/pozas todavía no descarga animales y eventos;
-  esa ampliación será una entrega posterior.
-
-## Pendientes
-
-- Aprobación de Oskar y Diery sobre el diccionario y el DDL propuesto.
-- Validación de dominio: identidad, unidades, catálogos, nulabilidad.
-- No ejecutar migraciones ni importaciones hasta aprobación.
+- **CONFIRMADO** — Los Excel autorizados se leyeron exclusivamente para el
+  entrenamiento RF, según autorización de Diery. No se usaron para promoción
+  Lope; no se consultó ni modificó `cuyielite`.
+- **CONFIRMADO** — No se ejecutó promoción ni carga real en esta entrega.
+- **PENDIENTE** — No se registra aprobación ni se marca ninguna compuerta como
+  cumplida.
