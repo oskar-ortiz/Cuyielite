@@ -51,4 +51,5 @@ class AuditReport:
     candidates: list[Any] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    celdas_error: list[dict] = field(default_factory=list)
     summary: dict = field(default_factory=dict)

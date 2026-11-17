@@ -14,6 +14,7 @@ from .readers import (
     detect_format,
     read_individual_sheet,
     read_reproductive_blocks,
+    read_error_cells,
 )
 from .reconcile import reconcile_litters
 from .report import write_report
@@ -83,6 +84,12 @@ def audit_file(path: str, report: AuditReport, file_hash: str):
                     report.warnings.append(f"{ws_f.title}!{sex_cell}: sexo no informado")
         elif fmt == "reproductive":
             blocks = read_reproductive_blocks(ws_f, ws_c)
+            for cell in read_error_cells(ws_f, ws_c):
+                report.celdas_error.append({**cell, "file_id": _file_id(file_hash)})
+                report.warnings.append(
+                    f"{cell['sheet']}!{cell['cell']}: valor de error guardado "
+                    f"{cell['value']}; no convertir en cero ni usar como conteo"
+                )
             recon = reconcile_litters(blocks)
             for b in blocks:
                 for parto in b["partos"]:
