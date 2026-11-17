@@ -247,6 +247,30 @@ def adapt_audit(report: Any) -> dict[str, Any]:
     warnings = report.get("warnings", [])
     if not isinstance(warnings, list):
         raise AdaptacionError("warnings debe ser una lista")
+    error_cells = report.get("celdas_error", [])
+    if not isinstance(error_cells, list):
+        raise AdaptacionError("celdas_error debe ser una lista")
+    not_inferred = [
+        {
+            "entity": "eventos",
+            "reason": "La auditoría actual no extrae eventos de dominio revisables.",
+        },
+        {
+            "entity": "parto_crias",
+            "reason": "Requiere conciliar una cría individual con un parto; no se infiere el vínculo.",
+        },
+    ]
+    if error_cells:
+        not_inferred.append(
+            {
+                "entity": "conteos_reproductivos",
+                "reason": (
+                    "Hay resultados de error guardados (#VALUE!) en celdas reproductivas; "
+                    "se entregan como celdas_error para revisión y no se convierten en cero "
+                    "ni autorizan una cantidad confirmada."
+                ),
+            }
+        )
     return {
         "contract": REVIEW_CONTRACT,
         "source_contract": AUDIT_CONTRACT,
@@ -254,16 +278,8 @@ def adapt_audit(report: Any) -> dict[str, Any]:
         "mapeo_version": report["mapeo_version"],
         "files": [dict(source_file) for source_file in files],
         "proposals": proposals,
-        "not_inferred": [
-            {
-                "entity": "eventos",
-                "reason": "La auditoría actual no extrae eventos de dominio revisables.",
-            },
-            {
-                "entity": "parto_crias",
-                "reason": "Requiere conciliar una cría individual con un parto; no se infiere el vínculo.",
-            },
-        ],
+        "not_inferred": not_inferred,
+        "celdas_error": error_cells,
         "warnings": warnings,
         "summary": {
             "proposal_count": len(proposals),
