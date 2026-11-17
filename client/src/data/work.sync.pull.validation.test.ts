@@ -68,4 +68,42 @@ describe('pull-v1 contract', () => {
     };
     expect(() => validatePullPage(page([item], 'next', true), SCOPE, 2)).toThrow();
   });
+
+  it('acepta entidades de dominio, fechas con offset y rechaza entidades desconocidas', () => {
+    const cuy = record('33333333-3333-4333-8333-333333333333', '1', {
+      poza_id: null,
+      galpon_origen_id: null,
+      codigo_identificacion: 'C-1',
+      sexo: 'H',
+      fecha_nacimiento: '2025-03-12',
+      color_codigo: null,
+      ojos_codigo: null,
+      pelaje_original: null,
+      padre_id: null,
+      madre_id: null,
+      categoria_ml: 'NORMAL',
+      ultimo_peso_g: '950.50',
+      estado: null,
+    });
+    cuy.created_at = '2026-11-06T10:00:00.123456+00:00';
+    const valid = page([{ seq: '1', entity: 'cuyes', record: cuy }]);
+    expect(validatePullPage(valid, SCOPE, 50)).toEqual(valid);
+
+    expect(() =>
+      validatePullPage(page([{ seq: '1', entity: 'mortalidad' as unknown as 'cuyes', record: cuy }]), SCOPE, 50),
+    ).toThrow(/inválido/);
+    expect(() =>
+      validatePullPage(
+        page([
+          {
+            seq: '1',
+            entity: 'cuyes',
+            record: { ...cuy, data: { ...cuy.data, peso_gramos: 12 } },
+          },
+        ]),
+        SCOPE,
+        50,
+      ),
+    ).toThrow(/inválido/);
+  });
 });

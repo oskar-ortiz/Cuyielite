@@ -2,14 +2,23 @@ import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { Route } from 'react-router-dom';
 
+import Acceso from './pages/Acceso';
+import AnimalDetalle from './pages/AnimalDetalle';
+import Animales from './pages/Animales';
+import AsistenteTrabajo from './pages/AsistenteTrabajo';
 import ConflictosTrabajo from './pages/ConflictosTrabajo';
 import CrearGalpon from './pages/CrearGalpon';
 import CrearPoza from './pages/CrearPoza';
 import EditarGalpon from './pages/EditarGalpon';
 import EditarPoza from './pages/EditarPoza';
+import FormularioCuyo from './pages/FormularioCuyo';
+import FormularioEvento from './pages/FormularioEvento';
+import FormularioParto from './pages/FormularioParto';
+import FormularioPesaje from './pages/FormularioPesaje';
 import GalponDetalle from './pages/GalponDetalle';
 import Galpones from './pages/Galpones';
 import ModoInicio from './pages/ModoInicio';
+import PrediccionesAnimal from './pages/PrediccionesAnimal';
 import SincronizacionTrabajo from './pages/SincronizacionTrabajo';
 import SqlitePoc from './pages/SqlitePoc';
 
@@ -40,8 +49,9 @@ import '@ionic/react/css/display.css';
 /* import '@ionic/react/css/palettes/dark.class.css'; */
 import '@ionic/react/css/palettes/dark.system.css';
 
-/* Theme variables */
+/* Theme variables and shared application patterns */
 import './theme/variables.css';
+import './theme/app.css';
 
 setupIonicReact();
 
@@ -54,7 +64,21 @@ const App: React.FC = () => (
         <Route path="/trabajo/galpones" element={<Galpones mode="trabajo" />} />
         <Route path="/trabajo/galpones/nuevo" element={<CrearGalpon mode="trabajo" />} />
         <Route path="/trabajo/sincronizacion" element={<SincronizacionTrabajo />} />
+        <Route path="/trabajo/acceso" element={<Acceso />} />
         <Route path="/trabajo/conflictos" element={<ConflictosTrabajo />} />
+        <Route path="/trabajo/conflictos/:entity/:recordId" element={<ConflictosTrabajo />} />
+        <Route path="/trabajo/galpones/:galponId/pozas/:pozaId/animales" element={<Animales mode="trabajo" />} />
+        <Route path="/trabajo/galpones/:galponId/pozas/:pozaId/animales/nuevo" element={<FormularioCuyo />} />
+        <Route path="/trabajo/animales/:animalId" element={<AnimalDetalle />} />
+        <Route path="/trabajo/animales/:animalId/editar" element={<FormularioCuyo />} />
+        <Route path="/trabajo/animales/:animalId/partos/nuevo" element={<FormularioParto />} />
+        <Route path="/trabajo/animales/:animalId/partos/:partoId/editar" element={<FormularioParto />} />
+        <Route path="/trabajo/animales/:animalId/pesajes/nuevo" element={<FormularioPesaje />} />
+        <Route path="/trabajo/animales/:animalId/pesajes/:pesajeId/editar" element={<FormularioPesaje />} />
+        <Route path="/trabajo/animales/:animalId/eventos/nuevo" element={<FormularioEvento />} />
+        <Route path="/trabajo/animales/:animalId/eventos/:eventoId/editar" element={<FormularioEvento />} />
+        <Route path="/trabajo/animales/:animalId/predicciones" element={<PrediccionesAnimal />} />
+        <Route path="/trabajo/asistente" element={<AsistenteTrabajo />} />
         <Route path="/galpones/nuevo" element={<CrearGalpon />} />
         <Route path="/galpones/:id" element={<GalponDetalle />} />
         <Route path="/trabajo/galpones/:id" element={<GalponDetalle mode="trabajo" />} />

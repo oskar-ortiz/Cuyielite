@@ -4,7 +4,16 @@ import type { WorkSyncStatus } from './work.sync.status';
 import { classifySyncError, describeSyncState } from './work.sync.ui';
 
 function status(overrides: Partial<WorkSyncStatus> = {}): WorkSyncStatus {
-  return { scopeId: null, cursor: null, pending: 0, prepared: 0, conflicts: 0, rejected: 0, ...overrides };
+  return {
+    scopeId: null,
+    deviceId: 'device-test',
+    cursor: null,
+    pending: 0,
+    prepared: 0,
+    conflicts: 0,
+    rejected: 0,
+    ...overrides,
+  };
 }
 
 describe('estado visible de sincronización', () => {
@@ -110,5 +119,18 @@ describe('clasificación de errores de sincronización', () => {
 
   it('no oculta un error inesperado como recuperable', () => {
     expect(classifySyncError(new Error('fallo desconocido'))).toBe('error');
+  });
+
+  it('explica el desajuste de ámbito y confirma que el trabajo local se conserva', () => {
+    expect(classifySyncError(new Error('scope local no coincide'))).toBe('scopeMismatch');
+    expect(classifySyncError(new Error('Cambio de scope no permitido'))).toBe('scopeMismatch');
+    expect(
+      describeSyncState({ status: status({ pending: 2 }), syncing: false, outcome: { kind: 'scopeMismatch' } }),
+    ).toMatchObject({
+      phase: 'scopeMismatch',
+      title: 'La sesión y la base local tienen ámbitos distintos',
+      tone: 'danger',
+      detail: expect.stringContaining('los cambios pendientes se conservaron'),
+    });
   });
 });

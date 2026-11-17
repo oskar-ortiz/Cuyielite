@@ -10,7 +10,7 @@ export interface SyncRunSummary {
 
 export interface WorkSyncRepository {
   status(): Promise<WorkSyncStatus>;
-  run(token: string): Promise<SyncRunSummary>;
+  run(token: string, options?: { allowPush?: boolean }): Promise<SyncRunSummary>;
 }
 
 let running = false;
@@ -24,14 +24,14 @@ function summary(value: unknown): SyncRunSummary {
   };
 }
 
-async function run(token: string): Promise<SyncRunSummary> {
+async function run(token: string, options?: { allowPush?: boolean }): Promise<SyncRunSummary> {
   if (running) throw new Error('Ya hay una sincronización en curso');
   if (token.trim().length < 32) {
     throw new Error('El token de laboratorio debe tener al menos 32 caracteres');
   }
   running = true;
   try {
-    return summary(await synchronizeWorkDatabase(token.trim()));
+    return summary(await synchronizeWorkDatabase(token.trim(), options));
   } finally {
     running = false;
   }

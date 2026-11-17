@@ -1,22 +1,19 @@
 import { Capacitor, CapacitorHttp, registerPlugin } from '@capacitor/core';
 
+import { apiUrl, API_BASE_URL, isAllowedApiUrl } from './api.config.js';
+import type { SessionResponse } from './auth.types.js';
 import type { SyncPushResponse } from './work.sync.client.js';
 import type { ConflictCase, ConflictResolutionResult, ConflictReview } from './work.sync.conflicts.js';
 import type { WorkSyncStatus } from './work.sync.status.js';
 
-// Transporte nativo acotado para sincronizacion de laboratorio (T6).
-// El token vive solo en memoria; la URL base es loopback fija y no la elige
-// el renderer. En web no hay transporte: la sincronizacion queda deshabilitada.
+// Transporte nativo acotado para la API de CuyiElite. El access token vive en
+// memoria; el refresh se guarda en el almacenamiento nativo del dispositivo.
+// La URL base se fija en build y no la elige el renderer.
 
-export const LAB_BASE_URL = 'http://127.0.0.1:8000';
+export const LAB_BASE_URL = API_BASE_URL;
 
 export function isLoopbackUrl(url: string): boolean {
-  try {
-    const u = new URL(url);
-    return u.protocol === 'http:' && u.hostname === '127.0.0.1';
-  } catch {
-    return false;
-  }
+  return isAllowedApiUrl(url);
 }
 
 export interface SyncContext {
@@ -26,21 +23,53 @@ export interface SyncContext {
   limits: Record<string, number>;
 }
 
+export interface SyncContextV2 extends SyncContext {
+  supported_entities: string[];
+}
+
 export interface SyncTransport {
   context(token: string): Promise<SyncContext>;
   push(token: string, req: unknown): Promise<SyncPushResponse>;
   pull(token: string, cursor: string | null, limit: number): Promise<unknown>;
+  contextV2?(token: string): Promise<SyncContextV2>;
+  pushV2?(token: string, req: unknown): Promise<SyncPushResponse>;
+  pullV2?(token: string, cursor: string | null, limit: number): Promise<unknown>;
+  // Feed derivado de solo lectura (protocolo 3). Opcional: un servidor anterior
+  // no lo expone y la sincronización de dominio sigue igual.
+  pullDerived?(token: string, cursor: string | null, limit: number): Promise<unknown>;
 }
 
 interface SyncLabPlugin {
   context(options: { token: string }): Promise<SyncContext>;
   push(options: { token: string; body: unknown }): Promise<unknown>;
   pull(options: { token: string; cursor: string | null; limit: number }): Promise<unknown>;
-  sync(options: { token: string }): Promise<unknown>;
+  contextV2(options: { token: string }): Promise<SyncContextV2>;
+  pushV2(options: { token: string; body: unknown }): Promise<unknown>;
+  pullV2(options: { token: string; cursor: string | null; limit: number }): Promise<unknown>;
+  pullDerived(options: { token: string; cursor: string | null; limit: number }): Promise<unknown>;
+  categoriaDerivada(options: { cuyId: string }): Promise<unknown>;
+  evaluationContext(options: { token: string; cuyId: string }): Promise<unknown>;
+  evaluateReproductora(options: { token: string; cuyId: string; body: unknown }): Promise<unknown>;
+  evaluateCandidata(options: { token: string; cuyId: string; body: unknown }): Promise<unknown>;
+  declareEvidence(options: { token: string; cuyId: string; body: unknown }): Promise<unknown>;
+  reviewEvidence(options: { token: string; cuyId: string; body: unknown }): Promise<unknown>;
+  alertasDerivadas(options: { cuyId: string }): Promise<unknown>;
+  sync(options: { token: string; allowPush?: boolean }): Promise<unknown>;
   status(): Promise<WorkSyncStatus>;
   listConflicts(): Promise<{ cases: ConflictCase[] }>;
   keepCentral(options: { review: ConflictReview }): Promise<ConflictResolutionResult>;
   retryConflict(options: { review: ConflictReview; input: Record<string, unknown> }): Promise<ConflictResolutionResult>;
+  authLogin(options: { body: unknown }): Promise<SessionResponse>;
+  authRefresh(options: { body: unknown }): Promise<SessionResponse>;
+  authLogout(options: { body: unknown }): Promise<{ ok: boolean }>;
+  authChangePassword(options: { token: string; body: unknown }): Promise<{ ok: boolean }>;
+  authMe(options: { token: string }): Promise<unknown>;
+  authSessionSave(options: { value: string }): Promise<{ ok: boolean }>;
+  authSessionRead(): Promise<{ value: string | null }>;
+  authSessionClear(): Promise<{ ok: boolean }>;
+  predictHembra(options: { token: string; body: unknown }): Promise<unknown>;
+  predictCandidata(options: { token: string; body: unknown }): Promise<unknown>;
+  assistantQuery(options: { token: string; body: unknown }): Promise<unknown>;
 }
 
 // Plugin Electron registrado en el manifest de Capawesome. El proceso principal
@@ -48,8 +77,8 @@ interface SyncLabPlugin {
 export const SyncLab = registerPlugin<SyncLabPlugin>('SyncLab');
 
 function assertLoopback(path: string): string {
-  const url = LAB_BASE_URL + path;
-  if (!isLoopbackUrl(url)) throw new Error('Destino fuera de loopback');
+  const url = apiUrl(path);
+  if (!isAllowedApiUrl(url)) throw new Error('Destino de API no autorizado');
   return url;
 }
 
@@ -76,6 +105,10 @@ export function createFetchTransport(): SyncTransport {
       context: (token) => SyncLab.context({ token }),
       push: (token, req) => SyncLab.push({ token, body: req }) as Promise<SyncPushResponse>,
       pull: (token, cursor, limit) => SyncLab.pull({ token, cursor, limit }),
+      contextV2: (token) => SyncLab.contextV2({ token }),
+      pushV2: (token, req) => SyncLab.pushV2({ token, body: req }) as Promise<SyncPushResponse>,
+      pullV2: (token, cursor, limit) => SyncLab.pullV2({ token, cursor, limit }),
+      pullDerived: (token, cursor, limit) => SyncLab.pullDerived({ token, cursor, limit }),
     };
   }
   if (platform === 'android') {
@@ -91,21 +124,44 @@ export function createFetchTransport(): SyncTransport {
         }
         return capRequest(`/sync/pull?${params.toString()}`, token);
       },
+      contextV2: (token) => capRequest('/sync/v2/context', token) as Promise<SyncContextV2>,
+      pushV2: (token, req) =>
+        capRequest('/sync/v2/push', token, { method: 'POST', body: req }) as Promise<SyncPushResponse>,
+      pullV2: (token, cursor, limit) => {
+        if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new RangeError('limit pull fuera de rango');
+        const params = new URLSearchParams({ limit: String(limit) });
+        if (cursor !== null) {
+          if (cursor.length > 4096) throw new Error('Cursor local invalido');
+          params.set('cursor', cursor);
+        }
+        return capRequest(`/sync/v2/pull?${params.toString()}`, token);
+      },
+      pullDerived: (token, cursor, limit) => {
+        if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new RangeError('limit pull fuera de rango');
+        const params = new URLSearchParams({ limit: String(limit) });
+        if (cursor !== null) {
+          if (cursor.length > 4096) throw new Error('Cursor local invalido');
+          params.set('cursor', cursor);
+        }
+        return capRequest(`/sync/v3/pull?${params.toString()}`, token);
+      },
     };
   }
   throw new Error('Sincronizacion no disponible: se requiere Android o Windows instalado');
 }
 
-export async function synchronizeWorkDatabase(token: string): Promise<unknown> {
+export async function synchronizeWorkDatabase(token: string, options: { allowPush?: boolean } = {}): Promise<unknown> {
   const platform = Capacitor.getPlatform();
-  if (platform === 'electron') return SyncLab.sync({ token });
+  if (platform === 'electron') return SyncLab.sync({ token, allowPush: options.allowPush !== false });
   if (platform === 'android') {
     const [{ getWorkConnection, adaptWorkConnection }, { runSyncCycle }] = await Promise.all([
       import('./work.database.android.js'),
       import('./work.sync.coordinator.js'),
     ]);
     const connection = await getWorkConnection();
-    return runSyncCycle(adaptWorkConnection(connection), createFetchTransport(), token);
+    return runSyncCycle(adaptWorkConnection(connection), createFetchTransport(), token, {
+      allowPush: options.allowPush !== false,
+    });
   }
   throw new Error('Sincronizacion no disponible: se requiere Android o Windows instalado');
 }
