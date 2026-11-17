@@ -95,7 +95,7 @@ Para regenerar: `python -m tools.lope_import.preparar_revision --entradas ... --
 
 ```text
 Respaldo: %LOCALAPPDATA%\CuyiElite\piloto-local\respaldos\cuyielite-piloto-*.dump (pg_dump -Fc)
-Restauración comprobada en cuyielite_pilot_restaurado: cuyes=0; ambitos=Centro Lope; migraciones=8
+Restauración comprobada en cuyielite_pilot_restaurado: cuyes=0; ambitos=Centro Lope; migraciones=8 (instantánea previa a 0005; las bases activas ya tienen 9)
 ```
 
 La restauración usa `CREATE DATABASE ... TEMPLATE` sobre una base aislada; nunca sobre la principal.

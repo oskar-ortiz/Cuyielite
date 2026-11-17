@@ -366,7 +366,9 @@ Pruebas de aceptación mínimas:
 
 La idempotencia completa de la herramienta de Diery se demuestra conjuntamente en D1B. D1 prueba su frontera con un llamador sintético; no declara el ETL real integrado ni importa archivos Lope.
 
-**Estado D1 (2026-11-10, rama `feat/d1-publicacion-dominio`):** primitiva implementada y verificada con 16 pruebas sobre PostgreSQL temporal. Diery confirmó `0004_publicacion_dominio.sql` para D1 y `0005_*` para su CHECK independiente de pesajes; ese CHECK aún no está publicado. La primitiva **no tiene llamador operativo**: solo la invocan pruebas y un orquestador sintético; la conexión real la aportará el ETL de Diery en D1B, después de resolver compatibilidad de descarga en D2.
+**Estado D1 (2026-11-10, rama `feat/d1-publicacion-dominio`):** primitiva implementada y verificada con 16 pruebas sobre PostgreSQL temporal. Diery confirmó `0004_publicacion_dominio.sql` para D1 y `0005_*` para su CHECK independiente de pesajes; ese CHECK aún no está publicado.
+
+> Actualización 2026-11-16: el CHECK ya está publicado como `0005_pesajes_check.sql` (PR #157, commit `5d1ac64`) y aplicado al piloto; la comprobación de restricción quedó registrada en `docs/verificaciones/piloto-paridad-documentacion.md`. La primitiva **no tiene llamador operativo**: solo la invocan pruebas y un orquestador sintético; la conexión real la aportará el ETL de Diery en D1B, después de resolver compatibilidad de descarga en D2.
 
 **Efecto sobre clientes v1 mientras D1 exista sin D2:** `pull_changes` no filtra entidades desconocidas. Si la historia contiene `entity='cuyes'`, el servicio devuelve el ítem y calcula `next_cursor`, pero `SyncPullItem.entity` solo admitía `galpon|poza` y `/sync/pull` respondía `500` antes de entregar cursor. No se avanza el cursor filtrando entidades: hacerlo perdería cambios para la descarga futura.
 
