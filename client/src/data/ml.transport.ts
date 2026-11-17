@@ -30,7 +30,9 @@ async function androidRequest(
     ...(body === undefined ? {} : { data: body }),
     disableRedirects: true,
     connectTimeout: 15_000,
-    readTimeout: 30_000,
+    // El asistente calcula embeddings por consulta; puede tardar más que una
+    // predicción o una sincronización en el primer arranque.
+    readTimeout: path === '/assistant/query' ? 120_000 : 30_000,
   });
   if (res.status >= 300 && res.status < 400) throw new MlHttpError(0, 'Redirección rechazada');
   if (res.status < 200 || res.status >= 300) throw new MlHttpError(res.status, `HTTP ${res.status}`);

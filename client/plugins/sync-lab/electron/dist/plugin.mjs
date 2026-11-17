@@ -118,6 +118,9 @@ async function request(route, token, init) {
   assertToken(token);
   const url = LAB_BASE_URL + route;
   assertLoopback(url);
+  // El asistente calcula embeddings en cada consulta: 10 s no bastan en un
+  // equipo modesto. El resto de rutas conserva el plazo corto.
+  const timeoutMs = route === ROUTES.assistant ? 120_000 : 10_000;
   const res = await fetch(url, {
     ...init,
     headers: {
@@ -125,7 +128,7 @@ async function request(route, token, init) {
       Authorization: `Bearer ${token}`,
     },
     redirect: 'error',
-    signal: AbortSignal.timeout(10_000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   assertLoopback(res.url);
   if (!res.ok) {

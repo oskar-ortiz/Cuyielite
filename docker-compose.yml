@@ -1,4 +1,5 @@
 # PostgreSQL con pgvector para desarrollo. Conectar desde DBeaver a localhost:5432.
+# DB_PORT permite darle un puerto propio al piloto local sin tocar otros entornos.
 services:
   db:
     image: pgvector/pgvector:pg16
@@ -7,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: cuyielite
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 volumes:

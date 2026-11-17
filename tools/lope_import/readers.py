@@ -112,6 +112,41 @@ def read_individual_sheet(ws_formula, ws_cached=None, max_cols: int = 22):
     return result
 
 
+EXCEL_ERROR_VALUES = frozenset(
+    {"#VALUE!", "#REF!", "#DIV/0!", "#N/A", "#NAME?", "#NULL!", "#NUM!"}
+)
+
+
+def read_error_cells(ws_formula, ws_cached, max_cols: int = 20):
+    """Lista las celdas con errores guardados en el libro, sin corregirlas.
+
+    Los bloques reproductivos se leen solo hasta la columna L, pero el libro
+    guarda resultados de error en columnas posteriores (O, P, Q). La auditoría
+    debe hacerlos visibles al revisor sin convertirlos en cero ni usarlos como
+    conteos: un `#VALUE!` es evidencia de un cálculo inválido, no una cantidad.
+    """
+    formulas: dict[str, str] = {}
+    for row in ws_formula.iter_rows(min_row=1, max_col=max_cols):
+        for cell in row:
+            if isinstance(cell.value, str) and cell.value.startswith("="):
+                formulas[cell.coordinate] = cell.value
+
+    found = []
+    for row in ws_cached.iter_rows(min_row=1, max_col=max_cols):
+        for cell in row:
+            value = cell.value
+            if isinstance(value, str) and value.strip().upper() in EXCEL_ERROR_VALUES:
+                found.append(
+                    {
+                        "sheet": ws_cached.title,
+                        "cell": cell.coordinate,
+                        "value": value.strip(),
+                        "formula": formulas.get(cell.coordinate),
+                    }
+                )
+    return found
+
+
 def read_reproductive_blocks(ws_formula, ws_cached=None, max_cols: int = 12):
     """Lee bloques reproductivos del formato 'REGISTRO REPRODUCTIVO'.
 
