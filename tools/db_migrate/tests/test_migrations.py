@@ -565,3 +565,106 @@ def test_concurrencia_coordinada(fresh_db):
             assert cur.fetchone() is not None
     finally:
         conn.close()
+
+
+def _insert_pesaje_context_fixture(conn):
+    cuy_id = uuid.uuid4()
+    parto_id = uuid.uuid4()
+    evento_id = uuid.uuid4()
+    conn.execute(
+        "INSERT INTO cuyes (id,codigo_identificacion,created_at,updated_at) "
+        "VALUES (%s,%s,now(),now())",
+        (cuy_id, f"CHECK-{cuy_id}"),
+    )
+    conn.execute(
+        "INSERT INTO partos (id,madre_id,created_at,updated_at) "
+        "VALUES (%s,%s,now(),now())",
+        (parto_id, cuy_id),
+    )
+    conn.execute(
+        "INSERT INTO eventos (id,cuy_id,tipo,created_at,updated_at) "
+        "VALUES (%s,%s,%s,now(),now())",
+        (evento_id, cuy_id, "EMPADRE"),
+    )
+    return cuy_id, parto_id, evento_id
+
+
+def _insert_test_pesaje(conn, cuy_id, parto_id=None, evento_id=None):
+    conn.execute(
+        "INSERT INTO pesajes "
+        "(cuy_id,peso_gramos,parto_id,evento_id,created_at,updated_at) "
+        "VALUES (%s,%s,%s,%s,now(),now())",
+        (cuy_id, "123.45", parto_id, evento_id),
+    )
+
+
+def test_pesajes_contexto_exclusivo_constraint_existe(fresh_db):
+    _apply_migration(fresh_db)
+    conn = psycopg.connect(fresh_db)
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM information_schema.table_constraints "
+                "WHERE table_schema='public' AND table_name='pesajes' "
+                "AND constraint_name='pesajes_contexto_exclusivo_chk' "
+                "AND constraint_type='CHECK'"
+            )
+            assert cur.fetchone() is not None
+    finally:
+        conn.close()
+
+
+def test_pesajes_contexto_exclusivo_permite_un_contexto_o_ninguno(fresh_db):
+    _apply_migration(fresh_db)
+    conn = psycopg.connect(fresh_db, autocommit=True)
+    try:
+        cuy_id, parto_id, evento_id = _insert_pesaje_context_fixture(conn)
+        _insert_test_pesaje(conn, cuy_id, parto_id=parto_id)
+        _insert_test_pesaje(conn, cuy_id, evento_id=evento_id)
+        _insert_test_pesaje(conn, cuy_id)
+        with pytest.raises(psycopg.errors.CheckViolation):
+            _insert_test_pesaje(conn, cuy_id, parto_id=parto_id, evento_id=evento_id)
+    finally:
+        conn.close()
+
+
+def test_pesajes_contexto_exclusivo_precheck_reporta_solo_cantidad(fresh_db, tmp_path):
+    import shutil
+
+    migrations_dir = tmp_path / "migrations"
+    migrations_dir.mkdir()
+    shutil.copyfile(
+        MIGRATIONS_DIR / "0001_lope_domain.sql",
+        migrations_dir / "0001_lope_domain.sql",
+    )
+    _apply_migration(fresh_db, directory=migrations_dir)
+
+    conn = psycopg.connect(fresh_db, autocommit=True)
+    try:
+        cuy_id, parto_id, evento_id = _insert_pesaje_context_fixture(conn)
+        _insert_test_pesaje(conn, cuy_id, parto_id=parto_id, evento_id=evento_id)
+    finally:
+        conn.close()
+
+    migration_0005 = MIGRATIONS_DIR / "0005_pesajes_check.sql"
+    shutil.copyfile(migration_0005, migrations_dir / migration_0005.name)
+    with pytest.raises(psycopg.errors.RaiseException) as exc_info:
+        _apply_migration(fresh_db, directory=migrations_dir)
+    assert exc_info.value.diag.message_primary == (
+        "Precheck incumplido: 1 pesajes tienen ambos contextos informados"
+    )
+
+
+def test_pesajes_contexto_exclusivo_sql_idempotente(fresh_db):
+    _apply_migration(fresh_db)
+    migration_sql = (MIGRATIONS_DIR / "0005_pesajes_check.sql").read_text(
+        encoding="utf-8"
+    )
+    conn = psycopg.connect(fresh_db)
+    try:
+        conn.execute(migration_sql)
+        conn.commit()
+        conn.execute(migration_sql)
+        conn.commit()
+    finally:
+        conn.close()
