@@ -1,6 +1,7 @@
 param(
     [string]$Avd = 'Pixel_36',
-    [ValidateRange(60, 600)][int]$TimeoutSeconds = 240
+    [ValidateRange(60, 600)][int]$TimeoutSeconds = 240,
+    [ValidateRange(512, 8192)][int]$AvdRamMb = 2560
 )
 
 # Start the existing AVD visibly, preserving userdata and bypassing old snapshots.
@@ -32,13 +33,21 @@ foreach ($device in (& $adb devices)) {
 if (-not $serial) {
     $memory = Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory
     $commitFree = [double]$memory.CommitLimit - [double]$memory.CommittedBytes
-    Write-Host "RAM disponible: $($memory.AvailableMBytes) MB; margen de memoria comprometida: $([math]::Round($commitFree / 1MB)) MB."
+    $availableMb = [double]$memory.AvailableMBytes
+    Write-Host "RAM disponible: $([math]::Round($availableMb)) MB; margen de memoria comprometida: $([math]::Round($commitFree / 1MB)) MB; AVD solicitado: $AvdRamMb MB."
+    # El margen de commit puede ser alto gracias al archivo de paginacion mientras
+    # la RAM fisica disponible es minima. En ese caso el emulador arranca pero
+    # System UI entra en ANR y la app queda en pantalla negra. Exigir RAM real
+    # disponible evita ese fallo sin cerrar aplicaciones de nadie.
+    if ($availableMb -lt $AvdRamMb) {
+        throw "RAM disponible insuficiente para el AVD ($AvdRamMb MB). No se inicia el emulador; libera memoria con el operador antes de reintentar. No se cierran aplicaciones ni se cambia el archivo de paginacion."
+    }
     if ($commitFree -lt 4GB) {
-        throw 'Falta margen de memoria para Android. Cierra aplicaciones guardadas antes de iniciar; no se cambiara el archivo de paginacion.'
+        throw 'Falta margen de memoria comprometida para Android. No se inicia el emulador; no se cambiara el archivo de paginacion.'
     }
     $logBase = Join-Path $env:TEMP ('cuyielite-pixel-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
     $launch = Start-Process -FilePath $emulator -ArgumentList @(
-        '-avd', $Avd, '-memory', '2560', '-cores', '2',
+        '-avd', $Avd, '-memory', "$AvdRamMb", '-cores', '2',
         '-no-snapshot', '-no-boot-anim', '-gpu', 'host'
     ) -RedirectStandardOutput "$logBase.log" -RedirectStandardError "$logBase.err" -WindowStyle Normal -PassThru
     Write-Host "Pixel se abre en ventana propia. Logs: $logBase.log y $logBase.err"
