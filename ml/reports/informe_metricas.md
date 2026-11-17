@@ -1,47 +1,32 @@
 # Informe de métricas — Random Forest de candidatas
 
-> **Estado al 2026-11-16: no reconciliado con el artefacto local.** El SHA-256
-> observado de `candidate_random_forest_b.joblib` es
-> `744349c43b4781dc5acef88e3db9dd6522d7b76c26a3f91e82d578792d6adce9`, pero
-> `ml/models/metadata.json` no registra `artifact_file` ni `model_sha256`.
-> El cargador verificado rechaza el artefacto por falta de hash. No copiar el
-> hash a metadata ni atribuirle estas métricas hasta reconciliar el conjunto,
-> el protocolo y el entrenamiento de forma reproducible.
->
-> Hay una discrepancia de protocolo: este informe afirma
-> `StratifiedGroupKFold` (5 pliegues externos y 3 internos), mientras que la
-> metadata describe `RepeatedStratifiedKFold` (5 pliegues × 3 repeticiones e
-> `StratifiedKFold` interno). Para `B_nacimiento`, la tabla principal de este
-> informe reporta precisión/recall/F1 `0.731 ± 0.061 / 1.000 ± 0.000 /
-> 0.844 ± 0.042`; la metadata registra `0.7313 ± 0.0547 / 0.9950 ± 0.0140 /
-> 0.8417 ± 0.0352`. No se ha establecido cuál resultado corresponde al archivo.
-> Las cifras detalladas que siguen son históricas y no deben citarse como
-> métricas verificadas del artefacto.
-
-- Fecha: 2026-11-09
+- Fecha: 2026-11-17
 - Versión scikit-learn: 1.9.1
+- SHA-256 del artefacto: `744349c43b4781dc5acef88e3db9dd6522d7b76c26a3f91e82d578792d6adce9`
+- SHA-256 de claves ordenadas de filas usadas: `7cf80a4d2504f6febc6e30ec7f00dce8fdd148dc8d86b4d6664fb424f1bbfa3a`
+- Commit base del código de entrenamiento: `70eb84cec9251913a523a8928037451f4cad7c96`
 - SHA-256 del CSV etiquetado: `9268ba03436af223c1ee983aed95170dbe7bd534b1c5ef10fcfce48fc10b8c57`
 - Protocolo: StratifiedGroupKFold, 5 pliegues externos y 3 internos; agrupación por código crudo `MADRE No.` y random_state=42.
 - Clasificador: `RandomForestClassifier(class_weight='balanced', random_state=42)`; búsqueda de hiperparámetros dentro de cada pliegue de entrenamiento.
 
 ## Dataset
 
-| Filas usadas | ELITE | NORMAL | NO_APLICA excluidas | REVISAR excluidas | Duplicados retirados | Filas sin identidad utilizable |
-| --- | --- | --- | --- | --- | --- | --- |
-| 805 | 200 | 605 | 1392 | 59 | 0 | 805 |
+| Leídas | Elegibles pre-deduplicación | Usadas | ELITE | NORMAL | NO_APLICA excluidas | REVISAR excluidas | Conflictos duplicados excluidos | Duplicados retirados | Sin madre excluidas | Con predictores faltantes imputados |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2256 | 805 | 805 | 200 | 605 | 1392 | 59 | 0 | 0 | 0 | 0 |
 
-La metadata registra 805 filas elegibles sin identidad utilizable; por ello,
-`duplicate_rows_removed = 0` no demuestra ausencia de duplicados por animal.
-El informe anterior menciona 275 grupos de `MADRE No.`, pero ese conteo no está
-registrado en metadata. La agrupación por código crudo no acredita identidad
-individual ni descarta reutilizaciones o colisiones.
+### Cascada agregada por origen
 
-## Resultados históricos (no reconciliados con el artefacto)
+| Origen | Leídas | Conflictos duplicados | NO_APLICA | REVISAR | Otras etapas/sin etiqueta | Elegibles | Duplicados retirados | Sin madre excluidas | Usadas | Predictores faltantes imputados |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| origen_01 | 853 | 0 | 508 | 58 | 0 | 287 | 0 | 0 | 287 | 0 |
+| origen_02 | 1403 | 0 | 884 | 1 | 0 | 518 | 0 | 0 | 518 | 0 |
 
-Las cifras siguientes se conservan como estaban en el informe recibido; hasta
-resolver las discrepancias indicadas al inicio, no son métricas verificadas del
-artefacto local. El informe original las describe como media ± desviación
-estándar entre pliegues y matrices agregadas en orden NORMAL, ELITE.
+Grupos de madre utilizados: 275. Filas elegibles sin identidad global utilizable: 805. Los predictores faltantes se imputan; no se descartan por ese motivo. Las observaciones sin código de madre se excluyen de la validación agrupada.
+
+## Resultados de validación cruzada
+
+Se informa media ± desviación estándar entre pliegues. Las matrices agregan las predicciones de los pliegues externos y usan orden de clase NORMAL, ELITE.
 
 | Experimento | Variables | Precisión ELITE | Recall ELITE | F1 ELITE |
 | --- | --- | --- | --- | --- |
@@ -55,19 +40,12 @@ estándar entre pliegues y matrices agregadas en orden NORMAL, ELITE.
 | Real NORMAL | 604 | 1 |
 | Real ELITE | 0 | 200 |
 
-#### Métricas por clase (media ± desviación estándar)
+#### Precisión, recall y F1 por clase
 
 | Clase | Precisión | Recall | F1 |
 | --- | --- | --- | --- |
 | NORMAL | 1.000 ± 0.000 | 0.998 ± 0.004 | 0.999 ± 0.002 |
 | ELITE | 0.995 ± 0.011 | 1.000 ± 0.000 | 0.998 ± 0.006 |
-
-#### Precisión, recall y F1 por clase
-
-| Clase | Precisión | Recall | F1 |
-| --- | --- | --- | --- |
-| NORMAL | 1.000 ± 0.000 | 0.998 ± 0.003 | 0.999 ± 0.002 |
-| ELITE | 0.995 ± 0.010 | 1.000 ± 0.000 | 0.998 ± 0.005 |
 
 #### Importancia media de variables
 
@@ -106,19 +84,12 @@ Métricas de línea base calculadas sobre los mismos pliegues agrupados; la lín
 | Real NORMAL | 530 | 75 |
 | Real ELITE | 0 | 200 |
 
-#### Métricas por clase (media ± desviación estándar)
+#### Precisión, recall y F1 por clase
 
 | Clase | Precisión | Recall | F1 |
 | --- | --- | --- | --- |
 | NORMAL | 1.000 ± 0.000 | 0.876 ± 0.040 | 0.933 ± 0.023 |
 | ELITE | 0.731 ± 0.061 | 1.000 ± 0.000 | 0.844 ± 0.042 |
-
-#### Precisión, recall y F1 por clase
-
-| Clase | Precisión | Recall | F1 |
-| --- | --- | --- | --- |
-| NORMAL | 0.998 ± 0.005 | 0.877 ± 0.035 | 0.933 ± 0.019 |
-| ELITE | 0.731 ± 0.055 | 0.995 ± 0.014 | 0.842 ± 0.035 |
 
 #### Importancia media de variables
 
@@ -158,8 +129,7 @@ Hay 58 ejemplos `DESCARTE`, 266 `NORMAL` y 29 sin clase entre las filas reproduc
 - El experimento B excluye peso al destete y ratio; estima la clase derivada posteriormente a partir de variables disponibles al nacer. Su resultado no confirma que la candidata llegue a cumplir los criterios de destete.
 - La muestra procede de una sola explotación/centro e incluye registros de Galpón 1 y Galpón 2. La validación mezcla ambos galpones; no equivale a validación externa ni a evaluación en un galpón aislado.
 - Las etiquetas provienen de reglas de clasificación, no de un experto ni de una evaluación independiente.
-- La agrupación usa el valor crudo `MADRE No.` porque no existe una reconciliación validada de esos códigos con una identidad global. Colisiones o reutilizaciones entre archivos podrían mezclar madres distintas o no detectar una misma madre con códigos diferentes.
-- Las filas sin identificador utilizable no permiten detectar posibles duplicados entre archivos; los duplicados con identidad conocida se deduplican antes de la validación.
+- La agrupación usa el valor crudo `MADRE No.` porque no existe una reconciliación validada de esos códigos con una identidad global. No se puede comprobar la separación por animal ni los duplicados entre archivos sin esa identidad; códigos iguales podrían colisionar y códigos distintos podrían corresponder al mismo animal.
 - Random Forest y líneas base se evaluaron sobre una muestra de 805 observaciones clasificables; las métricas dependen del tamaño y composición de esta muestra.
 
 El modelo guardado corresponde al experimento B, ajustado con todos los ejemplos elegibles después de completar la evaluación anidada. Las métricas informadas son las de validación cruzada, no las del ajuste final.
