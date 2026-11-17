@@ -60,6 +60,29 @@ describe('pull-v1 contract', () => {
     ).toThrow();
   });
 
+  it('rechaza pesajes con parto y evento a la vez (paridad con 0005)', () => {
+    const peso = (parto_id: string | null, evento_id: string | null) =>
+      record('44444444-4444-4444-8444-444444444444', '1', {
+        cuy_id: '33333333-3333-4333-8333-333333333333',
+        fecha_pesaje: '2026-03-12',
+        peso_gramos: '900.00',
+        etapa: null,
+        parto_id,
+        evento_id,
+      });
+    const parto = '55555555-5555-4555-8555-555555555555';
+    const evento = '66666666-6666-4666-8666-666666666666';
+    expect(
+      validatePullPage(page([{ seq: '1', entity: 'pesajes', record: peso(parto, null) }]), SCOPE, 50),
+    ).toBeTruthy();
+    expect(
+      validatePullPage(page([{ seq: '1', entity: 'pesajes', record: peso(null, evento) }]), SCOPE, 50),
+    ).toBeTruthy();
+    expect(() =>
+      validatePullPage(page([{ seq: '1', entity: 'pesajes', record: peso(parto, evento) }]), SCOPE, 50),
+    ).toThrow(/elemento pull/);
+  });
+
   it('rechaza una página que afirma tener más elementos sin llenar el límite', () => {
     const item = {
       seq: '1',
