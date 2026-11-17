@@ -1,6 +1,6 @@
 # Android RAG del piloto: diagnóstico, preflight y estado observado (2026-11-17)
 
-Estado: **BLOQUEADO / NO VERIFICADO EN UI ANDROID**. No se inició el AVD en esta sesión porque los recursos no cumplían el umbral. No se declara ningún caso del recorrido como completado.
+Estado: **BLOQUEADO / NO VERIFICADO EN UI ANDROID**. No se inició ningún AVD nuevo ni se ejecutó el recorrido: los recursos no cumplen el umbral de la guarda. No se declara ningún caso del recorrido como completado. Incluye una segunda revisión del 2026-11-17 con el emulador ya conectado (§7).
 
 ## 1. Estado de partida
 
@@ -91,3 +91,55 @@ Después se debe recorrer la UI real y capturar capturas/logs antes de marcar cu
 - Pixel_36, usuario 0, la app habitual `co.ucc.cuyielite`, sus bases y su Keystore: **intactos**.
 - No se desinstaló paquete habitual, no hubo `wipe-data`, no se abrieron puertos ni se cambió firewall.
 - No quedan contenedores, bases ni emuladores creados en esta sesión: solo `cuyielite-db-1` y el preexistente `cuyielite-s3-test`.
+
+## 7. Reanudación del 2026-11-17 con emulador ya conectado
+
+Fecha: 2026-11-17. Dispositivo: `emulator-5554`, `sdk_gphone64_x86_64`, API 36, usuario 0. Rama `docs/android-preflight-estado` desde `origin/dev` `3c4eb52` (PR #161 fusionado; PR #160 fusionó el handoff de Diery). JDK 21 (`Zulu 21.0.13.0.3`), `adb 1.0.41`. Método: solo lectura de estado, captura de pantalla y `logcat`; **no se enviaron taps, textos ni navegación**.
+
+### Preflight observado
+
+```text
+RAM disponible:        769 MB -> 767 MB en la segunda medición
+Margen de commit:      5,41 GiB -> 5,36 GiB
+Umbral de la guarda:   2560 MB de RAM disponible, 4 GiB de commit
+Dispositivos adb:      emulator-5554 (único; no hay teléfono físico autorizado)
+adb reverse:           tcp:8000 -> tcp:8000 activo
+Backend:               /health 200 (PID 19480); contenedor cuyielite-db-1 activo
+Paquete en primer plano: co.ucc.cuyielite.lab / co.ucc.cuyielite.MainActivity
+```
+
+La RAM disponible quedó **por debajo del umbral en toda la sesión**. Cumplir el margen de commit no basta: ese margen depende del archivo de paginación. No se inició otro AVD, no se bajó `-AvdRamMb`, no se cerraron aplicaciones del usuario, no se reinició Windows y no se repitieron intentos de interacción. No había un teléfono físico conectado que permitiera usar la variante `.lab`.
+
+### Origen del APK instalado
+
+```text
+pm path co.ucc.cuyielite.lab -> /data/app/.../base.apk  (14.714.578 bytes)
+sha256 instalado = 443e394eceb8d5cb440f9e6e52395261c5cfb12b58a5bbcf60b5a287be3203b6
+sha256 local     = 443e394eceb8d5cb440f9e6e52395261c5cfb12b58a5bbcf60b5a287be3203b6
+```
+
+El APK instalado corresponde exactamente al artefacto compilado con el código actual; **no** por eso se considera verificado el recorrido.
+
+### Estado de pantalla observado (captura, sin interacción)
+
+Captura: `%TEMP%\opencode\android-preflight.png`. Muestra `Acceso · Trabajo` de la variante `.lab`, etiqueta `Sin sesión`, campo de usuario con texto corrupto heredado de la interacción anterior (`…quen sin marcarse como completos.`), barra de herramientas del IME desplegada y campo de contraseña vacío. Es estado transitorio del formulario: no se limpió con `pm clear`, SQL ni desinstalación, y no se intentó corregirlo bajo el umbral de memoria.
+
+### Logcat (solo lectura)
+
+`adb logcat -d -t 1500` mostró `Long monitor contention` y `Slow dispatch took 380ms` en `system_server`, y `ImeTracker ... STATUS_TIMEOUT` al mostrar el IME. Es coherente con la presión de recursos documentada; no se registró un error funcional de la app en este tramo.
+
+### Resultado de los siete criterios (2026-11-17)
+
+| # | Criterio | Estado | Método / evidencia |
+|---|---|---|---|
+| 1 | Entrar a Trabajo e iniciar sesión admin | **NO VERIFICADO** | Pantalla de acceso observable; sin taps ni credenciales enviadas |
+| 2 | Sincronización con estado visible, sin spinner infinito | **NO VERIFICADO** | No se navegó fuera de Acceso |
+| 3 | Pregunta dentro del corpus con fuente y página | **NO VERIFICADO** | Sin consulta desde UI |
+| 4 | Pregunta fuera del corpus y abstención | **NO VERIFICADO** | Sin consulta desde UI |
+| 5 | Cierre/reapertura y sesión sin access token en claro | **NO VERIFICADO en UI** | Solo cobertura automatizada previa; no se cerró ni reabrió la app |
+| 6 | Viewer sin acciones de escritura | **NO VERIFICADO** | No se inició sesión como viewer |
+| 7 | Evidencia separando UI / backend / SQLite / pruebas | **PARCIAL** | UI: captura de estado; backend: `/health` 200; SQLite: sin comprobación nueva; pruebas: no ejecutadas en esta corrida |
+
+### Bloqueo y paso concreto para reanudar
+
+Bloqueo: RAM física disponible de 767–769 MB frente a 2560 MB exigidos por la guarda, con un único emulador conectado y sin teléfono físico autorizado. Reanudar cuando `RAM disponible >= 2560 MB` y `commit libre >= 4 GB`, confirmando `adb devices` y `/health`; entonces sí ejecutar los taps de login, consulta, abstención, cierre/reapertura y viewer, capturando una captura por caso. No se debe reducir `-AvdRamMb` ni cerrar aplicaciones del usuario para forzar la prueba.
