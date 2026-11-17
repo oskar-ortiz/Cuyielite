@@ -381,3 +381,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Manifiesto escrito en {args.output}")
         print(f"Registros aceptados: {accepted}")
     return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

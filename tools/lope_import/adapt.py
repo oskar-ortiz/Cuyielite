@@ -295,3 +295,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Propuestas de revisión: {review['summary']['proposal_count']}")
     print(f"Reporte de revisión escrito en {args.output}")
     return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
