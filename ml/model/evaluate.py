@@ -262,6 +262,7 @@ def evaluate_experiment(
 
     folds = []
     fold_metrics = []
+    fold_details = []
     class_folds = {label: [] for label in LABEL_ORDER}
     pooled_true = []
     pooled_pred = []
@@ -287,8 +288,18 @@ def evaluate_experiment(
         metrics = _metrics(truth, predictions)
         folds.append(metrics)
         fold_metrics.append(metrics)
+        class_metrics = {}
         for label in LABEL_ORDER:
-            class_folds[label].append(_metrics(truth, predictions, label))
+            label_metrics = _metrics(truth, predictions, label)
+            class_folds[label].append(label_metrics)
+            class_metrics[label] = label_metrics
+        fold_details.append(
+            {
+                "rows": int(len(test_indices)),
+                "groups": int(groups.iloc[test_indices].nunique()),
+                "metrics_by_class": class_metrics,
+            }
+        )
         pooled_true.extend(truth.tolist())
         pooled_pred.extend(predictions.tolist())
         parameter_counts[
@@ -320,6 +331,7 @@ def evaluate_experiment(
         "feature_names": list(feature_names),
         "folds": len(folds),
         "fold_metrics": fold_metrics,
+        "fold_details": fold_details,
         "metrics": _summarize_folds(folds),
         "metrics_by_class": {
             label: _summarize_folds(class_folds[label])

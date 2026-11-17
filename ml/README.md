@@ -114,23 +114,29 @@ anular las reglas.
 ### Entrenamiento autorizado y artefacto verificable
 
 `ml.model.train` genera el modelo B y, por defecto, registra en
-`ml/models/metadata.json` el SHA-256, fecha, semilla, versiones, métricas y
-conteos agregados. El artefacto `*.joblib` está ignorado por Git; configura la
-ruta autorizada antes de entrenar:
+`ml/models/metadata.json` el SHA-256 del artefacto, la huella de claves de fila,
+el commit base de entrenamiento, fecha, semilla, versiones, métricas y conteos
+agregados. También escribe las versiones completas del entorno en
+`ml/models/entorno_entrenamiento.txt`. El artefacto `*.joblib` está ignorado por
+Git; configura la ruta autorizada antes de entrenar:
 
 ```powershell
 $env:CUYIELITE_RF_MODEL_PATH = "RUTA_AUTORIZADA\candidate_random_forest_b.joblib"
 .\.venv\Scripts\python.exe -m ml.model.train `
   --data-dir "RUTA_AUTORIZADA\features" `
-  --model-dir "ml\models"
+  --model-dir "ml\models" `
+  --training-code-commit "SHA_DEL_COMMIT_BASE_VERSIONADO"
 ```
 
 La carpeta de datos debe contener `features_crias_etiquetadas.csv` y
-`features_reproductoras_etiquetadas.csv`. No ejecutes el entrenamiento con datos
-reales hasta contar con autorización y respaldo verificable. Al cargar el modelo,
-el backend compara su hash con el de metadata y falla explícitamente si falta o
-no coincide. Para una instalación fuera de la ruta predeterminada, se puede
-configurar `CUYIELITE_RF_METADATA_PATH` con la ubicación autorizada de metadata.
+`features_reproductoras_etiquetadas.csv`; los Excel autorizados para la
+agrupación por madre deben estar disponibles en la ruta local configurada por
+`ml/etl/config.py`. Entrenar con datos reales requiere autorización expresa para
+ese uso; no autoriza promoción de datos, que conserva sus propias compuertas y
+requiere respaldo restaurable. Al cargar el modelo, el backend compara su hash
+con el de metadata antes de deserializar y falla explícitamente si falta o no
+coincide. Para una instalación fuera de la ruta predeterminada, se pueden
+configurar `CUYIELITE_RF_MODEL_PATH` y `CUYIELITE_RF_METADATA_PATH`.
 
 La validación experta ciega y sus comandos están en
 [`ml/validacion_experta/README.md`](./validacion_experta/README.md). Las pruebas

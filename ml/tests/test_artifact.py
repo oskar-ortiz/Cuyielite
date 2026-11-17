@@ -53,13 +53,17 @@ def test_metadata_records_hash_and_aggregate_counts(tmp_path):
     assert "sensitive-file-name.xlsx" not in json.dumps(persisted)
 
 
-def test_loader_verifies_hash_before_deserializing(tmp_path):
+def test_loader_verifies_hash_before_deserializing(tmp_path, monkeypatch):
     model_path = tmp_path / "synthetic.joblib"
     metadata_path = tmp_path / "metadata.json"
     joblib.dump(_synthetic_model(), model_path)
     write_model_metadata(model_path, {}, metadata_path)
     assert load_verified_model(model_path, metadata_path) is not None
 
+    def unexpected_deserialization(path):
+        pytest.fail("El modelo no debe deserializarse si el hash no coincide.")
+
+    monkeypatch.setattr("ml.model.artifact.joblib.load", unexpected_deserialization)
     model_path.write_bytes(model_path.read_bytes() + b"tampered")
     with pytest.raises(ModelArtifactError, match="SHA256_MISMATCH|SHA-256"):
         load_verified_model(model_path, metadata_path)
@@ -114,9 +118,12 @@ def test_training_orchestrator_writes_authorized_artifact_and_complete_metadata(
             "rows_by_source": {"private-source.xlsx": 2},
         },
         sha256="a" * 64,
+        training_row_keys_sha256="b" * 64,
     )
     artifact_path = tmp_path / "authorized" / "synthetic.joblib"
     metadata_path = tmp_path / "authorized" / "metadata.json"
+    report_path = tmp_path / "authorized" / "report.md"
+    environment_path = tmp_path / "authorized" / "environment.txt"
     monkeypatch.setenv(MODEL_PATH_ENV, str(artifact_path))
     monkeypatch.setenv(METADATA_PATH_ENV, str(metadata_path))
     monkeypatch.setattr(train_module, "load_dataset", lambda path: dataset)
@@ -139,17 +146,27 @@ def test_training_orchestrator_writes_authorized_artifact_and_complete_metadata(
         "reproductive_label_counts",
         lambda path: {"total_rows": 0, "normal": 0, "descarte": 0, "unlabeled": 0},
     )
-    monkeypatch.setattr(train_module, "render_report", lambda metadata: "synthetic\n")
+    monkeypatch.setattr(
+        train_module,
+        "render_report",
+        lambda metadata: f"model sha256: {metadata['model_sha256']}\n",
+    )
 
     metadata = train_module.train(
         data_dir=tmp_path,
         model_dir=tmp_path / "models",
-        report_path=tmp_path / "report.md",
+        report_path=report_path,
+        training_code_commit="base-synthetic",
+        environment_report_path=environment_path,
     )
 
     assert artifact_path.is_file()
     assert metadata_path.is_file()
+    assert environment_path.is_file()
     assert metadata["model_sha256"] == sha256_file(artifact_path)
+    assert metadata["model_sha256"] in report_path.read_text(encoding="utf-8")
+    assert metadata["training_row_keys_sha256"] == "b" * 64
+    assert metadata["training_code_commit"] == "base-synthetic"
     assert metadata["random_seed"] == 42
     assert {"python", "scikit_learn", "numpy", "pandas", "joblib"} == set(
         metadata["versions"]

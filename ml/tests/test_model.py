@@ -5,7 +5,12 @@ import joblib
 import openpyxl
 import pandas as pd
 
-from ml.model.dataset import FEATURES_A, FEATURES_B, load_dataset
+from ml.model.dataset import (
+    FEATURES_A,
+    FEATURES_B,
+    _training_row_keys_sha256,
+    load_dataset,
+)
 from ml.model.evaluate import (
     _simple_rule,
     _validate_disjoint_groups,
@@ -87,6 +92,30 @@ def test_dataset_filters_labels_and_deduplicates_usable_identifiers(tmp_path):
     assert dataset.stats["rows_without_usable_identity"] == 1
     assert "ID-SYNTHETIC" not in json.dumps(dataset.stats)
     assert "CONFLICT-TEST" not in json.dumps(dataset.stats)
+    assert "source-a.xlsx" not in json.dumps(dataset.stats)
+    assert dataset.stats["lineage_by_source"]["origen_02"][
+        "duplicate_rows_removed"
+    ] == 1
+    assert dataset.stats["lineage_by_source"]["origen_03"][
+        "excluded_duplicate_conflict"
+    ] == 1
+    lineage = dataset.stats["lineage_by_source"].values()
+    assert sum(source["rows_read"] for source in lineage) == len(rows)
+    assert sum(source["rows_used"] for source in lineage) == len(dataset.labels)
+
+
+def test_training_row_key_fingerprint_is_order_independent():
+    rows = pd.DataFrame(
+        {
+            "provenance_archivo": ["source-a.xlsx", "source-b.xlsx"],
+            "provenance_hoja": ["Sheet1", "Sheet2"],
+            "provenance_fila": ["10", "20"],
+        }
+    )
+
+    assert _training_row_keys_sha256(rows) == _training_row_keys_sha256(
+        rows.iloc[::-1]
+    )
 
 
 def test_dataset_loads_mother_groups_from_workbook_provenance(tmp_path):
@@ -141,6 +170,8 @@ def test_dataset_loads_mother_groups_from_workbook_provenance(tmp_path):
     assert dataset.stats["rows_excluded_missing_mother"] == 1
     assert dataset.stats["mother_groups"] == 1
     assert "MOTHER-SYN-1" not in json.dumps(dataset.stats)
+    assert len(dataset.training_row_keys_sha256) == 64
+    assert workbook_path.name not in json.dumps(dataset.stats)
 
 
 def test_same_seed_produces_identical_cross_validation_metrics():
@@ -159,7 +190,9 @@ def test_same_seed_produces_identical_cross_validation_metrics():
     second = evaluate_experiment(features.loc[:, FEATURES_B], labels, FEATURES_B, **options)
     assert first["metrics"] == second["metrics"]
     assert first["fold_metrics"] == second["fold_metrics"]
+    assert first["fold_details"] == second["fold_details"]
     assert len(first["fold_metrics"]) == first["folds"]
+    assert len(first["fold_details"]) == first["folds"]
     assert all(
         set(metrics) == {"precision", "recall", "f1"}
         for metrics in first["fold_metrics"]
@@ -216,16 +249,36 @@ def test_metrics_report_contains_no_animal_identifiers():
             "date": "2026-11-08",
             "versions": {"scikit_learn": "test-version"},
             "dataset_sha256": "0" * 64,
+            "model_sha256": "1" * 64,
+            "training_row_keys_sha256": "2" * 64,
+            "training_code_commit": "base-synthetic",
             "protocol": {"outer_folds": 5, "inner_folds": 3},
             "dataset": {
+                "rows_total": 24,
+                "rows_eligible_before_dedup": 20,
                 "rows_used": 20,
                 "class_counts": {"ELITE": 8, "NORMAL": 12},
                 "excluded_no_aplica": 1,
                 "excluded_review": 2,
+                "excluded_duplicate_conflict": 1,
                 "duplicate_rows_removed": 0,
                 "rows_without_usable_identity": 20,
                 "rows_excluded_missing_mother": 1,
                 "mother_groups": 8,
+                "lineage_by_source": {
+                    "origen_01": {
+                        "rows_read": 24,
+                        "excluded_duplicate_conflict": 1,
+                        "excluded_no_aplica": 1,
+                        "excluded_review": 2,
+                        "excluded_other_unlabeled_or_stage": 0,
+                        "eligible_before_dedup": 20,
+                        "duplicate_rows_removed": 0,
+                        "rows_excluded_missing_mother": 1,
+                        "rows_used": 19,
+                        "rows_with_missing_features_imputed": 2,
+                    }
+                },
             },
             "experiments": {
                 name: {
@@ -242,6 +295,12 @@ def test_metrics_report_contains_no_animal_identifiers():
                         for label in ("NORMAL", "ELITE")
                     },
                     "fold_metrics": [
+                        {
+                            metric: 0.5
+                            for metric in ("precision", "recall", "f1")
+                        }
+                    ],
+                    "fold_details": [
                         {
                             "rows": 4,
                             "groups": 2,
@@ -298,5 +357,8 @@ def test_metrics_report_contains_no_animal_identifiers():
     )
     assert "ID-SYNTHETIC-ANIMAL-123" not in report
     assert "CHAPA-REAL-123" not in report
+    assert "1" * 64 in report
+    assert "2" * 64 in report
+    assert "origen_01" in report
     assert "fuga de información" in report
     assert "Precisión, recall y F1 por clase" in report

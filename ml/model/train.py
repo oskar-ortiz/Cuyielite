@@ -2,6 +2,7 @@
 
 import argparse
 from datetime import date
+from importlib.metadata import distributions
 import json
 import os
 from pathlib import Path
@@ -17,6 +18,7 @@ from ml.model.artifact import (
     DEFAULT_MODEL_PATH,
     METADATA_PATH_ENV,
     MODEL_PATH_ENV,
+    sha256_file,
     write_model_metadata,
 )
 from ml.model.dataset import (
@@ -33,6 +35,7 @@ REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DATA_DIR = REPOSITORY_ROOT / "ml" / "data"
 DEFAULT_MODEL_DIR = REPOSITORY_ROOT / "ml" / "models"
 DEFAULT_REPORT = REPOSITORY_ROOT / "ml" / "reports" / "informe_metricas.md"
+DEFAULT_ENVIRONMENT_REPORT = DEFAULT_MODEL_DIR / "entorno_entrenamiento.txt"
 
 
 def _aggregate_dataset_stats(stats: dict[str, Any]) -> dict[str, Any]:
@@ -50,8 +53,24 @@ def _aggregate_dataset_stats(stats: dict[str, Any]) -> dict[str, Any]:
         "rows_without_usable_identity",
         "rows_excluded_missing_mother",
         "mother_groups",
+        "lineage_by_source",
     }
     return {key: stats[key] for key in allowed if key in stats}
+
+
+def _write_environment_report(path: Path) -> None:
+    installed = {
+        distribution.metadata.get("Name", "").strip(): distribution.version
+        for distribution in distributions()
+        if distribution.metadata.get("Name")
+    }
+    lines = [f"Python=={platform.python_version()}"]
+    lines.extend(
+        f"{name}=={version}"
+        for name, version in sorted(installed.items(), key=lambda item: item[0].casefold())
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def _markdown_table(headers: list[str], rows: list[list[Any]]) -> str:
@@ -86,6 +105,11 @@ def render_report(metadata: dict[str, Any]) -> str:
         "",
         f"- Fecha: {metadata['date']}",
         f"- Versión scikit-learn: {metadata['versions']['scikit_learn']}",
+        f"- SHA-256 del artefacto: `{metadata['model_sha256']}`",
+        f"- SHA-256 de claves ordenadas de filas usadas: "
+        f"`{metadata['training_row_keys_sha256']}`",
+        f"- Commit base del código de entrenamiento: "
+        f"`{metadata['training_code_commit']}`",
         f"- SHA-256 del CSV etiquetado: `{metadata['dataset_sha256']}`",
         f"- Protocolo: StratifiedGroupKFold, "
         f"{metadata['protocol']['outer_folds']} pliegues externos y "
@@ -98,9 +122,22 @@ def render_report(metadata: dict[str, Any]) -> str:
         "## Dataset",
         "",
         _markdown_table(
-            ["Filas", "ELITE", "NORMAL", "NO_APLICA excluidas", "REVISAR excluidas",
-             "Conflictos duplicados excluidos", "Duplicados retirados"],
+            [
+                "Leídas",
+                "Elegibles pre-deduplicación",
+                "Usadas",
+                "ELITE",
+                "NORMAL",
+                "NO_APLICA excluidas",
+                "REVISAR excluidas",
+                "Conflictos duplicados excluidos",
+                "Duplicados retirados",
+                "Sin madre excluidas",
+                "Con predictores faltantes imputados",
+            ],
             [[
+                data["rows_total"],
+                data["rows_eligible_before_dedup"],
                 data["rows_used"],
                 data["class_counts"].get("ELITE", 0),
                 data["class_counts"].get("NORMAL", 0),
@@ -109,19 +146,57 @@ def render_report(metadata: dict[str, Any]) -> str:
                 data.get("excluded_duplicate_conflict", 0),
                 data["duplicate_rows_removed"],
                 data["rows_excluded_missing_mother"],
+                sum(
+                    source["rows_with_missing_features_imputed"]
+                    for source in data["lineage_by_source"].values()
+                ),
             ]],
         ),
         "",
+        "### Cascada agregada por origen",
+        "",
+        _markdown_table(
+            [
+                "Origen",
+                "Leídas",
+                "Conflictos duplicados",
+                "NO_APLICA",
+                "REVISAR",
+                "Otras etapas/sin etiqueta",
+                "Elegibles",
+                "Duplicados retirados",
+                "Sin madre excluidas",
+                "Usadas",
+                "Predictores faltantes imputados",
+            ],
+            [
+                [
+                    source,
+                    counts["rows_read"],
+                    counts["excluded_duplicate_conflict"],
+                    counts["excluded_no_aplica"],
+                    counts["excluded_review"],
+                    counts["excluded_other_unlabeled_or_stage"],
+                    counts["eligible_before_dedup"],
+                    counts["duplicate_rows_removed"],
+                    counts["rows_excluded_missing_mother"],
+                    counts["rows_used"],
+                    counts["rows_with_missing_features_imputed"],
+                ]
+                for source, counts in sorted(data["lineage_by_source"].items())
+            ],
+        ),
+        "",
         f"Grupos de madre utilizados: {data['mother_groups']}. "
-        f"Filas elegibles sin identificador de animal utilizable: "
-        f"{data['rows_without_usable_identity']}; esas filas no permitían "
-        "comprobar duplicados y las observaciones sin madre se excluyeron del "
-        "experimento agrupado.",
+        f"Filas elegibles sin identidad global utilizable: "
+        f"{data['rows_without_usable_identity']}. Los predictores faltantes se "
+        "imputan; no se descartan por ese motivo. Las observaciones sin código "
+        "de madre se excluyen de la validación agrupada.",
         "",
         "## Resultados de validación cruzada",
         "",
         "Se informa media ± desviación estándar entre pliegues. Las matrices "
-        "agregan las predicciones de todos los pliegues repetidos y usan orden "
+        "agregan las predicciones de los pliegues externos y usan orden "
         "de clase NORMAL, ELITE.",
         "",
         _markdown_table(
@@ -223,7 +298,7 @@ def render_report(metadata: dict[str, Any]) -> str:
                             f"{fold['metrics_by_class']['NORMAL']['f1']:.3f}",
                             f"{fold['metrics_by_class']['ELITE']['f1']:.3f}",
                         ]
-                        for index, fold in enumerate(result["fold_metrics"], 1)
+                        for index, fold in enumerate(result["fold_details"], 1)
                     ],
                 ),
                 "",
@@ -258,11 +333,9 @@ def render_report(metadata: dict[str, Any]) -> str:
             "experto ni de una evaluación independiente.",
             "- La agrupación usa el valor crudo `MADRE No.` porque no existe una "
             "reconciliación validada de esos códigos con una identidad global. "
-            "Colisiones o reutilizaciones entre archivos podrían mezclar madres "
-            "distintas o no detectar una misma madre con códigos diferentes.",
-            "- Las filas sin identificador utilizable no permiten detectar posibles "
-            "duplicados entre archivos; los duplicados con identidad conocida se "
-            "deduplican antes de la validación.",
+            "No se puede comprobar la separación por animal ni los duplicados "
+            "entre archivos sin esa identidad; códigos iguales podrían colisionar "
+            "y códigos distintos podrían corresponder al mismo animal.",
             "- Random Forest y líneas base se evaluaron sobre una muestra de "
             f"{data['rows_used']} observaciones clasificables; las métricas dependen "
             "del tamaño y composición de esta muestra.",
@@ -282,12 +355,21 @@ def train(
     model_dir: Path = DEFAULT_MODEL_DIR,
     report_path: Path = DEFAULT_REPORT,
     artifact_path: Path | None = None,
+    *,
+    training_code_commit: str | None = None,
+    environment_report_path: Path = DEFAULT_ENVIRONMENT_REPORT,
 ) -> dict[str, Any]:
     dataset: CandidateDataset = load_dataset(data_dir / "features_crias_etiquetadas.csv")
     if dataset.groups is None:
         raise ValueError(
             "El dataset no tiene procedencia suficiente para validar por MADRE No."
         )
+    if not dataset.training_row_keys_sha256:
+        raise ValueError(
+            "El dataset no tiene claves de procedencia para identificar filas usadas."
+        )
+    if not training_code_commit:
+        raise ValueError("Debe indicarse el commit base del código de entrenamiento.")
     experiment_a = evaluate_experiment(
         dataset.features_a, dataset.labels, FEATURES_A, dataset.groups
     )
@@ -314,11 +396,15 @@ def train(
     model_path.parent.mkdir(parents=True, exist_ok=True)
     joblib.dump(final_search.best_estimator_, model_path)
 
+    model_sha256 = sha256_file(model_path)
     metadata = {
         "model": "RandomForestClassifier",
         "primary_experiment": "B_nacimiento",
         "date": date.today().isoformat(),
         "random_seed": RANDOM_SEED,
+        "training_code_commit": training_code_commit,
+        "training_row_keys_sha256": dataset.training_row_keys_sha256,
+        "model_sha256": model_sha256,
         "versions": {
             "python": platform.python_version(),
             "scikit_learn": sklearn.__version__,
@@ -352,10 +438,14 @@ def train(
     }
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(render_report(metadata), encoding="utf-8")
+    _write_environment_report(environment_report_path)
     metadata_path = Path(
         os.getenv(METADATA_PATH_ENV, str(model_dir / "metadata.json"))
     )
-    return write_model_metadata(model_path, metadata, metadata_path)
+    registered = write_model_metadata(model_path, metadata, metadata_path)
+    if registered["model_sha256"] != model_sha256:
+        raise RuntimeError("El hash del artefacto cambió durante la generación.")
+    return registered
 
 
 def main() -> None:
@@ -371,12 +461,34 @@ def main() -> None:
         help=f"Ruta del artefacto RF (también configurable con {MODEL_PATH_ENV}).",
     )
     parser.add_argument("--report", type=Path, default=DEFAULT_REPORT)
+    parser.add_argument(
+        "--training-code-commit",
+        required=True,
+        help="Commit base exacto del código de entrenamiento versionado.",
+    )
+    parser.add_argument(
+        "--environment-report",
+        type=Path,
+        default=DEFAULT_ENVIRONMENT_REPORT,
+    )
     args = parser.parse_args()
-    metadata = train(args.data_dir, args.model_dir, args.report, args.artifact)
+    metadata = train(
+        args.data_dir,
+        args.model_dir,
+        args.report,
+        args.artifact,
+        training_code_commit=args.training_code_commit,
+        environment_report_path=args.environment_report,
+    )
     print(
         json.dumps(
             {
                 "dataset": metadata["dataset"],
+                "model_sha256": metadata["model_sha256"],
+                "training_row_keys_sha256": metadata[
+                    "training_row_keys_sha256"
+                ],
+                "training_code_commit": metadata["training_code_commit"],
                 "experiments": {
                     name: result["metrics"]
                     for name, result in metadata["experiments"].items()
