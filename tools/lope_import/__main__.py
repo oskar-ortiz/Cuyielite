@@ -145,6 +145,10 @@ def main(argv=None):
         from .adapt import main as adapt_main
 
         return adapt_main(argv[1:])
+    if argv and argv[0] == "decisions":
+        from .decisions import main as decisions_main
+
+        return decisions_main(argv[1:])
 
     parser = argparse.ArgumentParser(description="Auditoria de solo lectura de fuentes Excel")
     parser.add_argument("files", nargs="+", help="Rutas explicitas de archivos Excel")

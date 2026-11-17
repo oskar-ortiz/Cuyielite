@@ -228,6 +228,8 @@ def test_reproductive_partos_have_stable_origin_refs():
 
 
 def test_adapt_generates_review_only_domain_proposals():
+    from backend.app.services.publication import PUBLISHABLE_FIELDS
+
     with tempfile.TemporaryDirectory() as tmp:
         individual = os.path.join(tmp, "ind.xlsx")
         reproductive = os.path.join(tmp, "repro.xlsx")
@@ -279,6 +281,15 @@ def test_adapt_generates_review_only_domain_proposals():
         assert len(partos) == 3
         assert len(pesajes) == 2
         assert all(item["status"] == "PENDIENTE_REVISION" for item in proposals)
+        assert all(
+            set(item["proposed_fields"]) == set(PUBLISHABLE_FIELDS[item["entity"]])
+            for item in proposals
+        )
+        assert animals[0]["proposed_fields"]["poza_id"] is None
+        assert (
+            "resolver_poza_id_con_evidencia_y_ambito"
+            not in animals[0]["review_required"]
+        )
         assert all(item["proposed_fields"]["nacidos_vivos"] is None for item in partos)
         assert all(item["proposed_fields"]["nacidos_muertos"] is None for item in partos)
         assert all(

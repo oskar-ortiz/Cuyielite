@@ -235,13 +235,17 @@ Regla de ejemplo: una correspondencia `AMBIGUO` no lleva `entidad_id` aceptado; 
 `lope_import_audit/v1` y produce `lope_import_review/v1`. Es una salida
 intermedia, no es entrada de `promote` ni publica datos:
 
-- Para `cuyes`, propone solo código, sexo, fecha ISO, color y ojos que existan en
-  la auditoría. La correspondencia, UUID y `poza_id` quedan pendientes.
+- Para `cuyes`, propone código, sexo, fecha ISO, color y ojos disponibles; los
+  demás campos publicables se completan con `null`. `poza_id` queda `null`
+  porque la poza histórica no demuestra ubicación actual; la correspondencia y
+  UUID sí quedan pendientes.
 - Para `partos`, propone la fecha solo si es ISO y conserva el código de la
-  madre y el T.C.N. original. `madre_id`, `numero_parto` y los tres conteos
-  quedan `null` hasta revisión; nunca interpreta automáticamente `4+1M`.
+  madre y el T.C.N. original. `madre_id` queda pendiente de conciliación;
+  `numero_parto` queda `null` porque NUPAR no está en esta auditoría. Los tres
+  conteos quedan `null` hasta revisión; nunca interpreta automáticamente `4+1M`.
 - El peso reproductivo numérico se propone como `pesajes.etapa = MONTA`, pero
-  `cuy_id` y fecha quedan pendientes. No se inventa el vínculo al animal.
+  `cuy_id` queda pendiente. `fecha_pesaje` queda `null` porque no está en la
+  fuente y el esquema lo permite; no se inventa el vínculo al animal.
 - No infiere `eventos` ni `parto_crias`: las fuentes auditadas no bastan para
   crear esos vínculos.
 
@@ -483,13 +487,16 @@ referencias por huella/hoja/celda/rol y candidatos crudos. El comando `adapt`
 los convierte en `lope_import_review/v1`, con propuestas no publicables y
 pendientes de revisión. No emite UUID de dominio ni correspondencias aceptadas;
 las referencias de candidatos tampoco son aún las filas finales de
-`importacion_origenes`. El promotor no interpreta esos candidatos. La prueba
-sintética crea el lote y seis correspondencias aceptadas
-(`parser_version=mapeo_version="synthetic"`), con dos cuyes y una fila de cada
-entidad restante, y luego invoca `publicar_con_d1`. El mapeo de propuestas a
-`lope_promocion/v1`, la creación/revisión de correspondencias y la integración
-con el orquestador de Diery siguen pendientes; las versiones sintéticas no son
-versiones de producción.
+`importacion_origenes`. El adaptador de `lope_promocion/v1` ya valida el
+manifiesto, registra lote, orígenes y correspondencias aceptadas dentro de la
+transacción del orquestador y delega la publicación a `publicar_cambios`.
+`tools.lope_import.decisions` crea una plantilla separada
+`lope_import_review_decisions/v1` y construye el manifiesto desde las decisiones
+explícitas. No asigna automáticamente identidades: una aceptación requiere UUID,
+revisor, evidencia y campos `after` completos; una corrección requiere además
+`before` y `expected_version`. La prueba sintética cubre el recorrido de una
+propuesta hasta la publicación y un manifiesto con seis correspondencias para
+las cinco entidades. Las versiones sintéticas no son versiones de producción.
 
 La llamada de publicación ocurre dentro de la transacción de `promote_batch`:
 
@@ -517,12 +524,10 @@ La prueba crea y elimina una base `cuyielite_lope_promote_<uuid>`; no lee los
 Excel privados. La prueba de auditoría construye su propio libro sintético. La
 carga real sigue bloqueada hasta completar la integración del orquestador,
 autorizar el ámbito y registrar el respaldo.
-### 9.7 Propuesta de manifiesto para revisar con Diery
+### 9.8 Manifiesto de promoción `lope_promocion/v1`
 
-**Estado: ejemplo y clave acordados por Diery (2026-11-16).** Este acuerdo no
-conecta el ETL ni autoriza una carga real. Antes de conectarla, se debe validar
-con un fixture sintético que el orquestador escribe dominio, correspondencias,
-publicación e idempotencia dentro de la misma transacción.
+**Estado: contrato aprobado por Diery e integrado; probado con datos
+sintéticos.** Esto no conecta la carga real ni la autoriza.
 
 El manifiesto separa cuatro identidades:
 
@@ -530,8 +535,10 @@ El manifiesto separa cuatro identidades:
   autorizada. El valor del manifiesto no sustituye la autorización ni se confía
   sin validación.
 - `idempotency_key`: la tupla ya respaldada por `UNIQUE(huella_archivo,
-  parser_version, mapeo_version)` en `importacion_lotes`. El `lote_id` es el UUID
-  persistido al crear el lote y se recupera al reintentar esa misma tupla.
+  parser_version, mapeo_version)` en `importacion_lotes`. El `lote_id` persistido
+  al crear el lote debe conservarse y reutilizarse en el reintento; una tupla
+  existente con otro `lote_id` se rechaza. Cada manifiesto representa un archivo
+  fuente, porque la clave lleva una sola huella.
 - Origen estable: huella, hoja, celda, fila, rol y tipo de entidad. `origen_id`
   se resuelve por esa clave única y se reutiliza; no depende de las versiones.
 - Identidad de dominio: `entity` + UUID `id`. Un UUID aceptado se conserva entre

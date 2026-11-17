@@ -1,7 +1,7 @@
 """Adaptador del manifiesto de promoción acordado (`lope_promocion/v1`).
 
 El manifiesto acordado (`docs/integracion/contrato-dominio-etl-plataforma.md`
-§9.7) trae cuatro identidades separadas: ámbito, tupla de idempotencia del
+§9.8) trae cuatro identidades separadas: ámbito, tupla de idempotencia del
 lote, origen estable e identidad de dominio. Este módulo lo traduce al formato
 interno que ya consume `promote_batch` y deja persistido el lote, los orígenes y
 las correspondencias aceptadas en la misma transacción que el dominio y la
@@ -159,7 +159,7 @@ def _parse_correspondencias(value: Any) -> tuple[CorrespondenciaAceptada, ...]:
         raise PromocionError("correspondencias_aceptadas debe ser una lista")
     resultado: list[CorrespondenciaAceptada] = []
     vistas_entidad: set[UUID] = set()
-    vistas_origen: set[tuple[str, str, str, int, str, str]] = set()
+    vistas_origen: set[tuple[str, str, int, str, str]] = set()
     for item in value:
         if not isinstance(item, Mapping) or set(item) != set(CORRESPONDENCE_KEYS):
             raise PromocionError("Una correspondencia no coincide con el contrato")
@@ -181,7 +181,7 @@ def _parse_correspondencias(value: Any) -> tuple[CorrespondenciaAceptada, ...]:
         if entidad_id in vistas_entidad:
             raise PromocionError("Dos correspondencias apuntan a la misma entidad")
         vistas_entidad.add(entidad_id)
-        clave_origen = (huella_placeholder := "", hoja, celda, fila, rol, entidad_tipo)
+        clave_origen = (hoja, celda, fila, rol, entidad_tipo)
         if clave_origen in vistas_origen:
             raise PromocionError("Dos correspondencias repiten el mismo origen")
         vistas_origen.add(clave_origen)
@@ -411,6 +411,12 @@ def promover_manifiesto(
 ) -> ResultadoPromocion:
     """Promueve el manifiesto acordado con el orquestador y el publicador reales."""
     manifiesto = parse_manifiesto(payload, authorized_scope_id=authorized_scope_id)
+
+    def preparar(conn_transaccion, scope_id, lote_id):
+        if scope_id != manifiesto.scope_id or lote_id != manifiesto.lote_id:
+            raise PromocionError("El ámbito o el lote no coincide con el manifiesto")
+        return preparar_registros(conn_transaccion, manifiesto)
+
     return promote_batch(
         conn,
         manifiesto.scope_id,
@@ -418,11 +424,8 @@ def promover_manifiesto(
         [],
         publicador,
         dry_run=dry_run,
-        preparar=lambda conn, _scope, _lote: preparar_registros(conn, manifiesto),
+        preparar=preparar,
     )
-
-
-
 
 __all__ = [
     "CONTRACT_VERSION",
@@ -432,4 +435,3 @@ __all__ = [
     "preparar_registros",
     "promover_manifiesto",
 ]
-

@@ -1,8 +1,8 @@
 # Evidencia: integración sintética del contrato ETL con la publicación (2026-11-16)
 
-Estado: **tramo cerrado con una regresión marcada**. El manifiesto acordado `lope_promocion/v1` atraviesa el orquestador real (`promote_batch`), el publicador real (`publicar_cambios` sobre la misma conexión) y el pull v2 contra PostgreSQL temporal aislado, con datos sintéticos.
+Estado: **contrato aprobado e integración sintética verificada**. `lope_import_review/v1` pasa por decisiones humanas sintéticas a `lope_promocion/v1`, el orquestador real (`promote_batch`), el publicador real (`publicar_cambios` sobre la misma conexión) y el pull v2 contra PostgreSQL temporal aislado. No se usaron archivos reales.
 
-Base: `dev` `2d8751d` (PR #152 fusionado). Rama: `test/etl-manifiesto-integracion`.
+Validación local: rama `feat/lope-orquestador-promocion`; no se usaron archivos reales.
 
 ## 1. Qué se corrigió
 
@@ -26,17 +26,21 @@ Reglas aplicadas: el ámbito se resuelve del contexto autorizado y el del manifi
 
 ## 3. Comandos reproducibles (sin secretos)
 
-```bash
-docker run -d --name cuyelite-etl-lab -e POSTGRES_USER=cuyielite \
-  -e POSTGRES_PASSWORD=<temporal> -e POSTGRES_DB=postgres -p 55446:5432 pgvector/pgvector:pg16
-docker exec cuyelite-etl-lab psql -U cuyielite -d postgres -c "CREATE DATABASE cuyelite_etl_lab"
+```powershell
+docker run -d --rm --name cuyelite-etl-lab -e POSTGRES_USER=cuyielite \
+  -e POSTGRES_PASSWORD=synthetic-local-only -e POSTGRES_DB=postgres -p 55446:5432 pgvector/pgvector:pg16
+docker exec cuyelite-etl-lab pg_isready -U cuyielite -d postgres
 
-export TEST_DATABASE_URL=postgresql://cuyielite:<temporal>@127.0.0.1:55446/cuyelite_etl_lab
-export DATABASE_URL=$TEST_DATABASE_URL
-python -m pytest tools/lope_import/tests tools/db_migrate/tests -q
+# PowerShell; el nombre de la base se usa para validar que el destino sea aislado.
+$env:TEST_DATABASE_URL = 'postgresql://cuyielite:synthetic-local-only@127.0.0.1:55446/cuyelite_test'
+$env:DATABASE_URL = $env:TEST_DATABASE_URL
+& .\.venv\Scripts\python.exe -m pip install -r tools\lope_import\requirements.txt -r backend\requirements.txt
+& .\.venv\Scripts\python.exe -m pytest -q tools\lope_import\tests tools\db_migrate\tests
+docker stop cuyelite-etl-lab
 ```
 
 La suite crea bases desechables propias a partir de `TEST_DATABASE_URL` y aplica el bootstrap central más **todas** las migraciones vigentes, incluida la nueva `0009`.
+Resultado de la última ejecución: **77 passed**. El contenedor temporal se detuvo al terminar.
 
 ## 4. Matriz de casos
 
@@ -47,26 +51,25 @@ La suite crea bases desechables propias a partir de `TEST_DATABASE_URL` y aplica
 | Dry-run no persiste dominio, lote, correspondencias, historial ni contador | reales | **HECHO** |
 | Promoción confirmada escribe dominio y publica en la misma conexión | reales | **HECHO** |
 | Registros nuevos publicados con versión 1 | reales | **HECHO** |
-| Pull v2 con ámbito, UUID, versiones, decimales, fechas y referencias | reales | **PENDIENTE** (ver §6) |
-| Repetir el mismo manifiesto no duplica filas, historial ni secuencias | reales | **PENDIENTE** (ver §6) |
+| Pull v2 con ámbito, UUID, versiones, decimales, fechas y referencias | reales | **HECHO** |
+| Repetir el mismo manifiesto no duplica filas, historial ni secuencias | reales | **HECHO** (reutilizando el mismo `lote_id`) |
 | Misma tupla de idempotencia en otro ámbito | reales | **HECHO** (rechazo sin cambios parciales) |
 | Corrección efectiva incrementa versión y publica una vez | reales | **HECHO** (versión 2 y un cambio) |
 | No-op sin versiones ni historial | reales | **HECHO** |
 | Fallo de publicación revierte dominio y lote | reales + publicador falso | **HECHO** |
 | Referencias cruzadas entre ámbitos | reales | **HECHO** (rechazo) |
 | Manifiesto por archivo con el formato acordado | reales | **HECHO** |
+| Propuesta `review/v1` + decisiones humanas -> manifiesto -> publicación | reales + decisiones sintéticas | **HECHO** |
 | Evidencia DECLARADA no habilita evaluación oficial | backend | **HECHO** en la suite de evaluación existente |
 
 ## 5. Componentes reales frente a dobles
 
-- Reales: `promote_batch`, `publicar_cambios`, `pull_changes` v2, PostgreSQL, el adaptador del manifiesto.
+- Reales: adaptador de decisiones, adaptador del manifiesto, `promote_batch`, `publicar_cambios`, `pull_changes` v2 y PostgreSQL.
 - Doble: solo el publicador que falla a propósito, para comprobar la reversión total.
 
-## 6. Pendiente real
+## 6. Semántica de replay verificada
 
-Dos casos quedan marcados como `xfail` con motivo explícito, no omitidos:
-
-- **Repetición del mismo manifiesto** y **pull v2**: al promover dos veces el mismo manifiesto, la segunda promoción choca con la tupla de idempotencia global de `importacion_lotes` (`La tupla de idempotencia ya pertenece a otro lote`). La causa probable es que la tupla `(huella_archivo, parser_version, mapeo_version)` sea única de forma global mientras la nueva columna `scope_id` se valida después; el replay del mismo lote debe resolverse por `lote_id`, no por la tupla. **No se ha corregido en esta entrega**: requiere decidir si la tupla pasa a ser única por ámbito o si el replay se reconoce primero por `lote_id`.
+El reintento es idempotente cuando se reutiliza el manifiesto original, incluido su `lote_id`. Una misma tupla de idempotencia con otro `lote_id` se rechaza; la tupla también es global y no puede reutilizarse en otro ámbito. Si el productor no puede conservar el `lote_id` entre reintentos, debe acordarse un cambio de contrato antes de implementarlo.
 
 ## 7. Límites
 

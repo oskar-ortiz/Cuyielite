@@ -306,17 +306,15 @@ def test_promocion_feliz_escribe_y_publica_la_fila_final(fresh_db):
 
 def test_publicador_d1_real_publica_y_repetir_es_noop(fresh_db):
     with psycopg.connect(fresh_db) as conn:
-        assert [
+        applied_migrations = [
             row[0]
             for row in conn.execute(
                 "SELECT id FROM schema_migrations ORDER BY id"
             ).fetchall()
-        ] == [f"000{i}_{suffix}.sql" for i, suffix in (
-            (1, "lope_domain"),
-            (2, "sync_lab"),
-            (3, "rag_e5_embeddings"),
-            (4, "publicacion_dominio"),
-        )]
+        ]
+        assert applied_migrations == sorted(
+            path.name for path in MIGRATIONS_DIR.glob("*.sql")
+        )
 
     with psycopg.connect(fresh_db) as conn:
         scope_id, batch_id, records = _new_batch(conn)
