@@ -57,20 +57,24 @@ cárguelo una vez al iniciar el servicio y páselo solo a
 
 ```python
 from pathlib import Path
-import joblib
+from ml.model.artifact import load_verified_model
 
-modelo = joblib.load(
+modelo = load_verified_model(
     Path("ml/models/candidate_random_forest_b.joblib")
 )
 resultado = predecir_candidata(payload, modelo=modelo)
 ```
 
-El archivo se genera con `python -m ml.model.train` y queda bajo
-`ml/models/` por defecto. Si los cuatro predictores de nacimiento están
-presentes, `apoyo_modelo` devuelve su clase y probabilidades. Es apoyo
-exploratorio no calibrado: nunca sustituye ni altera la clase de las reglas.
-El modelo disponible fue entrenado con variables/etiquetas que no incluyen
-todos los requisitos de destete y empadre del endpoint.
+No cargue el artefacto con `joblib.load` directamente: `load_verified_model`
+verifica SHA-256 contra metadata antes de deserializar y falla si falta o no
+coincide. El servicio de plataforma debe usar `load_candidate_model`, que delega
+en este verificador y adapta los errores. El archivo se genera con
+`python -m ml.model.train --training-code-commit SHA_DEL_COMMIT_BASE` y queda bajo
+`ml/models/` por defecto; `*.joblib` está ignorado por Git. Si los cuatro
+predictores de nacimiento están presentes, `apoyo_modelo` devuelve clase y
+probabilidades. Es apoyo exploratorio no calibrado: nunca sustituye ni altera
+la clase de las reglas. El modelo no incluye todos los requisitos de destete y
+empadre del endpoint.
 
 ### Ejemplos HTTP propuestos
 
