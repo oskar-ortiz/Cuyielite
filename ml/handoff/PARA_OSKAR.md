@@ -1,9 +1,35 @@
 # Handoff técnico para Oskar
 
 Este handoff describe contratos y estado para integrar ML y RAG. No implementa
-rutas HTTP ni cambia `backend/`, `docs/` o el DDL. Las firmas de predicción se
-tomaron del PR #87, que sigue abierto y no está en `dev`; confirmar su revisión
-antes de integrar.
+rutas HTTP ni cambia `backend/`, `docs/` o el DDL. La rama `origin/dev` ya
+contiene las funciones de predicción (`365123a`) y su integración de servicio
+(`3831cfd`); el PR #87 ya no es la referencia pendiente de integración.
+
+## Estado de entrega RF — bloqueado para carga
+
+- El SHA-256 observado localmente para
+  `ml/models/candidate_random_forest_b.joblib` es
+  `744349c43b4781dc5acef88e3db9dd6522d7b76c26a3f91e82d578792d6adce9`.
+  El artefacto está ignorado por Git; no se deserializó ni se ejecutó.
+- `ml/models/metadata.json` no contiene `artifact_file` ni `model_sha256`.
+  `load_verified_model` rechaza el artefacto con `RF_MODEL_SHA256_MISSING`;
+  por tanto, el cargador evita usar un modelo cuya identidad no esté registrada.
+  No agregarle el hash observado como atajo: todavía no se ha probado qué
+  entrenamiento y métricas corresponden a esos bytes.
+- Protocolo en metadata: `RepeatedStratifiedKFold`, 5 pliegues × 3 repeticiones,
+  con `StratifiedKFold` interno de 3 pliegues y sin agrupación por animal.
+  `ml/reports/informe_metricas.md` afirma `StratifiedGroupKFold` y reporta
+  cifras distintas en su tabla principal de B. El informe actualizado conserva
+  ambos resultados como no reconciliados, no selecciona uno.
+- Metadata registra 805 filas elegibles, 805 sin identidad animal utilizable,
+  cero duplicados retirados y cero IDs duplicados entre fuentes. Estos ceros
+  no prueban ausencia de duplicados cuando no hay identidad utilizable. Las
+  versiones registradas son Python 3.14.3 y scikit-learn 1.9.1; faltan las
+  versiones exactas de NumPy, pandas y joblib.
+- No atribuir métricas al artefacto ni activarlo en el servicio hasta recibir
+  evidencia reproducible que vincule checksum del dataset, código, protocolo,
+  entorno completo, validación por animal y modelo final. No se debe reentrenar
+  con datos reales sin ámbito autorizado y respaldo verificable.
 
 ## 1. PredictionService y funciones ML
 
@@ -13,7 +39,7 @@ antes de integrar.
 from ml.prediccion import predecir_candidata, predecir_hembra
 ```
 
-La implementación en el PR #87 define `predecir_hembra(datos: DatosHembra) ->
+`ml/prediccion.py` en `dev` define `predecir_hembra(datos: DatosHembra) ->
 PrediccionHembra` y `predecir_candidata(datos: DatosCandidata, *,
 modelo: ModeloCandidata | None = None) -> PrediccionCandidata`.
 
@@ -51,26 +77,23 @@ candidata = predecir_candidata({
 
 ### Carga opcional del Random Forest
 
-El modelo no se carga por defecto y no debe versionarse. Si está disponible,
-cárguelo una vez al iniciar el servicio y páselo solo a
-`predecir_candidata`:
-
 ```python
-from pathlib import Path
-import joblib
+from ml.model.artifact import load_verified_model
 
-modelo = joblib.load(
-    Path("ml/models/candidate_random_forest_b.joblib")
-)
+modelo = load_verified_model()
 resultado = predecir_candidata(payload, modelo=modelo)
 ```
 
-El archivo se genera con `python -m ml.model.train` y queda bajo
-`ml/models/` por defecto. Si los cuatro predictores de nacimiento están
-presentes, `apoyo_modelo` devuelve su clase y probabilidades. Es apoyo
-exploratorio no calibrado: nunca sustituye ni altera la clase de las reglas.
-El modelo disponible fue entrenado con variables/etiquetas que no incluyen
-todos los requisitos de destete y empadre del endpoint.
+Configurar `CUYIELITE_RF_MODEL_PATH` para seleccionar un artefacto y, si
+corresponde, `CUYIELITE_RF_METADATA_PATH` para seleccionar metadata. Sin ruta de
+modelo, el cargador devuelve `None`; con ruta configurada, valida SHA-256 antes
+de deserializar y falla explícitamente si falta metadata o el hash no coincide.
+Con la metadata actualmente entregada, el servicio no debe cargar el artefacto.
+Cuando se disponga de una entrega reconciliada, el archivo puede generarse con
+`python -m ml.model.train` en el entorno autorizado y fuera de Git. Si se carga,
+`apoyo_modelo` es apoyo exploratorio, no sustituye ni altera la clase de reglas;
+el modelo B usa predictores de nacimiento y no acredita requisitos posteriores
+de destete y empadre.
 
 ### Ejemplos HTTP propuestos
 
@@ -221,10 +244,10 @@ No se modificó `AGENTS.md`.
 
 1. **Autoridad de clasificación de candidatas:** el Informe de Roles asigna el
    entrenamiento/evaluación del Random Forest al servicio de clasificación
-   (`docs/CuyiElite_Informe_Roles_y_Responsabilidades.md:52`); `#87` deja las
-   reglas como autoridad y el RF como apoyo opcional. Confirmar qué versión se
-   defenderá. La línea citada no explicita la clase candidata; precisar esa
-   afirmación en la revisión.
+   (`docs/CuyiElite_Informe_Roles_y_Responsabilidades.md:52`); el contrato de
+   `ml/prediccion.py` deja las reglas como autoridad y el RF como apoyo
+   opcional. Confirmar qué versión se defenderá. La línea citada no explicita
+   la clase candidata; precisar esa afirmación en la revisión.
 2. **ADR 0004:** pendiente la revisión y aceptación final de Oskar, aunque el
    instructor validó las reglas. En particular, el descarte por dos abortos
    sigue identificado como propuesta.
@@ -234,8 +257,8 @@ No se modificó `AGENTS.md`.
 
 ## Referencias consultadas
 
-- PR #87: `ml/prediccion.py` (firmas `predecir_hembra` y
-  `predecir_candidata`) y `ml/README.md` (ejemplos, tipos y límites).
+- `ml/prediccion.py` (firmas `predecir_hembra` y `predecir_candidata`) y
+  `ml/README.md` (ejemplos, tipos y límites), presentes en `dev`.
 - `db/ddl/central/003_alertas.sql`.
 - `rag/src/retrieve.py`, `rag/src/generate.py` y el contrato de la sección 10
   de `docs/CuyiElite_Arquitectura_Tecnica.md`.

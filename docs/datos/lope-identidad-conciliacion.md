@@ -1,6 +1,23 @@
 # Identidad y conciliación — importación Lope
 
-Estado: PROPUESTA para revisión de Oskar y Diery. No aprobado ni implementado.
+Estado: DISEÑO EN REVISIÓN. Parte del flujo de identidad y promoción está
+implementada; este documento no equivale a aprobación de diseño ni a
+autorización de carga real.
+
+## Estado vigente al 2026-11-16
+
+- PR #159 quedó fusionado; la migración `0005_pesajes_check.sql` fue aplicada
+  y verificada en el piloto. La regla de contexto exclusivo también se valida
+  al recibir pesajes en SQLite, sin modificar el checksum del esquema local.
+- Las tablas de origen, lote, correspondencia y la relación `parto_crias`
+  existen en el esquema central vigente. Sus restricciones no convierten una
+  coincidencia sugerida por el parser en una identidad aceptada.
+- La revisión técnica de conciliaciones sigue pendiente de asignación. Cada
+  aceptación o exclusión requiere decisión, evidencia y responsable; este
+  documento no aprueba correspondencias reales.
+- La matriz de paridad vigente está en
+  `docs/verificaciones/piloto-paridad-documentacion.md`; este diseño conserva
+  reglas conceptuales y no sustituye la descripción del esquema efectivo.
 
 ## Conceptos
 
@@ -94,16 +111,20 @@ Se modela con `origen_rol` explícito en `importacion_correspondencias`:
 - UNIQUE(lote_id, origen_hoja, origen_celda, origen_fila, origen_rol, entidad_tipo).
 - No duplica la entidad de dominio; solo registra la relación origen↔entidad.
 
-## Incompatibilidades con el esquema actual
+## Restricciones vigentes y decisiones pendientes
 
-- UNIQUE de `cuyes.codigo_identificacion` frente a chapas reutilizadas: cambiar a
-  índice no único o añadir restricción compuesta solo si se aprueba.
-- Fechas obligatorias (`partos.fecha_parto`, `pesajes.fecha_pesaje`) frente a datos
-  pendientes: permitir NULL donde se apruebe.
-- Ubicación obligatoria y estado ACTIVO por defecto frente a registros históricos:
-  permitir NULL en ubicación y estado pendiente de revisión.
-- `cuyes.poza_id` ya existe NOT NULL: para registros históricos sin poza actual,
-  debe permitirse NULL o distinguir galpón de origen de ubicación actual.
+- En el esquema efectivo central, `partos.fecha_parto`, `pesajes.fecha_pesaje`,
+  `cuyes.poza_id`, `cuyes.sexo` y `cuyes.estado` admiten NULL; `cuyes.estado`
+  no asigna `ACTIVO` por defecto y los conteos de parto no inventan cero.
+- `cuyes.codigo_identificacion` continúa `NOT NULL UNIQUE` en PostgreSQL.
+  La aceptación de chapas reutilizadas requiere una decisión de esquema
+  explícita; la tolerancia local a duplicados sirve para retenerlos en revisión,
+  no para declarar su identidad.
+- La regla de `0005_pesajes_check.sql` permite como máximo un contexto (`parto_id`
+  o `evento_id`). Su aplicación central y validación de pull local están
+  documentadas en la verificación de paridad.
+- No cambiar estas restricciones ni aceptar coincidencias reales sin revisión,
+  evidencia y aprobación técnica.
 
 ## Verificación
 
@@ -113,13 +134,16 @@ cumplir una FK. Todas las referencias no resueltas se conservan en revisión.
 
 ## Tablas físicas de soporte
 
+Las siguientes estructuras ya están implementadas en el esquema central; se
+enumeran aquí como referencia del diseño, no como DDL pendiente de crear.
+
 ### importacion_origenes (origen estable, independiente de lote/versiones)
 - id UUID PK
 - huella_archivo, origen_hoja, origen_celda, origen_fila, origen_rol, entidad_tipo
 - UNIQUE(huella_archivo, origen_hoja, origen_celda, origen_fila, origen_rol, entidad_tipo)
 - No depende de parser_version, mapeo_version ni lote_id.
 
-### parto_crias (relación estructurada cría–parto)
+### parto_crias (relación cría–parto implementada)
 - id UUID PK
 - parto_id UUID FK partos(id)
 - cuy_id UUID FK cuyes(id)

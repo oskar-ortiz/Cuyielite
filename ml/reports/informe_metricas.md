@@ -1,5 +1,23 @@
 # Informe de métricas — Random Forest de candidatas
 
+> **Estado al 2026-11-16: no reconciliado con el artefacto local.** El SHA-256
+> observado de `candidate_random_forest_b.joblib` es
+> `744349c43b4781dc5acef88e3db9dd6522d7b76c26a3f91e82d578792d6adce9`, pero
+> `ml/models/metadata.json` no registra `artifact_file` ni `model_sha256`.
+> El cargador verificado rechaza el artefacto por falta de hash. No copiar el
+> hash a metadata ni atribuirle estas métricas hasta reconciliar el conjunto,
+> el protocolo y el entrenamiento de forma reproducible.
+>
+> Hay una discrepancia de protocolo: este informe afirma
+> `StratifiedGroupKFold` (5 pliegues externos y 3 internos), mientras que la
+> metadata describe `RepeatedStratifiedKFold` (5 pliegues × 3 repeticiones e
+> `StratifiedKFold` interno). Para `B_nacimiento`, la tabla principal de este
+> informe reporta precisión/recall/F1 `0.731 ± 0.061 / 1.000 ± 0.000 /
+> 0.844 ± 0.042`; la metadata registra `0.7313 ± 0.0547 / 0.9950 ± 0.0140 /
+> 0.8417 ± 0.0352`. No se ha establecido cuál resultado corresponde al archivo.
+> Las cifras detalladas que siguen son históricas y no deben citarse como
+> métricas verificadas del artefacto.
+
 - Fecha: 2026-11-09
 - Versión scikit-learn: 1.9.1
 - SHA-256 del CSV etiquetado: `9268ba03436af223c1ee983aed95170dbe7bd534b1c5ef10fcfce48fc10b8c57`
@@ -8,15 +26,22 @@
 
 ## Dataset
 
-| Filas | ELITE | NORMAL | NO_APLICA excluidas | REVISAR excluidas | Duplicados retirados | Madre no identificada |
+| Filas usadas | ELITE | NORMAL | NO_APLICA excluidas | REVISAR excluidas | Duplicados retirados | Filas sin identidad utilizable |
 | --- | --- | --- | --- | --- | --- | --- |
-| 805 | 200 | 605 | 1392 | 59 | 0 | 0 |
+| 805 | 200 | 605 | 1392 | 59 | 0 | 805 |
 
-Grupos de madre utilizados: 275. Filas elegibles sin identificador de animal utilizable: 805; esas filas no permitían comprobar duplicados y las observaciones sin madre se excluyeron del experimento agrupado.
+La metadata registra 805 filas elegibles sin identidad utilizable; por ello,
+`duplicate_rows_removed = 0` no demuestra ausencia de duplicados por animal.
+El informe anterior menciona 275 grupos de `MADRE No.`, pero ese conteo no está
+registrado en metadata. La agrupación por código crudo no acredita identidad
+individual ni descarta reutilizaciones o colisiones.
 
-## Resultados de validación cruzada
+## Resultados históricos (no reconciliados con el artefacto)
 
-Se informa media ± desviación estándar entre pliegues. Las matrices agregan las predicciones de todos los pliegues repetidos y usan orden de clase NORMAL, ELITE.
+Las cifras siguientes se conservan como estaban en el informe recibido; hasta
+resolver las discrepancias indicadas al inicio, no son métricas verificadas del
+artefacto local. El informe original las describe como media ± desviación
+estándar entre pliegues y matrices agregadas en orden NORMAL, ELITE.
 
 | Experimento | Variables | Precisión ELITE | Recall ELITE | F1 ELITE |
 | --- | --- | --- | --- | --- |

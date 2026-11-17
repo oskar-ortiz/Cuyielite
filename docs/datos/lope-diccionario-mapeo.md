@@ -1,9 +1,31 @@
 # Diccionario y cobertura real del parser — importación Lope
 
-Estado: PROPUESTA para revisión de Oskar y Diery. No aprobado ni implementado.
+Estado: PROPUESTA PARA REVISIÓN DE OSKAR Y DIERY. No representa aprobación de
+carga real ni asigna un revisor técnico.
 
 Fuentes verificadas: `tools/lope_import/readers.py`, `models.py`, `normalize.py`,
-`__main__.py`, `reconcile.py`. Pruebas: 19 (6 en `test_basic.py`, 13 en `test_cli.py`).
+`__main__.py`, `reconcile.py`, `adapt.py`, `decisions.py`, `manifest.py` y
+`promote.py`. La suite actual de `tools/lope_import` tiene 55 pruebas; ver
+`docs/verificaciones/etl-manifiesto-integracion.md`.
+
+## Estado de implementación al 2026-11-16
+
+- PR #159 quedó fusionado. Según la evidencia del piloto, `0005_pesajes_check.sql`
+  se aplicó y verificó; la paridad de la regla entre PostgreSQL y el pull de
+  SQLite está documentada en
+  `docs/verificaciones/piloto-paridad-documentacion.md`.
+- La extracción y la auditoría ya se conectan con adaptación, conciliación,
+  decisiones humanas, manifiesto y promoción. La tabla de cobertura de abajo
+  describe qué conserva la etapa de extracción; no significa que todo campo
+  esté listo para publicarse ni que se hayan aceptado registros reales.
+- `to_int` y `to_decimal` existen y se usan en la adaptación de valores
+  publicables. Los errores guardados de fórmulas se exponen como `celdas_error`
+  para revisión; no se convierten en cantidades.
+- `reconcile_litters` detecta ambigüedad y no fusiona identidades. La promoción
+  solo usa decisiones aceptadas con motivo, evidencia y revisor; la identidad
+  no se resuelve automáticamente por chapa.
+- Estas implementaciones no constituyen aprobación del mapeo pendiente ni
+  autorización para cargar datos reales.
 
 ---
 
@@ -59,9 +81,13 @@ Leyenda de estados:
 | T.C.N. (por parto) | CONSERVADO RAW | `block["partos"][j]["tcn"]` | Texto preservado ("6M", "1+2M"); no se interpreta. Los conteos quedan NULL y pendientes de revisión humana. |
 
 `reconcile_litters` agrupa por poza, detecta códigos de hembra coincidentes y marca
-`reconcilable: False`. No fusiona.
+`reconcilable: False`; no fusiona. La conciliación humana posterior se conserva
+en decisiones versionadas y la publicación consulta esas decisiones.
 
-`models.CandidateLitter` existe pero no se instancia en `__main__.py`.
+`CandidateLitter` está definido en `models.py`, pero el recorrido de extracción
+actual no lo instancia. La conciliación usa los bloques extraídos y el
+resultado de `reconcile_litters`; no se debe inferir integración completa por
+la existencia del modelo.
 
 ## Parte 2 — Mapeo concreto (destino, tipo, unidad, nulabilidad)
 
@@ -109,10 +135,12 @@ Cada campo apunta a tabla/columna o relación concreta, o queda en preparación/
 
 ## Vínculo cría ↔ parto de nacimiento
 
-- No existe FK directa cría→parto en el modelo actual.
-- Se modela en `importacion_correspondencias` con `origen_rol = 'CRIA_DE_PARTO'`.
-- Una tabla futura `parto_crias` puede formalizarlo. Mientras tanto, la correspondencia revisada conserva la relación.
-- No se declara completo con una columna genérica de detalle.
+- `parto_crias` existe en el esquema central y en el esquema de Trabajo; la
+  relación se guarda con `parto_id`, `cuy_id` y `rol`, no como texto libre.
+- La relación impone unicidad de la pareja y una sola camada de nacimiento por
+  cría. `importacion_correspondencias` conserva la resolución entre origen y
+  entidad, pero no sustituye la relación de dominio.
+- El vínculo real de una cría sigue sujeto a una decisión revisada con evidencia.
 
 ## Datos de empadre
 
@@ -158,13 +186,13 @@ Cada campo apunta a tabla/columna o relación concreta, o queda en preparación/
 - Fechas vacías se conservan NULL.
 - Cantidades desconocidas se conservan NULL (sin DEFAULT 0).
 
-## Ampliaciones del parser necesarias (trabajo posterior, no implementadas)
+## Pendientes de mapeo y publicación
 
-- Extraer y normalizar GAL No., POZA No., MACHO No., MADRE No., NUPAR en `CandidateAnimal`.
-- Extraer y normalizar PESO PARTO, T.C.N.V/M/T, PESO NACIMIENTO (hoy solo procedencia).
-- Extraer FECHA DESTETE, PESO DESTETE, FECHA/PESO 4 SEMANAS, JAULA, DESTINO.
-- Usar `to_decimal`/`to_int` para pesos y cantidades (hoy no se usan en `__main__`).
-- Instanciar `CandidateLitter` en lugar de dict suelto.
-- Normalizar `ojos` y `color` a códigos de catálogo (pendiente de Lope/Diery).
-- Implementar despivot de Parto 1..N en eventos individuales.
-- Implementar reconciliación de correspondencias individual↔reproductivo.
+- Acordar la normalización de `ojos` y `color` a catálogos y el despivot de
+  Parto 1..N a eventos antes de ampliar el mapeo publicable.
+- GAL/POZA y las referencias genealógicas no autorizan inferir ubicación actual
+  ni identidad; los valores no resueltos permanecen pendientes de decisión.
+- Los campos de auditoría o fórmula con error continúan en revisión; el parser
+  no debe sustituirlos por cero ni por datos calculados.
+- El mapeo y las correspondencias requieren revisor técnico designado y
+  evidencia por decisión. No se declaran completos por la existencia del flujo.

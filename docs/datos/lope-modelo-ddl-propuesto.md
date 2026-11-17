@@ -1,33 +1,44 @@
 # Modelo DDL propuesto — importación Lope
 
-Estado: PROPUESTA para revisión. NO EJECUTADA. No modificar DDL histórico 001-005.
+Estado: DISEÑO DE REFERENCIA EN REVISIÓN. No ejecutar este documento como
+migración. El piloto ya tiene aplicadas y verificadas las migraciones vigentes;
+la carga real sigue pendiente de autorización.
 
-## Parte del modelo vigente (002_nucleo.sql)
+## Implementación vigente al 2026-11-16
+
+- PR #159 documenta la aplicación de `0005_pesajes_check.sql` y la paridad
+  funcional con SQLite: un pesaje puede vincularse a parto, evento o ninguno,
+  nunca a ambos.
+- Las tablas y relaciones de dominio descritas aquí existen en las migraciones
+  centrales y en el esquema efectivo de Trabajo. Las decisiones aún pendientes
+  se señalan al final; la existencia del DDL no aprueba datos ni mapeos.
+- `db/ddl/local/001_sqlite.sql` es una referencia histórica. Para el esquema
+  local efectivo se debe consultar `client/src/data/work.schema.ts` y la
+  verificación de paridad, no usar el DDL histórico como estado actual.
+
+## Línea base histórica (002_nucleo.sql)
 
 Tablas existentes: galpones, pozas, cuyes, partos, pesajes, mortalidad.
 No crear tabla animales que duplique cuyes. `animal_id` mapea a `cuyes.id`.
 `ANIMAL No.` es un código de negocio separado.
 
-Columnas existentes relevantes:
-- `galpones.ubicacion VARCHAR(255)` ya es NULLABLE.
-- `cuyes.poza_id UUID NOT NULL REFERENCES pozas(id)` (ubicación actual).
-- `cuyes.codigo_identificacion VARCHAR(50) NOT NULL UNIQUE`.
-- `cuyes.fecha_nacimiento DATE` ya es NULLABLE.
-- `cuyes.sexo VARCHAR(1) NOT NULL CHECK (sexo IN ('M','H'))`.
-- `cuyes.estado VARCHAR(20) NOT NULL DEFAULT 'ACTIVO'`.
-- `partos.fecha_parto DATE NOT NULL`.
-- `partos.tamano_camada_nacida INTEGER NOT NULL`.
-- `partos.nacidos_vivos INTEGER NOT NULL DEFAULT 0`.
-- `partos.nacidos_muertos INTEGER NOT NULL DEFAULT 0`.
-- `pesajes.fecha_pesaje DATE NOT NULL`.
-- `pesajes.peso_gramos NUMERIC(8,2) NOT NULL`.
+Las restricciones que siguen describen la línea base de esa migración, no el
+esquema efectivo actual. Las migraciones posteriores permiten NULL en
+`cuyes.poza_id`, `cuyes.sexo`, `cuyes.estado`, `partos.fecha_parto` y
+`pesajes.fecha_pesaje`; los conteos de parto también admiten NULL y no usan
+`DEFAULT 0`. `cuyes.codigo_identificacion` permanece `NOT NULL UNIQUE`.
 
-## Propuesta coherente
+## Propuesta original (referencia histórica, no esquema efectivo)
+
+Las declaraciones “nuevo”, `NOT NULL` y “proponer” de esta sección describen
+el diseño inicial. No copiar este bloque como DDL ni asumir que refleja las
+restricciones actuales. Los elementos principales ya están en las migraciones
+centrales; el estado efectivo se consulta en ellas y en la matriz de paridad.
 
 ### Identidad y relaciones de animales
 
 Galpón de origen ≠ ubicación actual:
-- `cuyes.poza_id` (existente, NOT NULL) = ubicación actual.
+- `cuyes.poza_id` = ubicación actual si está informada; admite NULL.
 - `cuyes.galpon_origen_id UUID NULL REFERENCES galpones(id)` (nuevo) = galpón de origen histórico.
 - `cuyes.padre_id UUID NULL REFERENCES cuyes(id)` (nuevo).
 - `cuyes.madre_id UUID NULL REFERENCES cuyes(id)` (nuevo).
@@ -54,8 +65,8 @@ Galpón de origen ≠ ubicación actual:
 - Un pesaje se vincula a lo sumo a un `parto_id` o a un `evento_id` (no ambos). Si ninguno, es pesaje aislado.
 - `pesajes.contexto` como texto libre se ELIMINA de la propuesta: la relación se demuestra por FK, no por texto.
 
-### Eventos (destete, empadre, traslado, etc.)
-- Tabla nueva `eventos`:
+### Eventos (destete, empadre, traslado, etc.; tabla implementada)
+- `eventos`:
   - `id UUID PK`
   - `cuy_id UUID NOT NULL FK cuyes(id)`
   - `tipo VARCHAR(30) NOT NULL` (DESTETE, EMPADRE, TRASLADO, DESCARTE, VENTA, MUERTE)
@@ -66,8 +77,8 @@ Galpón de origen ≠ ubicación actual:
   - `detalle VARCHAR(255)` (anotación, no relación)
   - `created_at TIMESTAMPTZ`, `updated_at TIMESTAMPTZ`, `deleted_at TIMESTAMPTZ`
 
-### Vínculo cría → parto de nacimiento
-- Tabla nueva `parto_crias` (relación estructurada, no un origen_rol suelto):
+### Vínculo cría → parto de nacimiento (implementado)
+- `parto_crias` es una relación estructurada, no un `origen_rol` suelto:
   - `id UUID PK`
   - `parto_id UUID NOT NULL FK partos(id)`
   - `cuy_id UUID NOT NULL FK cuyes(id)`
@@ -90,7 +101,7 @@ Galpón de origen ≠ ubicación actual:
 
 ### Origen estable independiente del lote
 
-Tabla nueva `importacion_origenes`:
+Tabla `importacion_origenes` implementada:
 - `id UUID PK`
 - `huella_archivo VARCHAR(64) NOT NULL`
 - `origen_hoja VARCHAR(100) NOT NULL`
@@ -114,9 +125,9 @@ Coordinación concurrente:
   del mismo origen. La segunda ejecución obtiene conflicto y reutiliza o revisa.
 - La transacción bloquea el ámbito/contador antes de verificar correspondencias.
 
-### Área de preparación/revisión
+### Área de preparación/revisión implementada
 
-Tabla nueva `importacion_correspondencias`:
+Tabla `importacion_correspondencias` implementada:
 - `id UUID PK`
 - `origen_id UUID NOT NULL FK importacion_origenes(id)` (origen estable, no lote)
 - `lote_id UUID NOT NULL FK importacion_lotes(id)` (ejecución)
@@ -133,9 +144,9 @@ Tabla nueva `importacion_correspondencias`:
 - UNIQUE(origen_id, estado)
 - Relación 1:N: una fila de origen puede originar animal, parto y pesajes (vía origen_rol).
 
-### Manifiesto idempotente
+### Manifiesto idempotente implementado
 
-Tabla nueva `importacion_lotes`:
+Tabla `importacion_lotes` implementada:
 - `id UUID PK`
 - `huella_archivo VARCHAR(64) NOT NULL`
 - `parser_version VARCHAR(20) NOT NULL`
@@ -152,21 +163,23 @@ El lote identifica la ejecución y se vincula al origen/correspondencia; no cons
 - SQLite: estado TEXT nullable, sin DEFAULT, sin CHECK.
 - Ambos motores: no ACTIVO por defecto. Sin catálogo restrictivo.
 
-## Incompatibilidades con el esquema actual
+## Restricciones vigentes y decisiones pendientes
 
-1. UNIQUE de `cuyes.codigo_identificacion` frente a chapas reutilizadas.
-2. `cuyes.poza_id NOT NULL` frente a registros históricos sin ubicación actual.
-3. Fechas obligatorias (`partos.fecha_parto NOT NULL`, `pesajes.fecha_pesaje NOT NULL`) frente a datos pendientes.
-4. `cuyes.sexo NOT NULL CHECK` frente a sexo desconocido.
-5. `cuyes.estado NOT NULL DEFAULT 'ACTIVO'` frente a registros históricos.
-6. Cantidades de parto NOT NULL + DEFAULT 0 frente a datos desconocidos.
-7. `cuyes.codigo_identificacion` preserva ceros: ya es VARCHAR, OK.
-8. Campos y relaciones que todavía no existen: galpon_origen_id, padre_id, madre_id,
-   color_codigo, ojos_codigo, pelaje_original, numero_parto, etapa, parto_id, evento_id,
-   macho_id en eventos, eventos, parto_crias, importacion_origenes,
-   importacion_correspondencias, importacion_lotes.
+1. `cuyes.codigo_identificacion` continúa `NOT NULL UNIQUE`; permitir chapas
+   reutilizadas requiere una decisión de esquema explícita.
+2. `0005_pesajes_check.sql` ya impide que un pesaje tenga `parto_id` y
+   `evento_id` simultáneos. Está aplicada y verificada en el piloto; no reescribir
+   esa migración.
+3. La nulabilidad de ubicación, sexo, estado, fechas y conteos debe leerse del
+   esquema efectivo y sus migraciones, no de la línea base histórica de 002.
+4. El diseño no autoriza ejecutar nuevas migraciones ni aceptar valores de
+   catálogo, identidades o correspondencias sin revisión.
 
-## Tabla de correspondencia PostgreSQL / SQLite
+## Referencia histórica de tipos PostgreSQL / SQLite
+
+La tabla siguiente conserva la comparación original con `db/ddl/local/001_sqlite.sql`.
+Ese archivo no describe el esquema efectivo de Trabajo. Para el estado actual,
+consultar `docs/verificaciones/piloto-paridad-documentacion.md`.
 
 | Concepto | PostgreSQL | SQLite trabajo | Diferencias |
 |---|---|---|---|
@@ -189,12 +202,15 @@ El lote identifica la ejecución y se vincula al origen/correspondencia; no cons
 - Conversión: central NUMERIC → string decimal → SQLite TEXT. Al leer, parsear a Decimal.
 - El contrato sync debe transportar pesos como string decimal (como las versiones BIGINT).
 
-## Restricciones
+## Restricciones de uso
 
-- No agregues restricciones de dominio que Lope no confirmó; las presentadas aquí son
-  para aprobación de Oskar y Diery.
-- No elimines restricciones existentes durante esta entrega (solo se proponen).
-- No ejecutes DDL ni migraciones.
+- No agregar restricciones de dominio que Lope no confirmó; los cambios
+  adicionales requieren revisión de Oskar y Diery.
+- No eliminar restricciones vigentes. La migración 0005 ya está aplicada; no
+  modificar su checksum ni repetir su DDL manualmente.
+- Este documento no es una orden de migración. No ejecutar DDL nuevo ni cargar
+  datos reales hasta completar aprobación, revisor, decisiones, dry-run y
+  respaldo verificable.
 
 
 ## Caso sintético: segunda asignación de parto (debe rechazarse)
