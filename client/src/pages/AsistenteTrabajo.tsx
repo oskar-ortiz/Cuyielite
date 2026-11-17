@@ -21,6 +21,8 @@ import { bookOutline, sendOutline } from 'ionicons/icons';
 import { useRef, useState } from 'react';
 
 import { InlineNotice, PageFrame, PageIntro, SectionCard } from '../components/AppUi';
+import { AUTH_MODE } from '../data/api.config.js';
+import { ensureAccessToken } from '../data/auth.session.js';
 import { assistantErrorMessage } from '../data/ml.errors';
 import { getMlTransport, type AssistantResult } from '../data/ml.transport';
 import './galpones.css';
@@ -36,8 +38,20 @@ const AsistenteTrabajo: React.FC = () => {
 
   const submit = async () => {
     if (busy) return;
-    if (!token.trim()) {
-      setError('Ingresa el token de laboratorio para consultar.');
+    // En el piloto la consulta usa la sesión iniciada; el token manual queda
+    // reservado al modo laboratorio, como en el resto de pantallas de ML.
+    let bearer: string;
+    try {
+      bearer = AUTH_MODE === 'pilot' ? await ensureAccessToken() : token.trim();
+    } catch {
+      bearer = '';
+    }
+    if (!bearer) {
+      setError(
+        AUTH_MODE === 'pilot'
+          ? 'Inicia sesión para consultar el asistente.'
+          : 'Ingresa el token de laboratorio para consultar.',
+      );
       return;
     }
     if (question.trim().length < 3) {
@@ -49,7 +63,7 @@ const AsistenteTrabajo: React.FC = () => {
     setError(null);
     setResult(null);
     try {
-      const data = (await getMlTransport().assistantQuery(token.trim(), {
+      const data = (await getMlTransport().assistantQuery(bearer, {
         pregunta: question,
         top_k: Number(topK),
       })) as AssistantResult;
@@ -78,15 +92,19 @@ const AsistenteTrabajo: React.FC = () => {
             description="Consulta los manuales indexados. Cada respuesta conserva las fuentes devueltas por el servidor."
           />
           <SectionCard title="Tu consulta" description="Escribe una pregunta concreta sobre el manejo de cuyes.">
-            <IonInput
-              fill="outline"
-              label="Token de laboratorio"
-              labelPlacement="stacked"
-              type="password"
-              value={token}
-              onIonInput={(e) => setToken(String(e.detail.value ?? ''))}
-              autocomplete="off"
-            />
+            {AUTH_MODE === 'lab' ? (
+              <IonInput
+                fill="outline"
+                label="Token de laboratorio"
+                labelPlacement="stacked"
+                type="password"
+                value={token}
+                onIonInput={(e) => setToken(String(e.detail.value ?? ''))}
+                autocomplete="off"
+              />
+            ) : (
+              <p className="texto-ayuda">La consulta usa la sesión activa del piloto.</p>
+            )}
             <IonTextarea
               fill="outline"
               label="Pregunta"
