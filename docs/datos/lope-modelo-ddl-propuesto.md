@@ -41,12 +41,15 @@ cambio de DDL requiere revisión y una migración incremental aprobada.
   incluida la validación del contexto exclusivo de pesajes en el pull.
   Fuente: `docs/verificaciones/piloto-paridad-documentacion.md`.
 - **CONFIRMADO** — El SQL de migración 0001 elimina la restricción UNIQUE de
-  `cuyes.codigo_identificacion` y crea un índice no único. La matriz de paridad
-  describe ese campo como UNIQUE en PostgreSQL. Fuentes: migración 0001 y
-  matriz de paridad.
-- **PENDIENTE** — Resolver esa discrepancia de unicidad para el esquema central
-  efectivo con evidencia de Oskar sobre la instancia/migraciones autorizadas.
-  No consultar `cuyielite` ni cambiar restricciones en esta entrega.
+  `cuyes.codigo_identificacion` y crea `idx_cuyes_codigo` como índice no único.
+  La matriz de paridad, corregida el 2026-11-17, describe el esquema efectivo
+  con ambos lados sin UNIQUE. Fuentes: `db/migrations/central/0001_lope_domain.sql:46-47`,
+  `docs/verificaciones/piloto-paridad-documentacion.md` §5 y consulta de solo
+  lectura sobre la base del piloto.
+- **PENDIENTE (D10, parte de dominio)** — La aclaración técnica de unicidad no
+  resuelve la decisión de dominio sobre vínculos reales. Debe completarla Diery
+  con la evidencia indicada en `docs/verificaciones/matriz-carga-real-lope.md`.
+  No se cambiaron DDL, índices ni datos.
 
 ## Estructuras y semánticas
 

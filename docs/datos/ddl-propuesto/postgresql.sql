@@ -1,6 +1,10 @@
--- PROPUESTA PARA REVISIÓN, NO EJECUTADA.
+-- PROPUESTA HISTÓRICA PARA REVISIÓN, NO EJECUTADA DESDE ESTE ARCHIVO.
 -- No colocar en db/ddl/central/ ni ejecutar sobre una base existente.
 -- Base: PostgreSQL 16 + pgvector. Solo para revisión de Oskar y Diery.
+-- Nota 2026-11-17: la "Incompatibilidad 1" ya fue resuelta por
+-- db/migrations/central/0001_lope_domain.sql:46-47. El esquema efectivo tiene
+-- PRIMARY KEY(id) e idx_cuyes_codigo NO ÚNICO; ver
+-- docs/verificaciones/piloto-paridad-documentacion.md §5.
 
 -- ============================================================
 -- Incompatibilidad 1: UNIQUE de cuyes.codigo_identificacion vs chapas reutilizadas.
