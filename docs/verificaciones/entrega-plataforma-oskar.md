@@ -46,9 +46,10 @@ Anexo preparado por Oskar para incorporar al informe de Trabajo de Grado. No ree
 
 ### e) Pendientes externos
 
+La **aprobación técnica de Oskar con reservas ya fue emitida el 2026-11-17**, sobre las versiones y hashes identificados en el [registro de aprobación](aprobacion-tecnica-documentos-lope.md), incorporado mediante el PR #171. No acepta correspondencias reales, no sustituye la validación zootécnica ni autoriza una promoción de datos.
+
 - D1–D14, revisor técnico, decisiones humanas, dry-run revisado, respaldo inmediato y autorización de promoción: Diery/Centro Lope/Oskar.
 - Pertinencia RAG (gestación, vitamina C), procedencia de preguntas y validación experta del RF: Diery.
-- Aprobación documental formal sobre la versión con hashes: Oskar.
 
 ## 3. Guion de demostración académica (estimaciones de tiempo)
 
@@ -99,7 +100,7 @@ Se actualizarán cuando lleguen:
 - Autorización y resultado de la promoción real, si se ejecuta.
 - Recorrido posterior con datos autorizados.
 
-La matriz canónica de carga es la fuente única de requisitos: `docs/verificaciones/matriz-carga-real-lope.md`. La aprobación técnica de Oskar ya está registrada en `docs/verificaciones/aprobacion-tecnica-documentos-lope.md` (PR #171) con sus reservas. Las secciones pendientes están marcadas con responsable e insumo necesario, no como resultados completados.
+La [matriz canónica de carga](matriz-carga-real-lope.md) es la fuente única de requisitos. La [aprobación técnica de Oskar](aprobacion-tecnica-documentos-lope.md) (PR #171) está emitida con sus reservas; siguen pendientes la validación de dominio, las correspondencias y la autorización de una promoción concreta. Las secciones pendientes están marcadas con responsable e insumo necesario, no como resultados completados.
 
 ## 7. Verificación
 
