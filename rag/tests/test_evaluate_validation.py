@@ -1,11 +1,16 @@
+import contextlib
 from dataclasses import dataclass
 
+import psycopg
 import yaml
 
+from rag.eval import evaluate_validation as evaluate_validation_module
 from rag.eval.evaluate_validation import (
     calculate_validation_metrics,
     load_validation_cases,
+    run_config_app_evaluation,
     run_evaluation,
+    write_config_app_report,
     write_report,
 )
 
@@ -14,16 +19,17 @@ from rag.eval.evaluate_validation import (
 class SyntheticResult:
     pagina: int
     similitud: float = 0.9
+    contenido_chunk: str = ""
 
 
-def _result(page: int, score: float = 0.9) -> SyntheticResult:
-    return SyntheticResult(page, score)
+def _result(page: int, score: float = 0.9, text: str = "") -> SyntheticResult:
+    return SyntheticResult(page, score, text)
 
 
 def _cases(valid_count=10, outside_count=5, in_domain_count=3):
     return [
         {
-            "id": f"A{index}",
+            "id": f"Q{index}",
             "grupo": "valida",
             "pregunta": f"pregunta nueva {index}",
             "paginas_esperadas": [index],
@@ -198,3 +204,118 @@ def test_run_uses_fixed_threshold_and_report_has_only_aggregates(tmp_path):
     assert "pregunta nueva" not in content
     assert "fuera corpus" not in content
     assert "sin respuesta 1" not in content
+
+
+def test_config_app_uses_top_k_five_and_diagnostic_cuts():
+    calls = []
+
+    def fake_retrieve(connection, question, embedder, top_k, min_similarity):
+        calls.append((question, top_k, min_similarity))
+        if question == "pregunta nueva 1":
+            return [_result(1, 0.95, "pregunta nueva")]
+        return []
+
+    result = run_config_app_evaluation(
+        _cases(),
+        object(),
+        object(),
+        threshold=0.8,
+        retrieve_fn=fake_retrieve,
+    )
+
+    assert result["top_k"] == 5
+    assert result["principal"]["retrieval"]["hit@1"] == 0.1
+    assert result["valid_details"][0]["pagina_correcta_en_5"] is True
+    assert result["valid_details"][0]["contiene_todos_los_terminos"] is True
+    assert {3, 5, 10, 20}.issubset({top_k for _, top_k, _ in calls})
+    assert sum(1 for _, top_k, _ in calls if top_k == 5) == 20
+    assert {threshold for _, _, threshold in calls} == {0.8}
+
+
+def test_config_app_lists_page_misses_and_term_overlap():
+    def fake_retrieve(connection, question, embedder, top_k, min_similarity):
+        if question == "pregunta nueva 2":
+            return [_result(2, 0.9, "pregunta nueva")]
+        return []
+
+    result = run_config_app_evaluation(
+        _cases(),
+        object(),
+        object(),
+        threshold=0.8,
+        retrieve_fn=fake_retrieve,
+    )
+
+    assert "Q1" in result["valid_page_misses"]
+    detail = next(item for item in result["valid_details"] if item["numero"] == "Q2")
+    assert detail["pagina_correcta_en_5"] is True
+    assert detail["cobertura_terminos"] == 1.0
+    assert detail["contiene_todos_los_terminos"] is True
+
+
+def test_config_app_report_appends_without_changing_previous_figures(tmp_path):
+    def fake_retrieve(connection, question, embedder, top_k, min_similarity):
+        if question == "pregunta nueva 1":
+            return [_result(1, 0.95, "pregunta nueva")]
+        return []
+
+    result = run_config_app_evaluation(
+        _cases(),
+        object(),
+        object(),
+        threshold=0.8,
+        retrieve_fn=fake_retrieve,
+    )
+    report = tmp_path / "report.md"
+    report.write_text("CIFRAS PREVIAS\n", encoding="utf-8")
+
+    write_config_app_report(
+        result,
+        0.8,
+        "synthetic-embedder",
+        report,
+        evaluation_date="2026-11-18",
+        environment_note="corpus en memoria",
+    )
+
+    content = report.read_text(encoding="utf-8")
+    assert content.startswith("CIFRAS PREVIAS\n")
+    assert "## Medición con la configuración de la app" in content
+    assert "top_k=5 (principal)" in content
+    assert "top_k=3 (diagnóstico)" in content
+    assert "gestación" in content and "vitamina C" in content
+    assert "Entorno: corpus en memoria" in content
+
+
+def test_main_config_app_uses_config_app_branch(monkeypatch, tmp_path):
+    calls = {}
+
+    monkeypatch.setenv("RAG_DATABASE_URL", "postgresql://fake")
+    monkeypatch.setattr(
+        evaluate_validation_module,
+        "load_validation_cases",
+        lambda *_: _cases(),
+    )
+
+    def fake_run(cases, connection, embedder, threshold):
+        calls["run"] = (len(cases), threshold)
+        return {"top_k": 5}
+
+    def fake_write(result, threshold, model_name, report_path):
+        calls["write"] = (result, threshold, model_name, report_path)
+
+    monkeypatch.setattr(evaluate_validation_module, "run_config_app_evaluation", fake_run)
+    monkeypatch.setattr(evaluate_validation_module, "write_config_app_report", fake_write)
+    monkeypatch.setattr(psycopg, "connect", lambda url: contextlib.nullcontext(object()))
+
+    class FakeEmbedder:
+        model_name = "synthetic-embedder"
+
+    monkeypatch.setattr("rag.src.embed.E5Embedder", FakeEmbedder)
+    report = tmp_path / "report.md"
+
+    evaluate_validation_module.main(["--config-app", "--report", str(report)])
+
+    assert calls["run"] == (18, 0.807566308073)
+    assert calls["write"][2] == "synthetic-embedder"
+    assert calls["write"][3] == report
