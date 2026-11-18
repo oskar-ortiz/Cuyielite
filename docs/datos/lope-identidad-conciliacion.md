@@ -38,6 +38,16 @@
 - **CONFIRMADO** — La evidencia declarada no equivale a evidencia revisada:
   `0008` distingue `DECLARADA`, `REVISADA` y `RECHAZADA`. Fuente:
   `db/migrations/central/0008_evidencia_revisable.sql`.
+- **COMPROBADO POR OSKAR** (técnico; no es aprobación documental) — PostgreSQL
+  y SQLite permiten repetir `cuyes.codigo_identificacion`; la identidad única
+  es el UUID `id`. `0001_lope_domain.sql` elimina
+  `cuyes_codigo_identificacion_key` y crea el índice no único
+  `idx_cuyes_codigo`. Un código repetido es un asunto de conciliación de datos,
+  no una restricción de base de datos. Confirmado por Oskar en la base efectiva
+  del piloto. La matriz de paridad
+  (`docs/verificaciones/piloto-paridad-documentacion.md`) contiene una
+  afirmación obsoleta que Oskar corregirá; no se edita en esta entrega. Fuentes:
+  `db/migrations/central/0001_lope_domain.sql` y confirmación de Oskar.
 
 ## Decisiones que requieren evidencia
 
@@ -53,25 +63,36 @@
   `UNIQUE(parto_id, cuy_id)`, sin cambiar las restricciones vigentes.
   Diery prepara la evidencia y el revisor técnico designado acepta, rechaza o
   deja pendiente cada vínculo. No se modifica el contrato de transporte.
-- **PENDIENTE** — Confirmar la semántica de `R` por campo. `tools/lope_import`
-  no implementa una regla para ese símbolo y la documentación previa presenta
-  interpretaciones incompatibles. Responsable: Diery aporta la fuente primaria;
-  revisor técnico valida y Oskar actualiza el documento normativo.
+- **PENDIENTE** — Confirmar la semántica de `R`. Aclaración aportada por Oskar:
+  `R` = REEMPLAZO, un animal que sale de su función (por ejemplo enfermedad o
+  venta); por sí sola no demuestra muerte ni descarte. El motivo de salida se
+  conserva en un campo separado, cuya fuente autorizada queda como decisión
+  pendiente. `tools/lope_import` no implementa una regla para ese símbolo.
+  Responsable: Oskar aporta la aclaración; responsable de dominio confirma;
+  revisor técnico valida.
 - **PENDIENTE** — Confirmar catálogo de eventos y el uso de `detalle`.
   Responsable: Diery/Oskar acuerdan el catálogo con el responsable de dominio.
 - **PENDIENTE** — Confirmar la fuente de abortos y del peso de monta con su
   fecha, procedencia y relación con el animal. Responsable: Diery aporta la
   fuente autorizada; revisor técnico valida.
-- **PENDIENTE** — Confirmar el esquema central efectivo donde exista
-  discrepancia entre migraciones y documentación de paridad. No consultar la
-  base `cuyielite` para esta entrega. Responsable: Oskar aporta evidencia
-  verificable del esquema autorizado.
+- **PENDIENTE** — Identificar la fuente autorizada del motivo de salida de un
+  animal `R` (REEMPLAZO) y su impacto en el diccionario de mapeo. No se infiere
+  muerte ni descarte desde `R`. Responsable: Diery aporta la fuente; revisor
+  técnico designado valida; responsable de dominio confirma.
+- **RESUELTO (COMPROBADO POR OSKAR)** — La discrepancia de unicidad de
+  `cuyes.codigo_identificacion` quedó comprobada sobre la base efectiva del
+  piloto; ver §Reglas confirmadas. Un código repetido se trata como caso de
+  conciliación, no como restricción de base de datos.
 
 ## Controles de identidad
 
 - **CONFIRMADO** — El código de negocio no se usa por sí solo para fusionar
   animales; las referencias ambiguas se quedan en revisión. Fuente:
   `reconcile.py`, `decisions.py` y `promote.py`.
+- **CONFIRMADO** — La identidad única del animal es el UUID `id`;
+  `codigo_identificacion` es chapa de negocio y puede repetirse. Un código
+  repetido requiere conciliación, no corrección de esquema. Fuentes:
+  `db/migrations/central/0001_lope_domain.sql` y `reconcile.py`.
 - **CONFIRMADO** — La promoción exige que los registros tengan correspondencias
   aceptadas y que las entidades de referencia pertenezcan al lote/ámbito
   validado. Fuente: `tools/lope_import/manifest.py` y `promote.py`.

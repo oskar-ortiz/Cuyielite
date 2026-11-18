@@ -25,6 +25,8 @@ promociones. Requiere revisión de Diery/Oskar.
   aplique, del revisor técnico designado.
 - **PENDIENTE**: falta una fuente, evidencia o responsable; se indica quién debe
   aportarlo.
+- **ACLARACIÓN**: aporte recibido por canal directo (por ejemplo, de Oskar); no
+  es aprobación documental ni confirmación de dominio.
 
 ## Auditoría y extracción
 
@@ -65,10 +67,18 @@ promociones. Requiere revisión de Diery/Oskar.
   pesaje de etapa `MONTA`. `adapt.py` ya construye esa propuesta, pero no prueba
   que la columna sea una medición de monta ni que corresponda a un animal
   confirmado. Requiere evidencia de origen y acuerdo de dominio.
-- **PENDIENTE** — Confirmar el significado de `R` en su columna y contexto. La
-  regla no está implementada en `tools/lope_import` y la documentación previa
-  del proyecto presenta interpretaciones incompatibles. Diery debe señalar la
-  fuente/leyenda y el revisor técnico validar; no mapearlo por suposición.
+- **ACLARACIÓN DE OSKAR (pendiente de confirmación por el responsable de
+  dominio)** — `R` = REEMPLAZO: un animal que sale de su función (por ejemplo
+  enfermedad o venta). `R` por sí sola no demuestra muerte ni descarte. El motivo
+  de salida se conserva en un campo separado y no se infiere del símbolo. La
+  regla no está implementada en `tools/lope_import`. Falta que el responsable de
+  dominio confirme la semántica y que se identifique la fuente autorizada del
+  motivo de salida (decisión pendiente abajo).
+- **PENDIENTE** — Identificar la fuente autorizada del motivo de salida de un
+  animal `R` (REEMPLAZO) y su impacto en este diccionario de mapeo. No se publica
+  el motivo sin fuente ni se deriva muerte o descarte desde `R`. Diery aporta la
+  fuente y su trazabilidad; el revisor técnico designado valida; el responsable
+  de dominio confirma.
 - **PENDIENTE** — Confirmar catálogo y semántica de eventos. Las etiquetas
   candidatas del diseño no son un catálogo aprobado. Diery/Oskar deben acordar
   valores permitidos, significado de `detalle` y evidencia de cada evento.
@@ -85,7 +95,9 @@ promociones. Requiere revisión de Diery/Oskar.
      un conteo del parto no prueban por sí solos el vínculo.
   2. Conciliar la identidad de la cría con un `cuy_id` aceptado y el parto con
      un `parto_id` aceptado; decidir explícitamente cada código ambiguo,
-     duplicado o sin correspondencia.
+     duplicado o sin correspondencia. Un `codigo_identificacion` repetido no es
+     un conflicto de base de datos (D10 comprobado); la identidad única es el
+     UUID `id` y el caso es de conciliación de datos.
   3. Aprobar el `rol` de cada vínculo con evidencia de la columna/contexto.
      `CRIA` es el default del DDL, no evidencia de que ese valor corresponda;
      acordar la semántica de otros roles si aparecen.
