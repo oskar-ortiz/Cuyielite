@@ -76,6 +76,9 @@
 Esta tabla registra opciones, evidencia y estado de cada decisión; no es la
 lista canónica de pendientes ni reemplaza la matriz.
 
+Guion de decisión para D1–D5: `lope-propuesta-revision-d1-d5.md`. Es una
+propuesta para el revisor; no aprueba ni cambia los estados.
+
 | ID | Pregunta puntual | Opciones | Evidencia (archivo y sección) | Impacto sobre dry-run | Responsable | Estado |
 |---|---|---|---|---|---|---|
 | D1 | ¿Qué filas del Excel Lope crean el vínculo parto↔cría y qué evidencia lo sustenta? | (a) vínculo por fila de origen con archivo/huella, hoja, celda y fila; (b) vínculo por cercanía de filas o conteo del parto (no suficiente). | `lope-modelo-ddl-propuesto.md` §Estructuras y semánticas (PENDIENTE regla física); `lope-diccionario-mapeo.md` §Mapeos y decisiones (item 1). | Sin decisión aceptada, ningún `parto_crias` entra al manifiesto; el dry-run queda vacío para esa entidad. | Diery prepara; revisor técnico designado decide. | PENDIENTE |
