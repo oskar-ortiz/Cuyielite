@@ -37,7 +37,7 @@
 | D8 | D8 | PENDIENTE en ambos. |
 | D9 | D9 | Matriz: PENDIENTE; anexo: PROPUESTO (pendiente de validación). El anexo registra una propuesta concreta; no hay aprobación. |
 | D10 | D10 | Matriz: «PREPARADO técnicamente; PENDIENTE registro en el archivo y decisión de dominio»; anexo: COMPROBADO POR OSKAR (PR #170, técnico). La parte técnica queda registrada; la decisión de dominio sigue PENDIENTE. |
-| D11 | D11 | Matriz: «responsable identificado; formalización pendiente»; el anexo conserva el detalle del responsable de dominio, el aval y aprobación recibidos (18/05/2026, WhatsApp), la entrega de información en PDF y Excel, y la validación de decisiones concretas pendiente para la prueba del sistema en el SENA. |
+| D11 | D11 | Matriz: «responsable identificado; formalización pendiente»; Luis Mangin está identificado como responsable de dominio y ya se le comunicó; siguen pendientes la formalización de la designación y la revisión concreta de cada decisión. La revisión se hará durante la prueba del sistema terminado, como se acordó. |
 | D12 | D12 | Matriz: «PREPARADO el comando; PENDIENTE ejecución y revisión»; anexo: PENDIENTE. Equivalente. |
 | D13 | D13 | Matriz: «PREPARADO y comprobado en laboratorio; PENDIENTE comprobación inmediata»; anexo: PENDIENTE. Equivalente. |
 | D14 | D14 | Matriz: «COMPROBADO como disponible; PENDIENTE confirmación de destino»; anexo: COMPARTIDO POR CANAL PRIVADO (por Oskar), valor no registrado en Git. Equivalente; falta la confirmación de destino. |
