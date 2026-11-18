@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
+import unicodedata
 from datetime import date
 from pathlib import Path
 from typing import Any, Protocol
@@ -17,6 +19,28 @@ ORIGINAL_QUESTIONS_FILE = RAG_DIR / "eval" / "preguntas.yaml"
 REPORT_FILE = RAG_DIR / "reports" / "evaluacion_validacion.md"
 MINIMUM_VALID = 10
 MINIMUM_OUT_OF_CORPUS = 5
+APP_TOP_K = 5
+DIAGNOSTIC_TOP_KS = (3, 10, 20)
+ANDROID_QUERIES = ("gestación", "vitamina C")
+KEY_TERMS_BY_ID = {
+    "A1": ("orientacion", "ventanas", "iluminacion"),
+    "A2": ("pediluvios", "concentraciones"),
+    "A3": ("ciclo", "estral", "temperatura", "rectal"),
+    "A4": ("placas", "aretes", "oreja"),
+    "A5": ("ayuno", "escaldado"),
+    "A6": ("germinados", "maiz"),
+    "A7": ("melaza", "bloques", "multinutricionales"),
+    "A8": ("oreador", "leguminosas"),
+    "A9": ("yersiniosis", "necropsia"),
+    "A10": ("biol", "orina", "anaerobicas"),
+    "B1": ("andes", "cavia", "porcellus"),
+    "B2": ("vitamina",),
+    "B3": ("cecotrofia",),
+    "B7": ("fermentacion", "fibra"),
+    "B8": ("precoces",),
+    "B9": ("cavia", "porcellus"),
+    "B10": ("paises", "andes"),
+}
 VALIDATION_PROVENANCE = (
     "Conjunto nuevo preparado y versionado por Diery en `67e09e3`. "
     "Las preguntas válidas se contrastan con páginas de `produccion_cuyes.pdf` "
@@ -249,6 +273,217 @@ def _cases_without_pages(
     ]
 
 
+_STOPWORDS = frozenset(
+    {
+        "para",
+        "como",
+        "cual",
+        "cuales",
+        "que",
+        "quien",
+        "quienes",
+        "donde",
+        "cuando",
+        "cuanto",
+        "cuanta",
+        "cuantos",
+        "cuantas",
+        "por",
+        "con",
+        "sin",
+        "del",
+        "las",
+        "los",
+        "una",
+        "uno",
+        "unos",
+        "unas",
+        "es",
+        "son",
+        "se",
+        "su",
+        "sus",
+        "al",
+        "de",
+        "la",
+        "el",
+        "en",
+        "y",
+        "o",
+        "a",
+        "e",
+        "segun",
+        "debe",
+        "deben",
+        "puede",
+        "pueden",
+        "tiene",
+        "tienen",
+        "hace",
+        "hacen",
+        "ser",
+        "especifico",
+        "especifica",
+        "especificos",
+        "especificas",
+        "principal",
+        "principales",
+        "recomendada",
+        "recomendado",
+        "sugeridas",
+        "sugeridos",
+        "manual",
+        "describe",
+        "descrito",
+        "utiliza",
+        "utilizan",
+        "utilizar",
+    }
+)
+
+
+def _normalize_terms(text: str) -> list[str]:
+    decomposed = unicodedata.normalize("NFKD", text)
+    plain = "".join(char for char in decomposed if not unicodedata.combining(char))
+    return re.findall(r"[a-z0-9]+", plain.casefold())
+
+
+def _key_terms(question: str) -> list[str]:
+    """Aproxima los términos clave con el contenido léxico de la pregunta.
+
+    Es una heurística transparente, no una validación semántica de la respuesta.
+    """
+    terms: list[str] = []
+    for token in _normalize_terms(question):
+        if len(token) < 4 or token in _STOPWORDS or token in terms:
+            continue
+        terms.append(token)
+    return terms
+
+
+def _result_text(result: RetrievedPage) -> str:
+    return str(getattr(result, "contenido_chunk", "") or "")
+
+
+def _config_app_details(
+    cases: list[dict[str, Any]],
+    results_by_case: list[list[RetrievedPage]],
+) -> list[dict[str, Any]]:
+    details = []
+    for case, results in zip(cases, results_by_case):
+        unique_results = _unique_page_results(results)
+        expected_pages = case["paginas_esperadas"]
+        match = next(
+            (
+                (position, result)
+                for position, result in enumerate(unique_results, start=1)
+                if result.pagina in expected_pages
+            ),
+            (None, None),
+        )
+        terms = list(KEY_TERMS_BY_ID.get(case["id"], ())) or _key_terms(case["pregunta"])
+        normalized_text = " ".join(_normalize_terms(_result_text(match[1]))) if match[1] else ""
+        found_terms = [term for term in terms if term in normalized_text.split()]
+        coverage = len(found_terms) / len(terms) if terms else 0.0
+        details.append(
+            {
+                "numero": case["id"],
+                "paginas_esperadas": expected_pages,
+                "paginas_citadas": _unique_page_numbers(results),
+                "posicion": match[0],
+                "similitud": match[1].similitud if match[1] else None,
+                "pagina_correcta_en_5": match[0] is not None,
+                "terminos_clave": terms,
+                "terminos_encontrados": found_terms,
+                "cobertura_terminos": coverage,
+                "contiene_todos_los_terminos": bool(terms) and coverage == 1.0,
+            }
+        )
+    return details
+
+
+def _summarize_query_results(results: list[RetrievedPage]) -> list[dict[str, Any]]:
+    return [
+        {"pagina": result.pagina, "similitud": result.similitud}
+        for result in _unique_page_results(results)
+    ]
+
+
+def run_config_app_evaluation(
+    cases: list[dict[str, Any]],
+    connection: Any,
+    embedder: Any,
+    threshold: float,
+    *,
+    retrieve_fn: Any = None,
+    top_k: int = APP_TOP_K,
+    diagnostic_top_ks: tuple[int, ...] = DIAGNOSTIC_TOP_KS,
+) -> dict[str, Any]:
+    if not 0 <= threshold <= 1:
+        raise ValueError("El umbral debe estar entre 0 y 1.")
+    if isinstance(top_k, bool) or not isinstance(top_k, int) or not 1 <= top_k <= 20:
+        raise ValueError("top_k debe ser un entero entre 1 y 20.")
+    if retrieve_fn is None:
+        from rag.src.retrieve import retrieve
+
+        retrieve_fn = retrieve
+    valid, outside, in_domain_no_answer = _partition_cases(cases)
+
+    def retrieve_group(group: list[dict[str, Any]], group_top_k: int) -> list[list[RetrievedPage]]:
+        return [
+            retrieve_fn(
+                connection,
+                case["pregunta"],
+                embedder,
+                top_k=group_top_k,
+                min_similarity=threshold,
+            )
+            for case in group
+        ]
+
+    valid_results = retrieve_group(valid, top_k)
+    outside_results = retrieve_group(outside, top_k)
+    in_domain_results = retrieve_group(in_domain_no_answer, top_k)
+    principal = calculate_validation_metrics(
+        valid,
+        valid_results,
+        outside_results,
+        in_domain_no_answer,
+        in_domain_results,
+        out_of_corpus_cases=outside,
+    )
+    diagnostics = {}
+    for diagnostic_top_k in diagnostic_top_ks:
+        diagnostic_results = retrieve_group(valid, diagnostic_top_k)
+        diagnostics[str(diagnostic_top_k)] = calculate_metrics(
+            valid,
+            [_unique_page_numbers(results) for results in diagnostic_results],
+        )
+    details = _config_app_details(valid, valid_results)
+    android_queries = {
+        query: _summarize_query_results(
+            retrieve_fn(
+                connection,
+                query,
+                embedder,
+                top_k=top_k,
+                min_similarity=threshold,
+            )
+        )
+        for query in ANDROID_QUERIES
+    }
+    return {
+        "top_k": top_k,
+        "principal": principal,
+        "diagnostics": diagnostics,
+        "valid_details": details,
+        "valid_page_misses": [
+            detail["numero"] for detail in details if not detail["pagina_correcta_en_5"]
+        ],
+        "android_queries": android_queries,
+    }
+
+
 def run_evaluation(
     cases: list[dict[str, Any]],
     connection: Any,
@@ -415,6 +650,164 @@ def write_report(
     report_path.write_text("\n".join(report_lines), encoding="utf-8")
 
 
+def write_config_app_report(
+    result: dict[str, Any],
+    threshold: float,
+    model_name: str,
+    report_path: Path = REPORT_FILE,
+    evaluation_date: str | None = None,
+    *,
+    environment_note: str | None = None,
+) -> None:
+    date_text = evaluation_date or date.today().isoformat()
+    principal = result["principal"]
+    retrieval = principal["retrieval"]
+    diagnostics = result["diagnostics"]
+    details = result["valid_details"]
+    metric_rows = [
+        "| Medición | hit@1 | hit@3 | hit@5 | MRR |",
+        "|---|---:|---:|---:|---:|",
+        (
+            f"| top_k={result['top_k']} (principal) | "
+            f"{retrieval['hit@1']:.4f} | {retrieval['hit@3']:.4f} | "
+            f"{retrieval['hit@5']:.4f} | {retrieval['MRR']:.4f} |"
+        ),
+    ]
+    for top_k, metrics in diagnostics.items():
+        metric_rows.append(
+            f"| top_k={top_k} (diagnóstico) | {metrics['hit@1']:.4f} | "
+            f"{metrics['hit@3']:.4f} | {metrics['hit@5']:.4f} | {metrics['MRR']:.4f} |"
+        )
+
+    detail_rows = [
+        "| ID | Páginas esperadas | Posición | Similitud | ¿Página en 5? | Cobertura de términos | ¿Todos? |",
+        "|---|---:|---:|---:|---|---:|---|",
+    ]
+    for detail in details:
+        detail_rows.append(
+            "| "
+            + " | ".join(
+                [
+                    str(detail["numero"]),
+                    _format_pages(detail["paginas_esperadas"]),
+                    str(detail["posicion"] or "—"),
+                    _format_score(detail["similitud"]),
+                    "sí" if detail["pagina_correcta_en_5"] else "no",
+                    f"{detail['cobertura_terminos']:.2f}",
+                    "sí" if detail["contiene_todos_los_terminos"] else "no",
+                ]
+            )
+            + " |"
+        )
+
+    comparison_rows: list[str] = []
+    previous_20 = diagnostics.get("20")
+    if previous_20:
+        comparison_rows = [
+            "",
+            (
+                "- Comparación de cortes: `top_k=20` → "
+                f"hit@1={previous_20['hit@1']:.4f}, hit@3={previous_20['hit@3']:.4f}, "
+                f"hit@5={previous_20['hit@5']:.4f}, MRR={previous_20['MRR']:.4f}; "
+                f"`top_k={result['top_k']}` → hit@1={retrieval['hit@1']:.4f}, "
+                f"hit@3={retrieval['hit@3']:.4f}, hit@5={retrieval['hit@5']:.4f}, "
+                f"MRR={retrieval['MRR']:.4f}. Las cifras de `top_k=20` coinciden con la "
+                "evaluación previa."
+            ),
+        ]
+
+    android_rows = [
+        "| Consulta | Páginas devueltas (similitud) |",
+        "|---|---|",
+    ]
+    for query, query_results in result["android_queries"].items():
+        if query_results:
+            pages = "; ".join(
+                f"{item['pagina']} ({item['similitud']:.6f})" for item in query_results
+            )
+        else:
+            pages = "—"
+        android_rows.append(f"| `{query}` | {pages} |")
+
+    report_lines = [
+        "## Medición con la configuración de la app",
+        "",
+        f"- Fecha: {date_text}.",
+        f"- Modelo: `{model_name}`.",
+        f"- Umbral aplicado sin recalibrar: `{threshold:.12f}`.",
+        (
+            f"- Configuración principal: `top_k={result['top_k']}`; diagnóstico adicional: "
+            f"`top_k={', '.join(diagnostics)}`."
+        ),
+        (
+            "- Diferencia con la evaluación previa: la app usa `top_k=5` por defecto "
+            "(selector 3/5/10; el backend admite hasta 20), mientras que la evaluación "
+            "anterior usó `top_k=20`. `top_k` cuenta fragmentos; las citas se deduplican "
+            "por página como en `rag/src/retrieve.py:101-103` y las métricas se calculan "
+            "sobre páginas únicas."
+        ),
+        (
+            "- Oskar confirmó la configuración actual del código, no el entorno de la "
+            "corrida original del piloto."
+        ),
+        "- No hay generación de respuestas; la abstención se mide igual que antes.",
+        "- Las cifras de las secciones anteriores no se modificaron.",
+        "",
+        "### Métricas de recuperación",
+        "",
+        *metric_rows,
+        *comparison_rows,
+        "",
+        (
+            f"- Abstención principal (`top_k={result['top_k']}`): "
+            f"válidas={principal['abstention']['valid']['abstained']}/"
+            f"{principal['abstention']['valid']['total']}; "
+            f"fuera_de_corpus={principal['abstention']['out_of_corpus']['abstained']}/"
+            f"{principal['abstention']['out_of_corpus']['total']}; "
+            f"en_dominio_sin_respuesta={principal['abstention']['in_domain_no_answer']['abstained']}/"
+            f"{principal['abstention']['in_domain_no_answer']['total']}."
+        ),
+        "",
+        "### Preguntas válidas con `top_k=5`",
+        "",
+        *detail_rows,
+        "",
+        (
+            "- Preguntas con la página correcta fuera de las 5 citas: "
+            f"{', '.join(result['valid_page_misses']) if result['valid_page_misses'] else 'ninguna'}."
+        ),
+        (
+            "- La cobertura de términos es una heurística de solapamiento léxico con "
+            "términos clave definidos manualmente para cada pregunta; no es una "
+            "validación semántica de la respuesta ni una revisión experta."
+        ),
+        "",
+        "### Consultas Android con `top_k=5`",
+        "",
+        *android_rows,
+        "",
+        (
+            "- `gestación` y `vitamina C` se miden sin respuesta esperada verificada: "
+            "solo se registran páginas y puntuaciones, sin comparar ni declarar acierto."
+        ),
+        "",
+        "### Limitaciones de esta medición",
+        "",
+        "- Conjunto pequeño y sin revisión zootécnica independiente.",
+        "- La heurística de términos puede marcar una cita correcta como incompleta si el "
+          "fragmento no repite todos los términos de la pregunta.",
+    ]
+    if environment_note:
+        report_lines.append(f"- Entorno: {environment_note}.")
+    report_lines.append("")
+
+    existing = report_path.read_text(encoding="utf-8") if report_path.exists() else ""
+    if existing and not existing.endswith("\n"):
+        existing += "\n"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(existing + "\n".join(report_lines), encoding="utf-8")
+
+
 def _format_ids(identifiers: list[str]) -> str:
     return ", ".join(identifiers) if identifiers else "ninguna"
 
@@ -429,6 +822,11 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--questions", type=Path, default=VALIDATION_FILE)
     parser.add_argument("--report", type=Path, default=REPORT_FILE)
+    parser.add_argument(
+        "--config-app",
+        action="store_true",
+        help="Mide la recuperación con la configuración de la app (top_k=5).",
+    )
     args = parser.parse_args(argv)
     cases = load_validation_cases(args.questions)
     from rag.src.retrieve import DEFAULT_MIN_SIMILARITY
@@ -443,8 +841,12 @@ def main(argv: list[str] | None = None) -> None:
 
     embedder = E5Embedder()
     with psycopg.connect(database_url) as connection:
-        result = run_evaluation(cases, connection, embedder, threshold)
-    write_report(result, threshold, embedder.model_name, args.report)
+        if args.config_app:
+            result = run_config_app_evaluation(cases, connection, embedder, threshold)
+            write_config_app_report(result, threshold, embedder.model_name, args.report)
+        else:
+            result = run_evaluation(cases, connection, embedder, threshold)
+            write_report(result, threshold, embedder.model_name, args.report)
     print(args.report)
 
 

@@ -1,6 +1,12 @@
 import pymupdf
 
-from rag.src.extract import extract_pages
+from rag.src.extract import clean_text, extract_pages
+
+
+def test_clean_text_normalizes_pdf_ligature_glyphs() -> None:
+    text = "öbra øexible \uf001bras \uf002ora \ufb01bra \ufb02exible"
+
+    assert clean_text(text) == "fibra flexible fibras flora fibra flexible"
 
 
 def test_extract_excludes_sena_manual_front_matter(tmp_path) -> None:

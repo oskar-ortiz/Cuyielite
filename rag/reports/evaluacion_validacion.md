@@ -96,3 +96,115 @@
 
 - Conjunto pequeño.
 - El umbral fue calibrado previamente con otro conjunto y no se recalibró aquí.
+## Medición con la configuración de la app
+
+- Fecha: 2026-11-18.
+- Modelo: `intfloat/multilingual-e5-base`.
+- Umbral aplicado sin recalibrar: `0.807566308073`.
+- Configuración principal: `top_k=5`; diagnóstico adicional: `top_k=3, 10, 20`.
+- Diferencia con la evaluación previa: la app usa `top_k=5` por defecto (selector 3/5/10; el backend admite hasta 20), mientras que la evaluación anterior usó `top_k=20`. `top_k` cuenta fragmentos; las citas se deduplican por página como en `rag/src/retrieve.py:101-103` y las métricas se calculan sobre páginas únicas.
+- Oskar confirmó la configuración actual del código, no el entorno de la corrida original del piloto.
+- No hay generación de respuestas; la abstención se mide igual que antes.
+- Las cifras de las secciones anteriores no se modificaron.
+
+### Métricas de recuperación
+
+| Medición | hit@1 | hit@3 | hit@5 | MRR |
+|---|---:|---:|---:|---:|
+| top_k=5 (principal) | 0.8235 | 0.8824 | 0.9412 | 0.8578 |
+| top_k=3 (diagnóstico) | 0.8235 | 0.8824 | 0.8824 | 0.8431 |
+| top_k=10 (diagnóstico) | 0.8235 | 0.8824 | 0.9412 | 0.8578 |
+| top_k=20 (diagnóstico) | 0.8235 | 0.8824 | 0.9412 | 0.8578 |
+
+- Comparación de cortes: `top_k=20` → hit@1=0.8235, hit@3=0.8824, hit@5=0.9412, MRR=0.8578; `top_k=5` → hit@1=0.8235, hit@3=0.8824, hit@5=0.9412, MRR=0.8578. Las cifras de `top_k=20` coinciden con la evaluación previa.
+
+- Abstención principal (`top_k=5`): válidas=0/17; fuera_de_corpus=7/10; en_dominio_sin_respuesta=0/3.
+
+### Preguntas válidas con `top_k=5`
+
+| ID | Páginas esperadas | Posición | Similitud | ¿Página en 5? | Cobertura de términos | ¿Todos? |
+|---|---:|---:|---:|---|---:|---|
+| A1 | 15 | 1 | 0.867443 | sí | 1.00 | sí |
+| A2 | 18, 19, 69 | 1 | 0.867268 | sí | 0.50 | no |
+| A3 | 71 | 4 | 0.836153 | sí | 1.00 | sí |
+| A4 | 27 | 1 | 0.883467 | sí | 1.00 | sí |
+| A5 | 79, 80 | 1 | 0.851487 | sí | 0.50 | no |
+| A6 | 39, 40 | 1 | 0.872771 | sí | 0.50 | no |
+| A7 | 43 | 1 | 0.872443 | sí | 1.00 | sí |
+| A8 | 20, 32 | 1 | 0.872031 | sí | 0.50 | no |
+| A9 | 71, 72 | 1 | 0.856755 | sí | 0.50 | no |
+| A10 | 51 | 1 | 0.884515 | sí | 1.00 | sí |
+| B1 | 71, 85 | 1 | 0.826535 | sí | 0.67 | no |
+| B2 | 32 | 3 | 0.848624 | sí | 1.00 | sí |
+| B3 | 31 | 1 | 0.858475 | sí | 0.00 | no |
+| B7 | 31, 32, 33 | 1 | 0.843977 | sí | 1.00 | sí |
+| B8 | 28 | 1 | 0.868794 | sí | 1.00 | sí |
+| B9 | 85 | — | — | no | 0.00 | no |
+| B10 | 12, 85 | 1 | 0.837886 | sí | 0.00 | no |
+
+- Preguntas con la página correcta fuera de las 5 citas: B9.
+- La cobertura de términos es una heurística de solapamiento léxico con términos clave definidos manualmente para cada pregunta; no es una validación semántica de la respuesta ni una revisión experta.
+
+### Consultas Android con `top_k=5`
+
+| Consulta | Páginas devueltas (similitud) |
+|---|---|
+| `gestación` | 65 (0.843255); 67 (0.836926); 17 (0.835437); 66 (0.832289); 16 (0.830511) |
+| `vitamina C` | 71 (0.821071); 42 (0.819587); 75 (0.818508); 76 (0.816332); 84 (0.815263) |
+
+- `gestación` y `vitamina C` se miden sin respuesta esperada verificada: solo se registran páginas y puntuaciones, sin comparar ni declarar acierto.
+
+### Limitaciones de esta medición
+
+- Conjunto pequeño y sin revisión zootécnica independiente.
+- La heurística de términos puede marcar una cita correcta como incompleta si el fragmento no repite todos los términos de la pregunta.
+- Entorno: el índice PostgreSQL no estaba accesible en este entorno; se reconstruyó el mismo corpus con extract_pages + chunk_pages (76 fragmentos) y se ejecutó la misma recuperación en memoria, sin reindexar.
+
+## Medición final de ligaduras y ranking
+
+- Fecha: 2026-11-18.
+- Modelo: `intfloat/multilingual-e5-base`; `top_k=5`.
+- Umbral: `0.807566308073`, calibrado con el texto previo y mantenido sin recalibrar.
+- Se midió una sola vez al final sobre los mismos 76 fragmentos reconstruidos en memoria; no se consultó ni escribió en PostgreSQL.
+- Antes significa extracción previa a la normalización; después, el extractor del commit `09d7e248aac42287ab9d2021b04445719b7596a3`.
+
+| Condición | hit@1 | hit@3 | hit@5 | MRR | Abstención fuera de corpus | Abstención en dominio sin respuesta |
+|---|---:|---:|---:|---:|---:|---:|
+| Antes de normalizar | 0.8235 | 0.8824 | 0.9412 | 0.8578 | 7/10 | 0/3 |
+| Después de normalizar | 0.8235 | 0.8824 | 0.9412 | 0.8676 | 7/10 | 0/3 |
+
+Cambió la decisión de abstención en 0 de las 13 sondas (10 fuera de corpus y 3
+en dominio sin respuesta). La métrica de ranking que mejoró fue MRR; el umbral
+y las etiquetas no cambiaron.
+
+### Selección previa en calibración y desarrollo
+
+Las alternativas se compararon solo con `rag/eval/preguntas.yaml` (20 válidas
+y 5 fuera de corpus) y el conjunto de desarrollo de dos consultas piloto, todas
+con `top_k=5` y el mismo umbral. Las páginas probables del piloto siguen
+**pendientes de verificar por Diery**: gestación, 26/32/71; vitamina C, 32/42.
+
+| Conjunto y condición | hit@1 | hit@3 | hit@5 | MRR | Abstención fuera de corpus |
+|---|---:|---:|---:|---:|---:|
+| Calibración, texto previo | 0.7500 | 0.9500 | 0.9500 | 0.8333 | 5/5 |
+| Calibración, ligaduras normalizadas | 0.8500 | 0.9500 | 0.9500 | 0.8917 | 5/5 |
+| Piloto, texto previo | 0.0000 | 0.5000 | 0.5000 | 0.2500 | — |
+| Piloto, ligaduras normalizadas | 0.5000 | 0.5000 | 0.5000 | 0.5000 | — |
+
+Una única variante adicional, fusión RRF de BM25 y ranking semántico con
+constante 60 y compuerta del mismo umbral, se probó solo en esos dos conjuntos.
+Con ligaduras normalizadas dio hit@1=0.7500, hit@3=0.9500, hit@5=0.9500 y
+MRR=0.8333 en calibración (abstención 5/5); en piloto dio
+0.5000/0.5000/0.5000 y MRR=0.5000. Se **descartó**: empeoró la calibración y no
+mejoró el piloto; no se midió en validación ni se incorporó al recuperador.
+
+En la reconstrucción local actual, las páginas devueltas para las consultas de
+desarrollo después de normalizar fueron gestación: 68; vitamina C: 42, 75, 71,
+76, 83. Estos resultados no sustituyen las páginas probables pendientes de
+verificación ni las salidas Android registradas anteriormente; no se ajustó el
+umbral a partir de ellos.
+
+La pregunta válida cuya página esperada es 85 (B9) permanece sin cambios; esa
+página es bibliografía y su etiqueta queda pendiente de revisión manual por
+Diery. No se editaron las etiquetas ni las páginas esperadas del conjunto de
+validación.
