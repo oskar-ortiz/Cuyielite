@@ -16,6 +16,15 @@ _NAMED_HEADING = re.compile(
     re.IGNORECASE,
 )
 SENA_MANUAL_FRONT_MATTER_PAGES = frozenset(range(1, 12))
+LIGATURE_REPLACEMENTS = {
+    "\u00f6": "fi",
+    "\u00f8": "fl",
+    "\uf001": "fi",
+    "\uf002": "fl",
+    "\ufb01": "fi",
+    "\ufb02": "fl",
+}
+_LIGATURE_TRANSLATION = str.maketrans(LIGATURE_REPLACEMENTS)
 
 
 @dataclass(frozen=True)
@@ -27,7 +36,7 @@ class PageText:
 
 def clean_text(text: str) -> str:
     """Normalize line wrapping while retaining paragraph boundaries."""
-    text = text.replace("\f", "\n")
+    text = text.translate(_LIGATURE_TRANSLATION).replace("\f", "\n")
     text = re.sub(r"(?<=[A-Za-zÁÉÍÓÚÜÑáéíóúüñ])-\s*\n(?=[A-Za-zÁÉÍÓÚÜÑáéíóúüñ])", "", text)
     lines = [line.strip() for line in text.splitlines()]
     paragraphs: list[str] = []
