@@ -37,7 +37,7 @@
 | D8 | D8 | PENDIENTE en ambos. |
 | D9 | D9 | Matriz: PENDIENTE; anexo: PROPUESTO (pendiente de validación). El anexo registra una propuesta concreta; no hay aprobación. |
 | D10 | D10 | Matriz: «PREPARADO técnicamente; PENDIENTE registro en el archivo y decisión de dominio»; anexo: COMPROBADO POR OSKAR (PR #170, técnico). La parte técnica queda registrada; la decisión de dominio sigue PENDIENTE. |
-| D11 | D11 | PENDIENTE en ambos; nombre POR DEFINIR en este anexo (sin registro de designación). |
+| D11 | D11 | PENDIENTE en ambos. Responsable de dominio: Luis Mangin, zootecnista de cuyes del Centro Lope (SENA) y coasesor del proyecto (detalle en D11 del anexo). Aval y aprobación para la realización del sistema recibidos (`<fecha>`, `<medio>`); entregó la información en PDF y Excel. Validación de decisiones concretas: PENDIENTE; se hará con la retroalimentación al probar el sistema en el SENA. Designación formal registrada por Oskar: pendiente. |
 | D12 | D12 | Matriz: «PREPARADO el comando; PENDIENTE ejecución y revisión»; anexo: PENDIENTE. Equivalente. |
 | D13 | D13 | Matriz: «PREPARADO y comprobado en laboratorio; PENDIENTE comprobación inmediata»; anexo: PENDIENTE. Equivalente. |
 | D14 | D14 | Matriz: «COMPROBADO como disponible; PENDIENTE confirmación de destino»; anexo: COMPARTIDO POR CANAL PRIVADO (por Oskar), valor no registrado en Git. Equivalente; falta la confirmación de destino. |
