@@ -25,6 +25,8 @@ promociones. Requiere revisión de Diery/Oskar.
   aplique, del revisor técnico designado.
 - **PENDIENTE**: falta una fuente, evidencia o responsable; se indica quién debe
   aportarlo.
+- **ACLARACIÓN**: aporte recibido por canal directo (por ejemplo, de Oskar); no
+  es aprobación documental ni confirmación de dominio.
 
 ## Auditoría y extracción
 
@@ -64,23 +66,66 @@ promociones. Requiere revisión de Diery/Oskar.
 - **PROPUESTO** — Interpretar el peso del bloque reproductivo como candidato a
   pesaje de etapa `MONTA`. `adapt.py` ya construye esa propuesta, pero no prueba
   que la columna sea una medición de monta ni que corresponda a un animal
-  confirmado. Requiere evidencia de origen y acuerdo de dominio.
-- **PENDIENTE** — Confirmar el significado de `R` en su columna y contexto. La
-  regla no está implementada en `tools/lope_import` y la documentación previa
-  del proyecto presenta interpretaciones incompatibles. Diery debe señalar la
-  fuente/leyenda y el revisor técnico validar; no mapearlo por suposición.
+  confirmado. Fuente candidata identificada: columna `Peso` de la fila de la
+  hembra del bloque reproductivo (353 celdas numéricas en 80 bloques; no se
+  publican valores). Destino propuesto: pesaje de etapa `MONTA` vinculado a un
+  evento `EMPADRE`, respetando el `CHECK` de `0005`. Requiere evidencia de origen
+  por registro y validación del responsable del Centro. Detalle:
+  `lope-eventos-valores-encontrados.md` §7.
+- **ACLARACIÓN DE OSKAR (pendiente de confirmación por el responsable de
+  dominio)** — `R` = REEMPLAZO: un animal que sale de su función (por ejemplo
+  enfermedad o venta). `R` por sí sola no demuestra muerte ni descarte. El motivo
+  de salida se conserva en un campo separado y no se infiere del símbolo. En los
+  archivos revisados `R` no aparece en `DESTINO`: solo 15 celdas en `COLOR`, la
+  columna de color. La regla no está implementada en
+  `tools/lope_import`. Falta que el responsable de dominio confirme la semántica
+  y que se identifique la fuente autorizada del motivo de salida (decisión
+  pendiente abajo). Detalle: `lope-eventos-valores-encontrados.md` §4.
+- **PENDIENTE** — Identificar la fuente autorizada del motivo de salida de un
+  animal `R` (REEMPLAZO) y su impacto en este diccionario de mapeo. No se publica
+  el motivo sin fuente ni se deriva muerte o descarte desde `R`. En los archivos
+  revisados `DESTINO` tiene `M` 545, `V` 297 y 6465 celdas vacías, sin `R`; las
+  observaciones mencionan EMPADRE/MONTA 13, VENTA 5 y MUERTE 1 (macho), sin
+  mención de `R`, y no tienen vínculo por fila con `DESTINO`. Diery aporta la
+  fuente y su trazabilidad; el responsable del Centro (por definir) valida; el
+  revisor técnico revisa. Detalle:
+  `lope-eventos-valores-encontrados.md` §4–§6.
 - **PENDIENTE** — Confirmar catálogo y semántica de eventos. Las etiquetas
-  candidatas del diseño no son un catálogo aprobado. Diery/Oskar deben acordar
-  valores permitidos, significado de `detalle` y evidencia de cada evento.
-- **PENDIENTE** — Identificar la fuente autorizada de abortos. La entrada ML
-  admite ese campo, pero el parser Lope revisado no lo produce como dato
-  publicable. Diery debe aportar fuente y trazabilidad; el revisor debe validar.
+  candidatas del diseño no son un catálogo aprobado: se observaron 47 valores distintos (46 no vacíos y la celda vacía) en
+  1412 celdas `T.C.N.`, además de `DESTINO` y categorías de observaciones. Oskar aporta valores y propuesta; el responsable del Centro (por
+  definir) debe acordar valores permitidos, significado de `detalle` y evidencia
+  de cada evento. Detalle: `lope-eventos-valores-encontrados.md` §1–§2.
+- **PENDIENTE** — Identificar la fuente autorizada de abortos. `AB` aparece 17
+  veces en `T.C.N.` (reproductivo G1 6; reproductivo G2 viejo 11), pero no hay
+  cantidad verificable ni regla aprobada para contar ocurrencias; no se convierte
+  en número. La herramienta conserva archivo, hoja y celda de cada ocurrencia
+  como procedencia, nunca en Git. Diery aporta trazabilidad; el responsable del
+  Centro (por definir) valida la regla. Detalle:
+  `lope-eventos-valores-encontrados.md` §3.
 - **PENDIENTE** — Confirmar la fuente y significado del peso de monta frente a
-  `PESO PARTO` y el peso del bloque reproductivo. Diery debe aportar evidencia
-  de columna/fecha/contexto y el revisor debe validar antes de aceptar.
-- **PENDIENTE** — Definir evidencia y reglas para crear `parto_crias` desde las
-  filas de origen. La existencia de la tabla no demuestra qué cría pertenece a
-  qué parto. Diery prepara las propuestas; el revisor decide cada vínculo.
+  `PESO PARTO` y el peso del bloque reproductivo. Diery aporta procedencia por
+  registro; el responsable del Centro (por definir) valida; el revisor técnico
+  revisa antes de aceptar.
+- **PENDIENTE** — Resolver, antes de aceptar cada `parto_crias` real, estas
+  decisiones de dominio (sin cambios al contrato de transporte):
+  1. Identificar la fila de origen y la evidencia que vincula ese parto con esa
+     cría; registrar archivo/huella, hoja, celda y fila. La cercanía de filas o
+     un conteo del parto no prueban por sí solos el vínculo.
+  2. Conciliar la identidad de la cría con un `cuy_id` aceptado y el parto con
+     un `parto_id` aceptado; decidir explícitamente cada código ambiguo,
+     duplicado o sin correspondencia. Un `codigo_identificacion` repetido no es
+     un conflicto de base de datos (D10 comprobado); la identidad única es el
+     UUID `id` y el caso es de conciliación de datos.
+  3. Aprobar el `rol` de cada vínculo con evidencia de la columna/contexto.
+     `CRIA` es el default del DDL, no evidencia de que ese valor corresponda;
+     acordar la semántica de otros roles si aparecen.
+  4. Resolver con evidencia los casos que contradigan la unicidad vigente
+     (un vínculo por `cuy_id`); dejar sin aceptar los casos no resueltos, sin
+     cambiar esa restricción.
+
+  Diery prepara cada propuesta; el revisor técnico designado acepta, rechaza o
+  deja pendiente con evidencia y motivo. Solo se promueven los vínculos
+  aceptados con `parto_id`, `cuy_id` y `rol` resueltos.
 
 ## Alcance no autorizado
 
