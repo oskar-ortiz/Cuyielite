@@ -3,7 +3,42 @@
 - Fecha: 2026-11-16.
 - Umbral aplicado sin recalibrar: `0.807566308073`.
 - Embeddings: `intfloat/multilingual-e5-base`.
-- Procedencia de las preguntas: [completar por Diery]
+- Procedencia de las preguntas: conjunto nuevo preparado y versionado por Diery en `67e09e3`. Las preguntas válidas se contrastan con páginas de `produccion_cuyes.pdf` (SENA / Centro Internacional de Producción Limpia – Lope, 2018, ISBN 978-958-15-0336-0); las páginas esperadas son referencias de recuperación, no una calificación de la respuesta. Las preguntas fuera de corpus y en dominio sin respuesta son sondas de abstención, no citas del manual. No consta revisión zootécnica independiente.
+
+## Procedencia por pregunta
+
+| ID | Tipo | Redactor | Fecha (redaccion) | Fuente | Verificador | Fecha (verificacion) | Usada para calibrar umbral |
+|---|---|---|---|---|---|---|---|
+| A1 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 15) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| A2 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 18, 19, 69) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| A3 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 71) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| A4 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 27) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| A5 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 79, 80) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| A6 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 39, 40) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| A7 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 43) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| A8 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 20, 32) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| A9 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 71, 72) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| A10 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 51) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| B1 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 71, 85) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| B2 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 32) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| B3 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 31) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| B4 | en_dominio_sin_respuesta | Diery | POR COMPLETAR (Diery) | dominio cuy; sin respuesta en el manual (sonda de abstencion) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| B5 | en_dominio_sin_respuesta | Diery | POR COMPLETAR (Diery) | dominio cuy; sin respuesta en el manual (sonda de abstencion) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| B6 | en_dominio_sin_respuesta | Diery | POR COMPLETAR (Diery) | dominio cuy; sin respuesta en el manual (sonda de abstencion) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| B7 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 31, 32, 33) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| B8 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 28) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| B9 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 85) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| B10 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 12, 85) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| AF1 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| AF2 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| AF3 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| AF4 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| AF5 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| BF1 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| BF2 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| BF3 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| BF4 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| BF5 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
 
 ## Métricas por grupo
 
@@ -52,6 +87,10 @@
 - Válidas sin página esperada entre los resultados: B9 (esperada: 85; primera: página 28, similitud 0.836597).
 - Fuera de corpus con resultados: AF1, AF2, AF4.
 - En dominio sin respuesta con resultados: B4, B5, B6.
+
+## Discrepancia RAG / ruta del backend
+
+`rag/src/retrieve.py` usa `E5Embedder` (`rag/src/embed.py`) con los prefijos `query: `/`passage: `, el modelo por defecto `intfloat/multilingual-e5-base` y el umbral `DEFAULT_MIN_SIMILARITY = 0.807566308073`; `rag/eval/evaluate_validation.py` usa el mismo embedder y el mismo umbral por defecto (vía `RAG_MIN_SIMILARITY`). La ruta del backend (`backend/app/services/ml.py::_real_consultar`) delega en `rag.src.retrieve.consultar` sin pasar embedder ni umbral, por lo que depende de `RAG_EMBEDDING_MODEL` y `RAG_MIN_SIMILARITY` del entorno: si esas variables difieren de las usadas en la evaluación, la consulta en producción puede usar modelo o umbral distintos aunque el código compartido sea idéntico. No se detectó discrepancia en el código fuente revisado; la posible discrepancia es de configuración de entorno.
 
 ## Limitaciones
 
