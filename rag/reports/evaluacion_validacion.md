@@ -9,36 +9,36 @@
 
 | ID | Tipo | Redactor | Fecha (redaccion) | Fuente | Verificador | Fecha (verificacion) | Usada para calibrar umbral |
 |---|---|---|---|---|---|---|---|
-| A1 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 15) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| A2 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 18, 19, 69) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| A3 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 71) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| A4 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 27) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| A5 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 79, 80) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| A6 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 39, 40) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| A7 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 43) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| A8 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 20, 32) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| A9 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 71, 72) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| A10 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 51) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| B1 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 71, 85) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| B2 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 32) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| B3 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 31) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| B4 | en_dominio_sin_respuesta | Diery | POR COMPLETAR (Diery) | dominio cuy; sin respuesta en el manual (sonda de abstencion) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| B5 | en_dominio_sin_respuesta | Diery | POR COMPLETAR (Diery) | dominio cuy; sin respuesta en el manual (sonda de abstencion) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| B6 | en_dominio_sin_respuesta | Diery | POR COMPLETAR (Diery) | dominio cuy; sin respuesta en el manual (sonda de abstencion) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| B7 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 31, 32, 33) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| B8 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 28) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| B9 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 85) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| B10 | valida | Diery | POR COMPLETAR (Diery) | produccion_cuyes.pdf (p. 12, 85) | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| AF1 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| AF2 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| AF3 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| AF4 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| AF5 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| BF1 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| BF2 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| BF3 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| BF4 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
-| BF5 | fuera_de_corpus | Diery | POR COMPLETAR (Diery) | sonda de abstencion; no del manual | POR COMPLETAR (Diery) | POR COMPLETAR (Diery) | No |
+| A1 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 15) | Diery| 2026-11-17 | No |
+| A2 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 18, 19, 69) | Diery | 2026-11-17 | No |
+| A3 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 71) | Diery | 2026-11-17 | No |
+| A4 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 27) | Diery | 2026-11-17 | No |
+| A5 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 79, 80) | Diery | 2026-11-17 | No |
+| A6 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 39, 40) | Diery | 2026-11-17 | No |
+| A7 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 43) | Diery | 2026-11-17 | No |
+| A8 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 20, 32) | Diery | 2026-11-17 | No |
+| A9 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 71, 72) | Diery | 2026-11-17 | No |
+| A10 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 51) | Diery | 2026-11-17 | No |
+| B1 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 71, 85) | Diery | 2026-11-17 | No |
+| B2 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 32) | Diery | 2026-11-17 | No |
+| B3 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 31) | Diery | 2026-11-17 | No |
+| B4 | en_dominio_sin_respuesta | Diery | 2026-11-16 | dominio cuy; sin respuesta en el manual (sonda de abstencion) | Diery | 2026-11-17 | No |
+| B5 | en_dominio_sin_respuesta | Diery | 2026-11-16 | dominio cuy; sin respuesta en el manual (sonda de abstencion) | Diery | 2026-11-17 | No |
+| B6 | en_dominio_sin_respuesta | Diery | 2026-11-16 | dominio cuy; sin respuesta en el manual (sonda de abstencion) | Diery | 2026-11-17 | No |
+| B7 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 31, 32, 33) | Diery | 2026-11-17 | No |
+| B8 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 28) | Diery | 2026-11-17 | No |
+| B9 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 85) | Diery | 2026-11-17 | No |
+| B10 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 12, 85) | Diery | 2026-11-17 | No |
+| AF1 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
+| AF2 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
+| AF3 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
+| AF4 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
+| AF5 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
+| BF1 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
+| BF2 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
+| BF3 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
+| BF4 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
+| BF5 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
 
 ## Métricas por grupo
 
