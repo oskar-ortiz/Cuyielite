@@ -1,4 +1,11 @@
 contract: rag_validation_questions/v1
+procedencia:
+  responsable: Diery
+  conjunto: "Preguntas nuevas de validación, incorporadas en el commit 67e09e3."
+  fuente_documental: "produccion_cuyes.pdf, SENA / Centro Internacional de Producción Limpia – Lope, 2018, ISBN 978-958-15-0336-0."
+  paginas_esperadas: "Páginas del PDF usadas como referencia para las preguntas válidas; no son una calificación de la respuesta generada."
+  grupos_control: "Las preguntas fuera de corpus y en dominio sin respuesta son sondas de abstención, no preguntas extraídas del manual."
+  revision: "No consta revisión zootécnica independiente del conjunto ni de las páginas esperadas."
 preguntas:
   - id: A1
     grupo: valida

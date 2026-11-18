@@ -124,10 +124,15 @@ def _prepare_destination(base_url: str, scope_id: str) -> None:
 
     from tools.db_migrate.runner import apply_migrations
 
-    parsed = base_url.rsplit("/", 1)
     with psycopg.connect(base_url, autocommit=True) as conn:
-        for path in sorted((REPO_ROOT / "db" / "ddl" / "central").glob("*.sql")):
-            conn.execute(path.read_text(encoding="utf-8"))
+        bootstrapped = conn.execute(
+            "SELECT 1 FROM information_schema.tables "
+            "WHERE table_schema='public' AND table_name='cuyes'"
+        ).fetchone()
+        if not bootstrapped:
+            for path in sorted((REPO_ROOT / "db" / "ddl" / "central").glob("*.sql")):
+                conn.execute(path.read_text(encoding="utf-8"))
+    # El migrador ya es idempotente: aplica solo lo que falta y valida checksums.
     apply_migrations(base_url)
     with psycopg.connect(base_url) as conn:
         conn.execute(

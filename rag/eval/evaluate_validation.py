@@ -17,6 +17,15 @@ ORIGINAL_QUESTIONS_FILE = RAG_DIR / "eval" / "preguntas.yaml"
 REPORT_FILE = RAG_DIR / "reports" / "evaluacion_validacion.md"
 MINIMUM_VALID = 10
 MINIMUM_OUT_OF_CORPUS = 5
+VALIDATION_PROVENANCE = (
+    "Conjunto nuevo preparado y versionado por Diery en `67e09e3`. "
+    "Las preguntas válidas se contrastan con páginas de `produccion_cuyes.pdf` "
+    "(SENA / Centro Internacional de Producción Limpia – Lope, 2018, "
+    "ISBN 978-958-15-0336-0); las páginas esperadas son referencias de "
+    "recuperación, no una calificación de la respuesta. Las preguntas fuera "
+    "de corpus y en dominio sin respuesta son sondas de abstención, no citas "
+    "del manual. No consta revisión zootécnica independiente."
+)
 
 
 class RetrievedPage(Protocol):
@@ -350,7 +359,7 @@ def write_report(
         f"- Fecha: {date_text}.",
         f"- Umbral aplicado sin recalibrar: `{threshold:.12f}`.",
         f"- Embeddings: `{model_name}`.",
-        "- Procedencia de las preguntas: [completar por Diery]",
+        f"- Procedencia de las preguntas: {VALIDATION_PROVENANCE}",
         "",
         "## Métricas por grupo",
         "",

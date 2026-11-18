@@ -188,7 +188,9 @@ def test_run_uses_fixed_threshold_and_report_has_only_aggregates(tmp_path):
     assert len(seen_thresholds) == 18
     assert set(seen_thresholds) == {0.73}
     assert "2026-11-16" in content
-    assert "Procedencia de las preguntas: [completar por Diery]" in content
+    assert "Procedencia de las preguntas: Conjunto nuevo preparado" in content
+    assert "`produccion_cuyes.pdf`" in content
+    assert "No consta revisión zootécnica independiente." in content
     assert "hit@1" in content and "MRR" in content
     assert "fuera_de_corpus" in content
     assert "en_dominio_sin_respuesta" in content
