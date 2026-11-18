@@ -9,7 +9,7 @@ Estado: **calidad RAG NO resuelta**. La plataforma quedó comprobada; la pertine
 - Corpus: `produccion_cuyes.pdf`, SHA-256 `c33392cb1422bfe50b0f44ccfcc2917888b4aa9b0329830d2b13db3a289a91ea`, 76 fragmentos en `cuyielite_rag`.
 - Umbral vigente: `RAG_MIN_SIMILARITY` por defecto `0.807566308073` (sin cambios).
 - `top_k = 5`, `LLM_PROVIDER=none` (extractivo).
-- Usuario: sesión de piloto, `scope_id 35dbd0c8-f3a3-4561-ac05-42d18645ff40`, rol admin. No influye en ranking.
+- Usuario: sesión de piloto con el ámbito Centro Lope registrado solo en el handoff privado, rol admin. No influye en ranking.
 
 ## Reproducción
 

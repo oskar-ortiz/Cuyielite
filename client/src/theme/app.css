@@ -370,6 +370,15 @@ ion-chip {
   display: flex;
   align-items: center;
   gap: var(--app-space-3);
+  /* Ocupa el espacio que dejan las acciones: sin esto, en pantallas estrechas
+     el título queda reducido a unas pocas líneas de un carácter. */
+}
+
+/* El elemento se inserta en el slot de ion-item: hace falta especificidad para
+   que el navegador no aplique el flex por defecto del shadow DOM. */
+ion-item .app-list__title {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .app-list__icon {
@@ -819,6 +828,24 @@ ion-chip {
   .record-actions ion-button,
   .animal-actions ion-button {
     width: 100%;
+  }
+
+  /* En filas con dos acciones, apilarlas y limitar su ancho deja espacio al
+     código de la poza y a su descripción sin recortes ni desplazamiento. */
+  .app-list ion-item > .record-actions {
+    flex: 0 0 auto;
+    max-width: 130px;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
+
+  .app-list ion-item > .record-actions ion-button {
+    width: auto;
+    --padding-start: 8px;
+    --padding-end: 8px;
+    font-size: 0.8rem;
+    min-height: 32px;
   }
 
   .brand-header {

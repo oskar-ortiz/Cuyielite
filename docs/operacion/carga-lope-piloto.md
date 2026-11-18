@@ -2,6 +2,8 @@
 
 Estado: **PREPARADO Y ENSAYADO CON DATOS SINTÉTICOS**. No autoriza una carga real. La carga real exige la aprobación previa del bloque final de este documento y credenciales técnicas separadas de las cuentas personales.
 
+La lista única de requisitos, responsables y estados está en `docs/verificaciones/matriz-carga-real-lope.md`; este procedimiento no mantiene una lista paralela.
+
 ## 0. Principios
 
 - La revisión humana es un paso obligatorio: importar no revisa evidencia ni evalúa.
