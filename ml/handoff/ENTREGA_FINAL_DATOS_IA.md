@@ -2,16 +2,25 @@
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.0 |
+| Versión | 1.1 |
 | Fecha | 2026-11-17 |
 | Rama | `feat/entrega-final-datos-ia` |
 | Base de trabajo | `70eb84cec9251913a523a8928037451f4cad7c96` |
-| Estado | Para revisión; sin aprobación documental ni autorización de carga real |
+| Estado | Integrada mediante #163; revisión documental y del RF real pendiente en el piloto; sin autorización de carga real |
 
 No se incluyeron identificadores de animales, chapas, mediciones individuales,
 `scope_id` ni el artefacto binario. El entrenamiento local se hizo con las
 fuentes autorizadas únicamente para ese fin. No se consultó la base
 `cuyielite`, no se promovieron datos y no se ejecutó carga real.
+
+### Actualización posterior a la entrega
+
+- La entrega basada en `f03f0ad` quedó integrada mediante #163 (merge
+  `2c1512c`).
+- El ámbito autorizado ya se compartió por canal privado; su identificador no
+  se copia a este repositorio.
+- En el piloto se revisarán los documentos y el RF real. La integración no
+  equivale a aprobación del modelo ni a autorización para promover datos.
 
 ## 1. Documentación Lope — commit `ecd4b66`
 
@@ -107,8 +116,12 @@ Se conserva el conjunto y el informe ya presentes en la rama base:
 
 La evaluación no se recalibró ni se volvió a ejecutar en esta entrega; las
 pruebas sí se ejecutaron. Las abstenciones observadas se producen por el umbral
-vigente. Limitaciones: conjunto pequeño, procedencia de preguntas por completar
-por Diery y el umbral fue calibrado previamente con otro conjunto. También
+vigente. El conjunto fue preparado y versionado por Diery en `67e09e3`: las
+preguntas válidas remiten a páginas de `produccion_cuyes.pdf` (SENA / Centro
+Internacional de Producción Limpia – Lope, 2018, ISBN 978-958-15-0336-0); las
+preguntas fuera de corpus y en dominio sin respuesta son sondas de abstención.
+No consta revisión zootécnica independiente de las preguntas o sus páginas
+esperadas. El umbral fue calibrado previamente con otro conjunto. También
 existe `rag/reports/evaluacion_generacion.md`; su calificación no registra fecha
 ni revisor, por lo que no se usa como aprobación de extremo a extremo.
 
@@ -125,17 +138,15 @@ ni revisor, por lo que no se usa como aprobación de extremo a extremo.
 
 1. Designar y registrar por canal autorizado al revisor técnico.
 2. Completar decisiones humanas de correspondencias, con evidencia y revisor,
-   incluyendo las cinco decisiones de dominio enumeradas en los documentos.
-3. Compartir el ámbito autorizado y `scope_id` por canal privado; no añadirlo a
-   Git.
-4. Revisar un dry-run autorizado y verificar un respaldo restaurable antes de
+   incluyendo las decisiones concretas de `parto_crias` enumeradas en
+   `docs/datos/lope-diccionario-mapeo.md`.
+3. Revisar un dry-run autorizado y verificar un respaldo restaurable antes de
    cualquier promoción.
-5. Resolver con evidencia del esquema autorizado la discrepancia de unicidad
+4. Resolver con evidencia del esquema autorizado la discrepancia de unicidad
    entre migración y documento de paridad.
-6. Diery debe completar la procedencia de las preguntas RAG y entregar el
-   artefacto RF por canal privado junto con su SHA-256. El artefacto no está en
-   este repositorio.
-7. Completar la validación ciega con revisor y datos autorizados si se requiere
+5. Revisar en el piloto el artefacto RF real y contrastar su SHA-256 con la
+   metadata; el binario no está en este repositorio.
+6. Completar la validación ciega con revisor y datos autorizados si se requiere
    aceptación experta.
 
 La carga real queda fuera de esta entrega y sigue bloqueada hasta cumplir esas
