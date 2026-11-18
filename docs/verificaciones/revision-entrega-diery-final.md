@@ -6,12 +6,12 @@ Estado: **revisión técnica terminada; aprobación documental pendiente**. No s
 
 | Elemento | Versión / commit | SHA-256 del archivo |
 |---|---|---|
-| Árbol revisado | `origin/dev` `23508b5` (PR #165 fusionado) | — |
+| Árbol revisado | `origin/dev` `943947b` (PR #169 fusionado); base original de la entrega `23508b5` / `70eb84c` | — |
 | Entrega Datos/IA | `f03f0ad` vía PR #163 (merge `2c1512c`) | — |
 | Validación RAG | `67e09e3` | — |
 | `lope-diccionario-mapeo.md` | 1.0-propuesta, base `70eb84c` | `8da952de085324830344efa6424e4eb398aa84d76744d4e3030c3859cea05591` |
 | `lope-identidad-conciliacion.md` | 1.0-propuesta, base `70eb84c` | `8c053cd61c832a267ca1a334532d8f77baaf5ee79c21d8728f48500660e2f027` |
-| `lope-modelo-ddl-propuesto.md` | 1.0-propuesta, base `70eb84c` | `587622e1079a669d7273edfcfb5f2f4ef7f3f4d02f4b7634761328950f8342f4` |
+| `lope-modelo-ddl-propuesto.md` | 1.0-propuesta, base `70eb84c`; **corrección documental de unicidad en esta entrega** (hash final) | `9df87433326834e9e39894d607e9c1884608a47fa87551819e924b25da153c0f` |
 | `lope-plan-migracion-validacion.md` | 1.0-propuesta, base `70eb84c` | `511758c12d010a868780da98b069b1778fe8d98aaf527c14124b3297b6928575` |
 | `ENTREGA_FINAL_DATOS_IA.md` | 1.0 | `c63d8285be155add70f3754567c83d1b14dd6016d1bddabc540f80d788185a5c` |
 | `ENTREGA_CARGADOR.md` | informe de inspección | `91cc379dcd15832fb31b728c0f2b9ac3a43416ee327f6db50e16e66f8cb09820` |
@@ -34,7 +34,23 @@ Contratos contrastados: `docs/integracion/contrato-dominio-etl-plataforma.md`, `
 
 ## Contradicciones revisadas
 
-No quedan contradicciones técnicas verificables entre los cuatro documentos actualizados y el código/migraciones revisados: los documentos usan `CONFIRMADO` con fuente, `PROPUESTO` y `PENDIENTE`, y conservan el registro de aprobación vacío. La discrepancia documentada de unicidad entre `cuyes.codigo_identificacion` central y el esquema local sigue marcada como pendiente de resolución con evidencia autorizada: no se cambió el DDL para "alinear" documentos.
+Los documentos usan `CONFIRMADO` con fuente, `PROPUESTO` y `PENDIENTE`, y conservan el registro de aprobación vacío. La única contradicción técnica verificable era la descripción de `cuyes.codigo_identificacion` como UNIQUE en PostgreSQL; quedó corregida en `docs/verificaciones/piloto-paridad-documentacion.md` §5 y en el bullet de `lope-modelo-ddl-propuesto.md` citado arriba. No se cambió DDL, índices, migraciones ni datos. La parte de dominio de D10 sigue pendiente: aclarar la restricción no resuelve vínculos reales.
+
+### D10 — evidencia técnica disponible
+
+| Elemento | Ruta y líneas verificadas |
+|---|---|
+| Bootstrap histórico | `db/ddl/central/002_nucleo.sql:27` — `codigo_identificacion VARCHAR(50) NOT NULL UNIQUE` |
+| Migración vigorante | `db/migrations/central/0001_lope_domain.sql:46-47` — `DROP CONSTRAINT ... cuyes_codigo_identificacion_key` y `CREATE INDEX idx_cuyes_codigo ...` (no único) |
+| Base efectiva del piloto | Consulta de solo lectura: `cuyes_pkey PRIMARY KEY (id)`, `idx_cuyes_codigo CREATE INDEX ... btree (codigo_identificacion)`, columna `NOT NULL` sin default; sin UNIQUE sobre la chapa |
+| SQLite efectivo | `client/src/data/work.schema.ts` — `codigo_identificacion TEXT NOT NULL` sin UNIQUE; regresión en `client/src/data/work.migration.test.ts` |
+| Interpretación | La chapa puede repetirse; la identidad es `id`. Repetir código no prueba identidad ni autoriza fusión |
+
+El archivo `docs/datos/lope-decisiones-parto-crias.md` con D1–D14 **no está presente en `origin/dev` 943947b**. Para Diery: completar allí la parte técnica de D10 con estas rutas/líneas y conservar la decisión de dominio como pendiente. Hasta entonces, la matriz canónica `docs/verificaciones/matriz-carga-real-lope.md` usa los temas D1–D14 del contexto del encargo y marca su significado como **pendiente de verificación en el archivo de decisiones**.
+
+### Procedencia de `R`
+
+Oskar aportó la aclaración **`R` = REEMPLAZO**. Se registra con esa procedencia; **no** es una confirmación institucional del Centro Lope y no debe atribuírsele a él. De `R` no se deduce enfermedad, muerte, venta ni descarte: el motivo concreto de salida y su fuente siguen pendientes de evidencia y decisión de dominio. El contrato `docs/integracion/contrato-dominio-etl-plataforma.md` atribuye antes la confirmación a Diery; se conserva esa línea como parte del contrato y se aclara aquí la procedencia informada para esta revisión.
 
 Las cifras del informe RF (2256 leídas, 805 usadas, 275 grupos por madre) coinciden con `ENTREGA_FINAL_DATOS_IA.md`; el hash del artefacto coincide con el comunicado y se verá en el bloque 2 antes de deserializar. No se citan métricas como aprobación experta.
 
@@ -42,10 +58,12 @@ Las cifras del informe RF (2256 leídas, 805 usadas, 275 grupos por madre) coinc
 
 > Asunto: revisión de documentos Lope v1.0-propuesta (borrador; no enviado)
 >
-> He revisado sobre `origin/dev` `23508b5` los documentos `docs/datos/lope-*.md` en su versión 1.0-propuesta (commit base `70eb84c`, hashes registrados en `docs/verificaciones/revision-entrega-diery-final.md`), junto con `ml/handoff/ENTREGA_FINAL_DATOS_IA.md` y `ENTREGA_CARGADOR.md`.
+> He revisado la versión 1.0-propuesta de `docs/datos/lope-diccionario-mapeo.md` (`8da952de…05591`), `lope-identidad-conciliacion.md` (`8c053cd6…0e2f027`), `lope-modelo-ddl-propuesto.md` (`9df87433…da153c0f`, con la corrección de unicidad documentada en `docs/verificaciones/piloto-paridad-documentacion.md` §5) y `lope-plan-migracion-validacion.md` (`511758c1…b6928575`), sobre `origin/dev` `943947b`, junto con `ml/handoff/ENTREGA_FINAL_DATOS_IA.md` y `ENTREGA_CARGADOR.md`.
 >
-> Confirmo que describen el flujo implementado: cinco entidades, `parto_crias` con identidad estable, replay por `lote_id` y clave global, una transacción, versiones 1/+1/no-op y conservación de NULL. Apruebo **el diseño documentado en esa versión**, sin aprobar correspondencias reales ni autorizar cargas.
+> La revisión técnica está **COMPLETADA**. Conforme al diseño revisado: cinco entidades de dominio; `parto_crias` como filas con `id` estable, referencias y unicidad vigente en el esquema; transporte ya implementado, distinto de la aceptación de vínculos reales; replay con el mismo `lote_id` y clave global; rechazo de reutilización del lote en otro ámbito; una transacción exterior para dominio, `publicar_cambios` y lote; versión 1 en primera publicación, +1 en corrección efectiva y no-op sin historial duplicado; NULL distinto de cero; aceptaciones solo con decisión y evidencia; categorías y alertas conforme a reglas/evidencia aprobadas; consultas RF informativas sin persistencia oficial.
 >
-> Quedan fuera de esta aprobación, y requieren decisión explícita: revisor técnico, vínculos reales de `parto_crias`, significado de `R`, catálogo de eventos, fuente de abortos y peso de monta, validación experta ciega, procedencia de preguntas RAG y dry-run/respaldo de la carga real.
+> Reservas: revisor técnico/de dominio por designar; D1–D10 de vínculos y evidencia de registros reales; catálogo de eventos, abortos y peso de monta; validación experta ciega; procedencia RAG. `R = REEMPLAZO` fue aclarado por Oskar y no equivale a confirmación del Centro Lope ni a una causa de salida.
 >
-> [Firma de Oskar — NO emitida en este documento]
+> Esta conformidad técnica **no acepta correspondencias reales**, **no sustituye la validación zootécnica** y **no autoriza por sí sola una promoción de datos**. La carga requiere además lo registrado en `docs/verificaciones/matriz-carga-real-lope.md`.
+>
+> [Texto listo para emisión por Oskar — aprobación formal PENDIENTE; sin firma, fecha ni estado APROBADO registrados aquí]

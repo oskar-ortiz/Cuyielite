@@ -114,6 +114,8 @@ El bloqueo por RAM se documentó en `docs/verificaciones/android-rag-preflight.m
 - RF: artefacto autorizado verificado por SHA-256 antes de deserializar, cargador real y endpoints comprobados sobre laboratorio sintético. Su visualización nativa sigue pendiente de intervención manual; ver `docs/verificaciones/rf-plataforma-verificacion.md`. No se reentrenó ni se eligió un modelo sustituto. Quedan pendientes la validación experta ciega y las limitaciones científicas documentadas.
 - La evaluación oficial sigue siendo una acción explícita y autorizada; importar o revisar evidencia no evalúa animales.
 
+Los pendientes humanos de la carga real (D1–D14, revisor, dry-run, respaldo y autorización) están consolidados en `docs/verificaciones/matriz-carga-real-lope.md`.
+
 ## 9. Guion operativo y recuperación de conexión
 
 Secuencia breve para una demostración del piloto:
