@@ -1,6 +1,6 @@
 # Android RAG del piloto: diagnóstico, preflight y estado observado (2026-11-17)
 
-Estado: **BLOQUEADO / NO VERIFICADO EN UI ANDROID**. No se inició ningún AVD nuevo ni se ejecutó el recorrido: los recursos no cumplen el umbral de la guarda. No se declara ningún caso del recorrido como completado. Incluye una segunda revisión del 2026-11-17 con el emulador ya conectado (§7).
+Estado del preflight inicial: **BLOQUEADO / NO VERIFICADO EN UI ANDROID**. No se inició ningún AVD nuevo ni se ejecutó el recorrido: los recursos no cumplían el umbral de la guarda. El resultado posterior comunicado por el equipo se registra por separado en §8; no modifica la evidencia histórica de §§1–7.
 
 ## 1. Estado de partida
 
@@ -143,3 +143,24 @@ Captura: `%TEMP%\opencode\android-preflight.png`. Muestra `Acceso · Trabajo` de
 ### Bloqueo y paso concreto para reanudar
 
 Bloqueo: RAM física disponible de 767–769 MB frente a 2560 MB exigidos por la guarda, con un único emulador conectado y sin teléfono físico autorizado. Reanudar cuando `RAM disponible >= 2560 MB` y `commit libre >= 4 GB`, confirmando `adb devices` y `/health`; entonces sí ejecutar los taps de login, consulta, abstención, cierre/reapertura y viewer, capturando una captura por caso. No se debe reducir `-AvdRamMb` ni cerrar aplicaciones del usuario para forzar la prueba.
+
+## 8. Resultado posterior comunicado por el equipo
+
+Actualización del 2026-11-17, registrada a partir del resultado comunicado por
+Diery; no se dispone aquí de transcripción de consultas, capturas ni `logcat`
+de esa ejecución:
+
+| Comprobación | Resultado comunicado | Alcance |
+|---|---|---|
+| Conexión desde Android | Confirmada | No se modificó ni se reabrió el contrato de transporte. |
+| Consulta sobre una impresora | Abstención confirmada | El texto exacto de la pregunta no quedó registrado. |
+| Consulta sobre gestación | Devolvió fragmentos considerados poco pertinentes | Falla de pertinencia de recuperación que requiere revisión; faltan texto exacto, fragmentos/páginas y captura para reproducirla. |
+| Consulta sobre vitamina C | Devolvió fragmentos considerados poco pertinentes | Falla de pertinencia de recuperación que requiere revisión; faltan texto exacto, fragmentos/páginas y captura para reproducirla. |
+
+Estos resultados son observaciones del piloto, no métricas de
+`rag/eval/preguntas_validacion.yaml` ni evidencia para recalibrar el umbral.
+Aunque vitamina C es un tema de una pregunta del conjunto (B2), no se asume que
+la consulta de Android tuviera el mismo texto. Registrar en la próxima revisión
+el texto literal, respuesta, fuentes/páginas devueltas, fecha y versión del
+corpus/modelo; analizar la pertinencia de recuperación sin cambiar el
+transporte.

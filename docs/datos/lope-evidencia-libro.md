@@ -1,24 +1,162 @@
-# Evidencia del libro de producción sobre D6, D7, D8, D9 y D15
+# Evidencia del libro de producción (Lope)
 
-Fuente: `db/raw_Lope/produccion_cuyes.pdf` (SENA, Centro Internacional de Producción Limpia – Lope, 2018). Las citas usan la página del PDF y, entre paréntesis, la página impresa del índice; la relación es PDF = impresa + 1. Solo se registra lo que el manual dice: no se deducen convenciones propias del Centro.
+| Campo | Valor |
+|---|---|
+| Versión | 1.0 |
+| Fecha | 2026-11-17 |
+| Estado | **EVIDENCIA DOCUMENTAL DISPONIBLE; no aprueba ninguna decisión** |
 
-Nota de extracción: la capa de texto del PDF sustituye algunas ligaduras `fi`/`fl` por `ö`. En las citas se restituyen esas ligaduras para facilitar la lectura; el PDF no se modifica.
+Evidencia recogida del libro de producción del Centro Lope para los puntos
+abiertos D6, D7, D8, D9 y D15. La evidencia no cambia estados: las decisiones
+siguen PENDIENTES o PROPUESTAS hasta la validación del responsable del Centro.
 
-## Resultado por punto
+## Fuente, alcance y método de cita
 
-| Punto | ID | Resultado | Evidencia |
-|---|---|---|---|
-| 1. Significado de `R`, reemplazo o color | D6, D15 | Evidencia encontrada; contradice `R = REEMPLAZO` | PDF p. 66 (impresa 65): «COLOR: color del pelo la cría. B: blanco; By: bayo; R: rojo; N: negro; G: gris; Ag: agutí». En la misma página: «D: destino del animal dependiendo de la fase; R: reproductor; D: descarte; V: vendido; M:muerto; L: levante; E: engorde». |
-| 2. Códigos `M` y `V` de `DESTINO` | D6 | Evidencia encontrada | PDF p. 66 (impresa 65): «V: vendido; M:muerto». El manual usa además `D` para «descarte», aunque la misma línea abre con «D: destino del animal dependiendo de la fase». |
-| 3. Cómo se registra el motivo de salida | D6, D15 | Parcial | PDF p. 67 (impresa 66): «OBSERVACIONES: reporte de fecha de reproductores muertos y fecha de reemplazo». También: «FECHA DESCARTE: fecha de finalización de la etapa reproductiva. 15 días después del último parto». No se encuentra un campo general de «motivo» ni un catálogo de causas. |
-| 4. Significado de `AB` y conteo de abortos | D8 | Parcial | PDF p. 67 (impresa 66): «ABORTOS: reportar fecha y en la casilla TCN, aborto». También: «T.C.N: tamaño de camada o número de crías vivas y muertas al nacimiento». No se encuentra la abreviatura `AB` ni una regla de conteo de abortos. |
-| 5. Qué se pesa en la monta o empadre | D9 | Evidencia encontrada | PDF p. 67 (impresa 66): «PESO MONTA: peso en gramos (g) de la hembra al empadre». PDF p. 26 (impresa 25): «el apareamiento o empadre deber ser al alcanzar pesos de 800 a 900 gramos». |
-| 6. Catálogo de eventos reproductivos | D7 | Parcial | PDF p. 66–67 (impresas 65–66): el registro reproductivo define «FECHA DE MONTA: fecha de empadre», «FECHA P1: fecha del parto número 1», «T.C.N», «FECHA DESCARTE» y «ABORTOS». No se encuentra un catálogo formal de tipos de evento con significado y reglas. |
+- Fuente: `db/raw_Lope/produccion_cuyes.pdf` (archivo local ignorado por Git; no
+  se versiona). Lectura de solo consulta.
+- Libro: *Producción de Cuyes*, SENA, Centro Internacional de Producción Limpia
+  Lope, 2018; 86 páginas de PDF. El contenido con números de página está en la
+  p. 8 del PDF.
+- **Convención de cita:** se cita la página del PDF, que equivale a la página
+  impresa + 1 (la portada y las páginas legales no llevan número impreso). Por
+  ejemplo, la sección 8.3 figura en el índice en la impresa 64 y su contenido
+  empieza en la p. 65 del PDF.
+- Citas textuales cortas, de una frase. No se copian tablas completas,
+  identificadores ni datos de animales.
 
-## Contradicción sobre `R`
+## Resumen
 
-- La aclaración registrada de Oskar dice `R = REEMPLAZO`.
-- El manual, en la nomenclatura del registro, dice `R: reproductor` y, en `COLOR`, `R: rojo`.
-- El manual usa la palabra «reemplazo» solo como fecha dentro de `OBSERVACIONES` («fecha de reemplazo»), no como significado del código `R`.
-- En los archivos revisados, `R` aparece 15 veces en `COLOR` y 0 veces en `DESTINO`.
-- No se resuelve la contradicción: D6 y D15 siguen PENDIENTES. La evidencia del libro no convierte `R` en `REEMPLAZO` ni autoriza a descartar la aclaración de Oskar.
+| Punto | Resultado | Páginas del PDF |
+|---|---|---|
+| 1. Significado de `R` | Evidencia encontrada; contradice la lectura `R` = REEMPLAZO | 66, 67 |
+| 2. Códigos `M` y `V` en `DESTINO` | Evidencia encontrada | 66 |
+| 3. Registro del motivo de salida | Evidencia parcial | 61, 66, 67 |
+| 4. Significado de `AB` y conteo de abortos | Evidencia parcial | 67 |
+| 5. Qué se pesa en la monta o empadre | Evidencia encontrada | 26, 67 |
+| 6. Catálogo de eventos reproductivos | Evidencia parcial | 66, 67 |
+
+## 1. Significado de la sigla `R`
+
+**Evidencia encontrada.** El libro usa `R` con dos significados, según la
+columna; ninguno es "reemplazo".
+
+- Color (p. 66): «COLOR: color del pelo la cría. B: blanco; By: bayo; R:
+  rojo; N: negro; G: gris; Ag: agutí».
+- Destino (p. 66): «R: reproductor; D: descarte; V: vendido; M:muerto; L:
+  levante; E: engorde».
+- El término "reemplazo" aparece en el registro reproductivo como una fecha de
+  observación, no como la sigla `R` (p. 67): «OBSERVACIONES: reporte de fecha de
+  reproductores muertos y fecha de reemplazo».
+
+**Contradicciones.** La aclaración de Oskar dice `R` = REEMPLAZO. El libro
+asigna `R` = rojo en `COLOR` y `R` = reproductor en `DESTINO`; la palabra
+"reemplazo" se usa para una fecha de observación de reproductores. Los archivos
+de datos revisados muestran `R` solo en `COLOR` (15 celdas; 14 en G1 y 1 en G2)
+y ninguna `R` en `DESTINO`. La evidencia del libro respalda que la `R` observada
+en `COLOR` es un color, y contradice la lectura de `R` como reemplazo. No se
+resuelve aquí: queda para el responsable del Centro.
+
+## 2. Códigos `M` y `V` en la columna `DESTINO`
+
+**Evidencia encontrada.** El libro define ambos códigos en la nomenclatura de
+`DESTINO` (p. 66): «V: vendido; M:muerto».
+
+- La lista completa de `DESTINO` en el libro es `R`, `D`, `V`, `M`, `L`, `E`
+  (reproductor, descarte, vendido, muerto, levante, engorde).
+- Los archivos de datos observados tienen `M` 545 y `V` 297, sin otra letra en
+  `DESTINO`; no se observó `R`. Coincide con el libro en `M` y `V`.
+- `SP` no aparece en la lista del libro. No se deduce su significado.
+
+## 3. Registro del motivo de salida
+
+**Evidencia parcial.** El libro registra el destino por código y algunas fechas
+en observaciones, pero no un campo de "motivo" ni una causa de enfermedad.
+
+- `DESTINO` (p. 66): «V: vendido; M:muerto» y «D: descarte». El código indica
+  la salida, no la causa.
+- Observaciones del registro reproductivo (p. 67): «reporte de fecha de
+  reproductores muertos y fecha de reemplazo». Son fechas, no un motivo.
+- La decisión de destino se describe por disponibilidad (p. 61): «El destino de
+  cada grupo dependerá de la disponibilidad de animales para cubrir los
+  requerimientos para venta o reproducción».
+- **No se encuentra en el libro** un campo o código para registrar "enfermedad"
+  como motivo de salida, ni un texto libre de motivo. Tampoco se indica cómo
+  registrar la venta como causa (el código `V` solo marca la salida).
+
+**Contradicciones.** La observación de "fecha de reemplazo" usa la palabra
+reemplazo, mientras la aclaración de Oskar la asigna a la sigla `R`. El libro no
+asocia `R` con el motivo de salida.
+
+## 4. Significado de `AB` y conteo de abortos
+
+**Evidencia parcial.** El libro indica registrar el aborto en la casilla
+`T.C.N.`, pero no define la sigla `AB` ni una regla de conteo.
+
+- Registro reproductivo (p. 67): «ABORTOS: reportar fecha y en la casilla TCN,
+  aborto».
+- `T.C.N.` (p. 67): «tamaño de camada o número de crías vivas y muertas al
+  nacimiento».
+- **No se encuentra en el libro** la sigla `AB` ni una instrucción de cuántos
+  abortos contar por parto o por celda. La indicación es registrar la fecha y
+  escribir "aborto" en la casilla, sin cantidad.
+- Los archivos revisados tienen `AB` 17 veces en `T.C.N.` (6 en G1 y 11 en G2
+  viejo). El libro es compatible con anotar el aborto en esa casilla, pero no
+  permite derivar un número de abortos ni validar la sigla `AB`.
+
+## 5. Qué se pesa en la monta o el empadre
+
+**Evidencia encontrada.** Se pesa la hembra al empadre.
+
+- Registro reproductivo (p. 67): «PESO MONTA: peso en gramos (g) de la hembra
+  al empadre».
+- Reproducción (p. 26): «el apareamiento o empadre deber ser al alcanzar pesos
+  de 800 a 900 gramos».
+- El registro distingue el peso del macho (p. 67, «PESO: peso del macho en
+  gramos (g)») y el peso de la madre al parto (p. 66, «PESO PARTO: peso en
+  gramos (g) de la madre al parto»). El peso de monta es el de la hembra.
+
+**Alcance.** El libro confirma qué se pesa y en qué momento; no confirma que la
+columna `Peso` del archivo reproductivo corresponda a esa medición. Esa
+correspondencia sigue requiriendo revisión por registro (D9 sigue PROPUESTO).
+
+## 6. Catálogo de eventos reproductivos y sus abreviaturas
+
+**Evidencia parcial.** El libro describe campos y abreviaturas del registro
+reproductivo, no un catálogo cerrado de eventos.
+
+- Registro reproductivo (p. 67): «FECHA DE MONTA: fecha de empadre»; «FECHA P1:
+  fecha del parto número 1» (y P2–P4); «FECHA DESCARTE: fecha de finalización de
+  la etapa reproductiva»; «ABORTOS: reportar fecha y en la casilla TCN,
+  aborto»; «OBSERVACIONES: reporte de fecha de reproductores muertos y fecha de
+  reemplazo».
+- `T.C.N.` (p. 67): «tamaño de camada o número de crías vivas y muertas al
+  nacimiento».
+- `DESTINO` (p. 66): «R: reproductor; D: descarte; V: vendido; M:muerto; L:
+  levante; E: engorde».
+- **No se encuentra en el libro** un catálogo de eventos con códigos de evento
+  ni una lista de tipos publicables. Los nombres y abreviaturas son campos del
+  registro, no un catálogo aprobado. D7 sigue PENDIENTE.
+
+## Contradicciones y límites de esta evidencia
+
+1. **`R`:** Oskar indicó `R` = REEMPLAZO. El libro dice `R` = rojo en `COLOR` y
+   `R` = reproductor en `DESTINO`; "reemplazo" aparece como fecha de
+   observación. Los datos tienen `R` solo en `COLOR`, no en `DESTINO`.
+2. **`AB`:** el libro ordena anotar "aborto" en `T.C.N.`, pero no define `AB` ni
+   una regla de conteo; no se puede convertir `AB` en número de abortos.
+3. **Códigos de `DESTINO`:** el libro lista `R`, `D`, `V`, `M`, `L`, `E`; no
+   incluye `SP`. El código `SP` del sistema no tiene respaldo en el libro.
+4. **Formato de `T.C.N.`:** el libro lo define como número de crías vivas y
+   muertas; no explica las formas observadas con `+`, `M`, `N`, `X` ni `AB`.
+   Esas formas quedan sin semántica del libro.
+5. **Vigencia:** el libro es un manual técnico de 2018. Describe la práctica
+   esperada, no necesariamente el registro actual del Centro. La evidencia es
+   documental y no sustituye la confirmación del responsable ni la revisión por
+   registro.
+
+## Estado
+
+- La evidencia está disponible para la validación del responsable del Centro;
+  no se marca nada como aprobado.
+- D6, D7, D8, D9 y D15 mantienen el estado que tenían en
+  `lope-decisiones-parto-crias.md`.

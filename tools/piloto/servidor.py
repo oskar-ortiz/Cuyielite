@@ -53,6 +53,38 @@ def _alive(pid: int) -> bool:
         return False
 
 
+def _command_line(pid: int) -> str:
+    """Devuelve la línea de comandos del PID sin depender de paquetes extra."""
+    if os.name != "nt":
+        try:
+            return (Path("/proc") / str(pid) / "cmdline").read_bytes().replace(b"\0", b" ").decode("utf-8", "replace")
+        except OSError:
+            return ""
+    try:
+        result = subprocess.run(
+            [
+                "powershell.exe", "-NoProfile", "-Command",
+                f"(Get-CimInstance Win32_Process -Filter 'ProcessId={pid}').CommandLine",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        return result.stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def _is_expected_backend(pid: int) -> bool:
+    """Un PID vivo solo cuenta como backend si ejecuta esta aplicación.
+
+    Evita que un PID reutilizado por otro proceso bloquee `start` o que `stop`
+    termine un proceso ajeno.
+    """
+    command = _command_line(pid)
+    return "uvicorn" in command and "backend.app.main:app" in command
+
+
 def _health(url: str) -> str | None:
     try:
         with urllib.request.urlopen(f"{url}/health", timeout=3) as response:
@@ -68,9 +100,14 @@ def start(port: int) -> int:
     if _health(url) is not None:
         print(f"Backend ya activo en {url}")
         return 0
-    if PID_FILE.exists() and _alive(int(PID_FILE.read_text().strip())):
-        print("Hay un PID de backend vivo pero no responde /health; revisa los logs.")
-        return 1
+    if PID_FILE.exists():
+        recorded = PID_FILE.read_text().strip()
+        if recorded.isdigit() and _alive(int(recorded)):
+            if _is_expected_backend(int(recorded)):
+                print("Hay un PID de backend vivo pero no responde /health; revisa los logs.")
+                return 1
+            print(f"PID {recorded} vivo pero no es el backend del piloto; se descarta.")
+            PID_FILE.unlink(missing_ok=True)
 
     env = load_env(REPO_ROOT / ".env")
     child_env = {**os.environ, **env}
@@ -117,9 +154,18 @@ def stop() -> int:
     if not PID_FILE.exists():
         print("Backend: sin PID registrado; nada que detener.")
         return 0
-    pid = int(PID_FILE.read_text().strip())
+    recorded = PID_FILE.read_text().strip()
+    if not recorded.isdigit():
+        print(f"Backend: PID registrado inválido ({recorded!r}); no se detiene ningún proceso.")
+        PID_FILE.unlink(missing_ok=True)
+        return 0
+    pid = int(recorded)
     if not _alive(pid):
         print(f"Backend: PID {pid} no estaba vivo.")
+        PID_FILE.unlink(missing_ok=True)
+        return 0
+    if not _is_expected_backend(pid):
+        print(f"Backend: PID {pid} pertenece a otro proceso; no se detiene. Se descarta el registro.")
         PID_FILE.unlink(missing_ok=True)
         return 0
     result = subprocess.run(
