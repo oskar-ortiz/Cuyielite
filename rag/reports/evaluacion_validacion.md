@@ -5,7 +5,6 @@
 - Embeddings: `intfloat/multilingual-e5-base`.
 - Procedencia de las preguntas: conjunto nuevo preparado y versionado por Diery en `67e09e3`. Las preguntas válidas se contrastan con páginas de `produccion_cuyes.pdf` (SENA / Centro Internacional de Producción Limpia – Lope, 2018, ISBN 978-958-15-0336-0); las páginas esperadas son referencias de recuperación, no una calificación de la respuesta. Las preguntas fuera de corpus y en dominio sin respuesta son sondas de abstención, no citas del manual. No consta revisión zootécnica independiente.
 
-
 ## Procedencia por pregunta
 
 | ID | Tipo | Redactor | Fecha (redaccion) | Fuente | Verificador | Fecha (verificacion) | Usada para calibrar umbral |
@@ -91,12 +90,7 @@
 
 ## Discrepancia RAG / ruta del backend
 
-rag/src/retrieve.py usa E5Embedder (rag/src/embed.py) con los prefijos `query: `/`passage: `, el modelo por defecto `intfloat/multilingual-e5-base` y el umbral `DEFAULT_MIN_SIMILARITY = 0.807566308073`; rag/eval/evaluate_validation.py usa el mismo embedder y el mismo umbral por defecto (via RAG_MIN_SIMILARITY). La ruta del backend (backend/app/services/ml.py::_real_consultar) delega en rag.src.retrieve.consultar sin pasar embedder ni umbral, por lo que depende de RAG_EMBEDDING_MODEL y RAG_MIN_SIMILARITY del entorno: si esas variables difieren de las usadas en la evaluacion, la consulta en produccion puede usar modelo o umbral distintos aunque el codigo compartido sea identico. No se detecto discrepancia en el codigo fuente revisado; la posible discrepancia es de configuracion de entorno.
-
-## Candidatos para el siguiente conjunto de validacion
-
-- "gestacion": pendiente de verificar si tiene respuesta en el manual.
-- "vitamina C": pendiente de verificar si tiene respuesta en el manual.
+`rag/src/retrieve.py` usa `E5Embedder` (`rag/src/embed.py`) con los prefijos `query: `/`passage: `, el modelo por defecto `intfloat/multilingual-e5-base` y el umbral `DEFAULT_MIN_SIMILARITY = 0.807566308073`; `rag/eval/evaluate_validation.py` usa el mismo embedder y el mismo umbral por defecto (vía `RAG_MIN_SIMILARITY`). La ruta del backend (`backend/app/services/ml.py::_real_consultar`) delega en `rag.src.retrieve.consultar` sin pasar embedder ni umbral, por lo que depende de `RAG_EMBEDDING_MODEL` y `RAG_MIN_SIMILARITY` del entorno: si esas variables difieren de las usadas en la evaluación, la consulta en producción puede usar modelo o umbral distintos aunque el código compartido sea idéntico. No se detectó discrepancia en el código fuente revisado; la posible discrepancia es de configuración de entorno.
 
 ## Limitaciones
 
