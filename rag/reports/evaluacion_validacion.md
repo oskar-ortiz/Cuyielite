@@ -12,33 +12,33 @@
 | A1 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 15) | Diery| 2026-11-17 | No |
 | A2 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 18, 19, 69) | Diery | 2026-11-17 | No |
 | A3 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 71) | Diery | 2026-11-17 | No |
-| A4 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 27) | 2026-11-17 | 2026-11-17 | No |
-| A5 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 79, 80) | 2026-11-17 | 2026-11-17 | No |
-| A6 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 39, 40) | 2026-11-17 | 2026-11-17 | No |
-| A7 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 43) | 2026-11-17 | 2026-11-17 | No |
-| A8 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 20, 32) | 2026-11-17 | 2026-11-17 | No |
-| A9 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 71, 72) | 2026-11-17 | 2026-11-17 | No |
-| A10 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 51) | 2026-11-17 | 2026-11-17 | No |
-| B1 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 71, 85) | 2026-11-17 | 2026-11-17 | No |
-| B2 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 32) | 2026-11-17 | 2026-11-17 | No |
-| B3 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 31) | 2026-11-17 | 2026-11-17 | No |
-| B4 | en_dominio_sin_respuesta | Diery | 2026-11-16 | dominio cuy; sin respuesta en el manual (sonda de abstencion) | 2026-11-17 | 2026-11-17 | No |
+| A4 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 27) | Diery | 2026-11-17 | No |
+| A5 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 79, 80) | Diery | 2026-11-17 | No |
+| A6 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 39, 40) | Diery | 2026-11-17 | No |
+| A7 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 43) | Diery | 2026-11-17 | No |
+| A8 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 20, 32) | Diery | 2026-11-17 | No |
+| A9 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 71, 72) | Diery | 2026-11-17 | No |
+| A10 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 51) | Diery | 2026-11-17 | No |
+| B1 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 71, 85) | Diery | 2026-11-17 | No |
+| B2 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 32) | Diery | 2026-11-17 | No |
+| B3 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 31) | Diery | 2026-11-17 | No |
+| B4 | en_dominio_sin_respuesta | Diery | 2026-11-16 | dominio cuy; sin respuesta en el manual (sonda de abstencion) | Diery | 2026-11-17 | No |
 | B5 | en_dominio_sin_respuesta | Diery | 2026-11-16 | dominio cuy; sin respuesta en el manual (sonda de abstencion) | Diery | 2026-11-17 | No |
-| B6 | en_dominio_sin_respuesta | Diery | 2026-11-16 | dominio cuy; sin respuesta en el manual (sonda de abstencion) | 2026-11-17 | 2026-11-17 | No |
-| B7 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 31, 32, 33) | 2026-11-17 | 2026-11-17 | No |
+| B6 | en_dominio_sin_respuesta | Diery | 2026-11-16 | dominio cuy; sin respuesta en el manual (sonda de abstencion) | Diery | 2026-11-17 | No |
+| B7 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 31, 32, 33) | Diery | 2026-11-17 | No |
 | B8 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 28) | Diery | 2026-11-17 | No |
-| B9 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 85) | 2026-11-17 | 2026-11-17 | No |
-| B10 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 12, 85) | 2026-11-17 | 2026-11-17 | No |
-| AF1 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | 2026-11-17 | 2026-11-17 | No |
-| AF2 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | 2026-11-17 | 2026-11-17 | No |
-| AF3 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | 2026-11-17 | 2026-11-17 | No |
-| AF4 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | 2026-11-17 | 2026-11-17 | No |
-| AF5 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | 2026-11-17 | 2026-11-17 | No |
-| BF1 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | 2026-11-17 | 2026-11-17 | No |
-| BF2 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | 2026-11-17 | 2026-11-17 | No |
-| BF3 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | 2026-11-17 | 2026-11-17 | No |
-| BF4 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | 2026-11-17 | 2026-11-17 | No |
-| BF5 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | 2026-11-17 | 2026-11-17 | No |
+| B9 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 85) | Diery | 2026-11-17 | No |
+| B10 | valida | Diery | 2026-11-16 | produccion_cuyes.pdf (p. 12, 85) | Diery | 2026-11-17 | No |
+| AF1 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
+| AF2 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
+| AF3 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
+| AF4 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
+| AF5 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
+| BF1 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
+| BF2 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
+| BF3 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
+| BF4 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
+| BF5 | fuera_de_corpus | Diery | 2026-11-16 | sonda de abstencion; no del manual | Diery | 2026-11-17 | No |
 
 ## Métricas por grupo
 
