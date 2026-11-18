@@ -1,7 +1,8 @@
-"""Extracción y limpieza de texto de manuales PDF."""
+﻿"""Extracción y limpieza de texto de manuales PDF."""
 
 from __future__ import annotations
 
+import hashlib
 import re
 from collections import Counter
 from dataclasses import dataclass
@@ -16,7 +17,12 @@ _NAMED_HEADING = re.compile(
     re.IGNORECASE,
 )
 SENA_MANUAL_FRONT_MATTER_PAGES = frozenset(range(1, 12))
-LIGATURE_REPLACEMENTS = {
+REGISTERED_MANUAL_SHA256 = "c33392cb1422bfe50b0f44ccfcc2917888b4aa9b0329830d2b13db3a289a91ea"
+UNIVERSAL_LIGATURE_REPLACEMENTS = {
+    "\ufb01": "fi",
+    "\ufb02": "fl",
+}
+REGISTERED_MANUAL_LIGATURE_REPLACEMENTS = {
     "\u00f6": "fi",
     "\u00f8": "fl",
     "\uf001": "fi",
@@ -24,7 +30,40 @@ LIGATURE_REPLACEMENTS = {
     "\ufb01": "fi",
     "\ufb02": "fl",
 }
-_LIGATURE_TRANSLATION = str.maketrans(LIGATURE_REPLACEMENTS)
+MANUAL_LIGATURE_PROFILES = {
+    REGISTERED_MANUAL_SHA256: {
+        "name": "produccion_cuyes.pdf",
+        "replacements": REGISTERED_MANUAL_LIGATURE_REPLACEMENTS,
+    }
+}
+# Compatibility aliases for callers that expect a profile registry by another name.
+LIGATURE_PROFILES = MANUAL_LIGATURE_PROFILES
+PDF_LIGATURE_PROFILES = MANUAL_LIGATURE_PROFILES
+EXTRACTION_PROFILES = MANUAL_LIGATURE_PROFILES
+LIGATURE_REPLACEMENTS = REGISTERED_MANUAL_LIGATURE_REPLACEMENTS
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as file:
+        for block in iter(lambda: file.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def ligature_replacements_for_pdf(pdf_sha256: str | None) -> dict[str, str]:
+    replacements = dict(UNIVERSAL_LIGATURE_REPLACEMENTS)
+    profile = MANUAL_LIGATURE_PROFILES.get((pdf_sha256 or "").lower())
+    if profile is not None:
+        replacements.update(profile["replacements"])
+    return replacements
+
+
+def _normalize_ligatures(text: str, pdf_sha256: str | None = None) -> str:
+    replacements = ligature_replacements_for_pdf(pdf_sha256)
+    if not replacements:
+        return text
+    return text.translate(str.maketrans(replacements))
 
 
 @dataclass(frozen=True)
@@ -34,9 +73,12 @@ class PageText:
     section: str | None = None
 
 
-def clean_text(text: str) -> str:
+def clean_text(text: str, pdf_sha256: str | None = None, *, sha256: str | None = None, profile: str | None = None) -> str:
     """Normalize line wrapping while retaining paragraph boundaries."""
-    text = text.translate(_LIGATURE_TRANSLATION).replace("\f", "\n")
+    selected_sha = pdf_sha256 if pdf_sha256 is not None else sha256
+    if selected_sha is None and profile is not None:
+        selected_sha = profile
+    text = _normalize_ligatures(text, selected_sha).replace("\f", "\n")
     text = re.sub(r"(?<=[A-Za-zÁÉÍÓÚÜÑáéíóúüñ])-\s*\n(?=[A-Za-zÁÉÍÓÚÜÑáéíóúüñ])", "", text)
     lines = [line.strip() for line in text.splitlines()]
     paragraphs: list[str] = []
@@ -70,12 +112,15 @@ def _is_section_heading(line: str) -> bool:
 def extract_pages(
     pdf_path: str | Path,
     excluded_pages: frozenset[int] = SENA_MANUAL_FRONT_MATTER_PAGES,
+    *,
+    pdf_sha256: str | None = None,
 ) -> list[PageText]:
     """Extract body pages, retaining PDF page numbers and detected headings."""
     path = Path(pdf_path)
     if not path.is_file():
         raise FileNotFoundError(f"No se encontró el PDF: {path}")
 
+    selected_sha = pdf_sha256 if pdf_sha256 is not None else _sha256_file(path)
     pages: list[PageText] = []
     section: str | None = None
     with pymupdf.open(path) as document:
@@ -92,7 +137,7 @@ def extract_pages(
             for line in raw_text.splitlines():
                 if _is_section_heading(line) and line_counts[line.strip().casefold()] <= 4:
                     section = line.strip()
-            text = clean_text(raw_text)
+            text = clean_text(raw_text, pdf_sha256=selected_sha)
             if text:
                 pages.append(PageText(page=page_number, text=text, section=section))
     return pages

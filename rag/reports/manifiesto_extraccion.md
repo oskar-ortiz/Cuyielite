@@ -10,16 +10,29 @@
 - Modelo: `intfloat/multilingual-e5-base`, 768 dimensiones.
 - Umbral: `0.807566308073`, conservado sin recalibrar.
 
+## Perfil acotado de normalización
+
+La sustitución de `ö`/`ø` (y de los glifos privados U+F001/U+F002) solo se
+aplica cuando el SHA-256 del PDF coincide con el perfil registrado:
+
+- Perfil: `produccion_cuyes.pdf`.
+- SHA-256: `c33392cb1422bfe50b0f44ccfcc2917888b4aa9b0329830d2b13db3a289a91ea`.
+- Mapa del perfil: `ö`→`fi`, `ø`→`fl`, U+F001→`fi`, U+F002→`fl`,
+  U+FB01→`fi`, U+FB02→`fl`.
+
+Para cualquier otro PDF o texto, `ö` y `ø` se conservan. Las ligaduras Unicode
+`ﬁ` (U+FB01) y `ﬂ` (U+FB02) se normalizan siempre.
+
 ## Mapa explícito de normalización
 
-| Carácter extraído | Sustitución |
-|---|---|
-| `ö` (U+00F6) | `fi` |
-| `ø` (U+00F8) | `fl` |
-| U+F001 | `fi` |
-| U+F002 | `fl` |
-| `ﬁ` (U+FB01) | `fi` |
-| `ﬂ` (U+FB02) | `fl` |
+| Carácter extraído | Sustitución | Condición |
+|---|---|---|
+| `ö` (U+00F6) | `fi` | Solo perfil registrado |
+| `ø` (U+00F8) | `fl` | Solo perfil registrado |
+| U+F001 | `fi` | Solo perfil registrado |
+| U+F002 | `fl` | Solo perfil registrado |
+| `ﬁ` (U+FB01) | `fi` | Siempre |
+| `ﬂ` (U+FB02) | `fl` | Siempre |
 
 Antes, 43/76 fragmentos contenían las cuatro lecturas erróneas observadas
 (`ö`, `ø`, U+F001 y U+F002): 102 ocurrencias. Al incluir la ligadura `ﬁ`

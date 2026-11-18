@@ -208,3 +208,27 @@ La pregunta válida cuya página esperada es 85 (B9) permanece sin cambios; esa
 página es bibliografía y su etiqueta queda pendiente de revisión manual por
 Diery. No se editaron las etiquetas ni las páginas esperadas del conjunto de
 validación.
+
+## Comprobación final con consultas completas de Android
+
+- Fecha: 2026-11-18.
+- Modelo: `intfloat/multilingual-e5-base`; umbral: `0.807566308073`; `top_k=5`.
+- Consultas exactas tomadas de `docs/integracion/handoff-diery-pertinencia-rag.md`.
+- El texto de los 76 fragmentos no cambió respecto de la regeneración anterior
+  (`fragments.json` SHA-256 `bd1acac99bbd6c4af588d847ca9abe3c6c2b2aa51dfa9d960994f897b21b680f`);
+  por eso no se re-midió la validación de 17/10/3. Se informa la abstención sobre
+  estas consultas.
+- Antes significa extracción previa a la normalización; después, el extractor
+  acotado de esta rama. Ambas corridas se hicieron en memoria, sin PostgreSQL.
+
+| Consulta exacta | Páginas esperadas (probables, pendientes de verificar por Diery) | Antes: páginas devueltas (similitud) | Después: páginas devueltas (similitud) | Esperadas en top 5 |
+|---|---|---|---|---|
+| `¿Cuál es la duración de la gestación de los cuyes?` | 26 (probables 32, 71) | 28 (0.882710), 85 (0.839569), 26 (0.837789), 80 (0.834542), 25 (0.831932) | 28 (0.882710), 85 (0.839569), 26 (0.837789), 80 (0.834542), 25 (0.831932) | 26 sí; 32 y 71 no |
+| `¿Por qué los cuyes necesitan vitamina C en su alimentación?` | 32, 42 | 31 (0.857437), 28 (0.853332), 85 (0.848907), 32 (0.848079), 12 (0.843784) | 31 (0.857437), 28 (0.853332), 85 (0.848907), 32 (0.848079), 12 (0.843784) | 32 sí; 42 no |
+| `¿Cómo configuro una impresora Wi-Fi?` | ninguna (fuera de corpus) | 15 (0.781993), 17 (0.781667), 52 (0.773322), 50 (0.772398), 16 (0.772029) | 15 (0.781993), 17 (0.781667), 52 (0.773322), 50 (0.772398), 16 (0.772029) | abstención: todas por debajo del umbral |
+
+- Abstención: la consulta Wi-Fi no devuelve resultados por encima del umbral.
+  Las dos consultas en dominio no se abstienen, pero sus páginas esperadas no
+  encabezan el top 5 (26 y 32 aparecen, 42 y 71 no).
+- La ligadura se acepta como mejora de extracción. La pertinencia que sigue
+  fallando queda pendiente.
