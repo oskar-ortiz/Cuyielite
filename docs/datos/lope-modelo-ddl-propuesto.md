@@ -40,6 +40,16 @@ cambio de DDL requiere revisión y una migración incremental aprobada.
   referencia histórica. La paridad documenta diferencias intencionales,
   incluida la validación del contexto exclusivo de pesajes en el pull.
   Fuente: `docs/verificaciones/piloto-paridad-documentacion.md`.
+- **COMPROBADO POR OSKAR** (técnico; no es aprobación documental) — PostgreSQL y
+  SQLite permiten repetir `cuyes.codigo_identificacion`; la identidad única es
+  el UUID `id`. El SQL de migración 0001 elimina la restricción
+  `cuyes_codigo_identificacion_key` y crea el índice no único `idx_cuyes_codigo`.
+  Un código repetido es un asunto de conciliación de datos, no una restricción
+  de base de datos. Confirmado por Oskar en la base efectiva del piloto. La
+  matriz de paridad (`docs/verificaciones/piloto-paridad-documentacion.md`)
+  describe ese campo como UNIQUE: es una afirmación obsoleta que Oskar corregirá
+  y que no se edita en esta entrega. Fuentes: migración 0001 y confirmación de
+  Oskar.
 - **CONFIRMADO** — El SQL de migración 0001 elimina la restricción UNIQUE de
   `cuyes.codigo_identificacion` y crea `idx_cuyes_codigo` como índice no único.
   La matriz de paridad, corregida el 2026-11-17, describe el esquema efectivo
@@ -54,8 +64,9 @@ cambio de DDL requiere revisión y una migración incremental aprobada.
 ## Estructuras y semánticas
 
 - **CONFIRMADO** — `parto_crias` es una tabla independiente, con relación a
-  parto y cuy, clave propia y unicidad de la relación y del cuy. Fuentes:
-  migración 0001 y matriz de paridad.
+  parto y cuy, clave propia y unicidad de la relación y del cuy. Esta restricción
+  es distinta de `cuyes.codigo_identificacion`, que no es único (ver §Esquema
+  central y local). Fuentes: migración 0001 y matriz de paridad.
 - **PENDIENTE** — La regla física no decide qué filas Excel crean el vínculo ni
   qué evidencia lo sustenta. Diery prepara los candidatos; el revisor técnico
   designado decide.
@@ -63,14 +74,33 @@ cambio de DDL requiere revisión y una migración incremental aprobada.
   no se define allí un catálogo cerrado. Fuente: migración 0001.
 - **PROPUESTO** — Aprobar un catálogo de eventos y la semántica de `detalle`
   antes de publicar eventos; requiere acuerdo de Diery/Oskar y validación del
-  responsable de dominio.
-- **PENDIENTE** — El valor `R` requiere fuente primaria y contexto de columna
-  antes de mapearlo. `tools/lope_import` no implementa su normalización y la
-  documentación previa presenta interpretaciones incompatibles. Responsable:
-  Diery aporta evidencia; revisor técnico valida.
+  responsable de dominio. Se observaron 47 valores distintos (46 no vacíos y la celda vacía) en
+  1412 celdas `T.C.N.`; las etiquetas del código no prueban uso. Detalle:
+  `lope-eventos-valores-encontrados.md` §1–§2.
+- **PENDIENTE** — El valor `R` requiere la confirmación del responsable de
+  dominio antes de mapearlo. Aclaración aportada por Oskar: `R` = REEMPLAZO, un
+  animal que sale de su función (por ejemplo enfermedad o venta); por sí sola no
+  demuestra muerte ni descarte, y el motivo de salida se conserva en un campo
+  separado. En los archivos revisados `R` no aparece en `DESTINO` (solo 15 celdas
+  en `COLOR`, la columna de color). `tools/lope_import` no implementa su
+  normalización. Responsable: Oskar aporta la aclaración; responsable del Centro
+  (por definir) confirma; revisor técnico revisa. Detalle:
+  `lope-eventos-valores-encontrados.md` §4.
+- **PENDIENTE** — Identificar la fuente autorizada del motivo de salida de un
+  animal `R` (REEMPLAZO) y su impacto en el diccionario de mapeo. No se infiere
+  muerte ni descarte desde `R`: `DESTINO` observado tiene `M` 545, `V` 297 y 6465
+  vacíos, sin `R`; no hay vínculo por fila entre `DESTINO` y observaciones.
+  Responsable: Diery aporta la fuente; responsable del Centro (por definir)
+  valida; revisor técnico revisa. Detalle:
+  `lope-eventos-valores-encontrados.md` §4–§6.
 - **PENDIENTE** — La fuente de abortos y el origen/fecha del peso de monta no se
-  resuelven con DDL. Responsable: Diery aporta fuente autorizada; revisor
-  técnico valida.
+  resuelven con DDL. `AB` aparece 17 veces en `T.C.N.`, sin cantidad verificable
+  ni regla de conteo. La columna `Peso` de la fila de la hembra (353 celdas
+  numéricas) se propone como pesaje de etapa `MONTA` vinculado a un evento
+  `EMPADRE`, respetando el `CHECK` de `0005`; no se publican valores.
+  Responsable: Diery aporta trazabilidad; responsable del Centro (por definir)
+  valida; revisor técnico revisa. Detalle:
+  `lope-eventos-valores-encontrados.md` §3 y §7.
 
 ## Uso de este documento
 
