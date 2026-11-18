@@ -56,7 +56,7 @@ La paridad se entiende como **conservar significado y comportamiento de los dato
 |---|---|---|---|
 | galpones / `galpon` | `id UUID`, `nombre`, `ubicacion NULL`, `scope_id`, `server_version`, `last_client_edited_at`, `synced_at`, `deleted_at` | `id TEXT`, `nombre`, `ubicacion NULL`, `created_at/updated_at`, `deleted_at` | PAR. `scope_id` y metadatos de servidor no se transportan; el dispositivo es de un solo ámbito y el contexto lo fija el login |
 | pozas / `poza` | `galpon_id`, `codigo`, `tipo`, `capacidad_maxima`, `scope_id`, versión | mismos campos de negocio; `galpon_id REFERENCES galpones` | PAR |
-| cuyes | `poza_id NULL`, `galpon_origen_id`, `codigo_identificacion UNIQUE`, `sexo NULL`, fechas, colores, padres, `categoria_*`, versión | `poza_id NULL`, `galpon_origen_id`, `codigo_identificacion` **sin UNIQUE**, mismos campos de negocio, `ultimo_peso_g TEXT` | PAR con diferencia intencional: el local permite códigos duplicados para poder retenerlos en revisión; hay regresión explícita en `work.migration.test.ts`. `categoria_*` centrales no se transportan por pull de dominio: llegan por el feed derivado v3 |
+| cuyes | `poza_id NULL`, `galpon_origen_id`, `codigo_identificacion NOT NULL` con índice **no único** (`idx_cuyes_codigo`), `sexo NULL`, fechas, colores, padres, `categoria_*`, versión | `poza_id NULL`, `galpon_origen_id`, `codigo_identificacion` sin UNIQUE, mismos campos de negocio, `ultimo_peso_g TEXT` | PAR: ambos permiten repetir la chapa. No hay diferencia de unicidad que justificar. Identidad técnica = `id` UUID (PK central y `TEXT PRIMARY KEY` local). `categoria_*` centrales no se transportan por pull de dominio: llegan por el feed derivado v3 |
 | partos | `madre_id`, `fecha_parto NULL`, conteos NULL, `numero_parto`, versión | mismos campos, conteos `INTEGER` NULL | PAR: NULL ≠ 0 se conserva |
 | pesajes | `peso_gramos NUMERIC(8,2)`, `etapa`, `parto_id`, `evento_id`, CHECK exclusivo (0005) | `peso_gramos TEXT` validado como decimal de 2 cifras, mismos vínculos | PAR tras la corrección de esta entrega: la validación de pull ahora rechaza `parto_id` y `evento_id` simultáneos, espejo del CHECK central. El SQLite no lleva CHECK propio para no romper la cadena de checksum del esquema local |
 | eventos | `cuy_id`, `tipo`, `fecha`, `macho_id`, `poza_origen_id/destino_id`, `detalle`, versión | mismos campos | PAR |
@@ -100,7 +100,18 @@ La paridad se entiende como **conservar significado y comportamiento de los dato
 
 Por tanto, en Android **no** se observaron login, consulta al asistente, cita, abstención, reapertura de sesión ni permisos de viewer. No se simularon mediante SQLite ni se presentó la verificación de Windows como si fuera Android. El mismo cambio de pantalla y de plazos quedó cubierto por pruebas unitarias y por el recorrido real en Windows/Electron de la entrega anterior.
 
-## 4. Pruebas ejecutadas en este bloque
+## 5. Unicidad de `cuyes.codigo_identificacion` (aclaración D10)
+
+| Estado | Evidencia verificable |
+|---|---|
+| Histórico | `db/ddl/central/002_nucleo.sql:27` declara `codigo_identificacion VARCHAR(50) NOT NULL UNIQUE`. |
+| Migración vigorante | `db/migrations/central/0001_lope_domain.sql:46-47` elimina `cuyes_codigo_identificacion_key` y crea `idx_cuyes_codigo` como índice **no único**. |
+| Base efectiva del piloto | Consulta de solo lectura sobre `cuyielite`: `cuyes_pkey PRIMARY KEY (id)`; `idx_cuyes_codigo CREATE INDEX ... btree (codigo_identificacion)`; columna `NOT NULL` sin default. No aparece ninguna restricción UNIQUE sobre la chapa. |
+| SQLite efectivo | `client/src/data/work.schema.ts` declara `codigo_identificacion TEXT NOT NULL` sin UNIQUE; `client/src/data/work.migration.test.ts` conserva una regresión que permite dos filas con el mismo código. |
+
+Consecuencia: la chapa es un dato de negocio que **puede repetirse**; la identidad técnica es `id`. Que dos registros compartan código **no demuestra** que sean el mismo animal y **no autoriza** a fusionarlos. Esta aclaración resuelve solo la parte técnica de D10; la decisión de dominio asociada sigue pendiente y se registra en la matriz canónica.
+
+## 6. Pruebas ejecutadas en este bloque
 
 ```text
 python -m pytest tools/db_migrate/tests -q   31 passed  (incluye los casos de 0005 del PR #157)
