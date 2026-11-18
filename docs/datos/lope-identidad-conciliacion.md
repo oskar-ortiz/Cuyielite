@@ -67,18 +67,30 @@
   `R` = REEMPLAZO, un animal que sale de su función (por ejemplo enfermedad o
   venta); por sí sola no demuestra muerte ni descarte. El motivo de salida se
   conserva en un campo separado, cuya fuente autorizada queda como decisión
-  pendiente. `tools/lope_import` no implementa una regla para ese símbolo.
-  Responsable: Oskar aporta la aclaración; responsable de dominio confirma;
-  revisor técnico valida.
-- **PENDIENTE** — Confirmar catálogo de eventos y el uso de `detalle`.
-  Responsable: Diery/Oskar acuerdan el catálogo con el responsable de dominio.
+  pendiente. En los archivos revisados `R` no aparece en `DESTINO` (solo 15
+  celdas en `COLOR`, la columna de color). `tools/lope_import` no implementa
+  una regla para ese símbolo. Responsable: Oskar aporta la aclaración;
+  responsable del Centro (por definir) confirma; revisor técnico revisa. Detalle:
+  `lope-eventos-valores-encontrados.md` §4.
+- **PENDIENTE** — Confirmar catálogo de eventos y el uso de `detalle`. Los tipos
+  previstos no prueban uso; se observaron 47 valores distintos (46 no vacíos y la celda vacía) en
+  1412 celdas `T.C.N.`. Responsable: Oskar aporta la información; responsable del Centro (por
+  definir) valida. Detalle: `lope-eventos-valores-encontrados.md` §1–§2.
 - **PENDIENTE** — Confirmar la fuente de abortos y del peso de monta con su
-  fecha, procedencia y relación con el animal. Responsable: Diery aporta la
-  fuente autorizada; revisor técnico valida.
+  fecha, procedencia y relación con el animal. `AB` aparece 17 veces en `T.C.N.`
+  sin cantidad verificable ni regla de conteo; la columna `Peso` de la fila de la
+  hembra tiene 353 celdas numéricas y se propone como peso de etapa `MONTA`
+  vinculado a `EMPADRE`, sin publicar valores. Responsable: Diery aporta
+  trazabilidad; responsable del Centro (por definir) valida la regla; revisor
+  técnico revisa. Detalle: `lope-eventos-valores-encontrados.md` §3 y §7.
 - **PENDIENTE** — Identificar la fuente autorizada del motivo de salida de un
   animal `R` (REEMPLAZO) y su impacto en el diccionario de mapeo. No se infiere
-  muerte ni descarte desde `R`. Responsable: Diery aporta la fuente; revisor
-  técnico designado valida; responsable de dominio confirma.
+  muerte ni descarte desde `R`: `DESTINO` observado tiene `M` 545, `V` 297 y 6465
+  vacíos, sin `R`; las observaciones mencionan EMPADRE/MONTA 13, VENTA 5 y MUERTE
+  1 (macho), sin mención de `R`, y no tienen vínculo por fila con `DESTINO`.
+  Responsable: Diery aporta la fuente; responsable del Centro (por definir)
+  valida; revisor técnico revisa. Detalle:
+  `lope-eventos-valores-encontrados.md` §4–§6.
 - **RESUELTO (COMPROBADO POR OSKAR)** — La discrepancia de unicidad de
   `cuyes.codigo_identificacion` quedó comprobada sobre la base efectiva del
   piloto; ver §Reglas confirmadas. Un código repetido se trata como caso de

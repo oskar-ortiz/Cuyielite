@@ -64,21 +64,33 @@ cambio de DDL requiere revisión y una migración incremental aprobada.
   no se define allí un catálogo cerrado. Fuente: migración 0001.
 - **PROPUESTO** — Aprobar un catálogo de eventos y la semántica de `detalle`
   antes de publicar eventos; requiere acuerdo de Diery/Oskar y validación del
-  responsable de dominio.
+  responsable de dominio. Se observaron 47 valores distintos (46 no vacíos y la celda vacía) en
+  1412 celdas `T.C.N.`; las etiquetas del código no prueban uso. Detalle:
+  `lope-eventos-valores-encontrados.md` §1–§2.
 - **PENDIENTE** — El valor `R` requiere la confirmación del responsable de
   dominio antes de mapearlo. Aclaración aportada por Oskar: `R` = REEMPLAZO, un
   animal que sale de su función (por ejemplo enfermedad o venta); por sí sola no
   demuestra muerte ni descarte, y el motivo de salida se conserva en un campo
-  separado. `tools/lope_import` no implementa su normalización. Responsable:
-  Oskar aporta la aclaración; responsable de dominio confirma; revisor técnico
-  valida.
+  separado. En los archivos revisados `R` no aparece en `DESTINO` (solo 15 celdas
+  en `COLOR`, la columna de color). `tools/lope_import` no implementa su
+  normalización. Responsable: Oskar aporta la aclaración; responsable del Centro
+  (por definir) confirma; revisor técnico revisa. Detalle:
+  `lope-eventos-valores-encontrados.md` §4.
 - **PENDIENTE** — Identificar la fuente autorizada del motivo de salida de un
   animal `R` (REEMPLAZO) y su impacto en el diccionario de mapeo. No se infiere
-  muerte ni descarte desde `R`. Responsable: Diery aporta la fuente; revisor
-  técnico designado valida; responsable de dominio confirma.
+  muerte ni descarte desde `R`: `DESTINO` observado tiene `M` 545, `V` 297 y 6465
+  vacíos, sin `R`; no hay vínculo por fila entre `DESTINO` y observaciones.
+  Responsable: Diery aporta la fuente; responsable del Centro (por definir)
+  valida; revisor técnico revisa. Detalle:
+  `lope-eventos-valores-encontrados.md` §4–§6.
 - **PENDIENTE** — La fuente de abortos y el origen/fecha del peso de monta no se
-  resuelven con DDL. Responsable: Diery aporta fuente autorizada; revisor
-  técnico valida.
+  resuelven con DDL. `AB` aparece 17 veces en `T.C.N.`, sin cantidad verificable
+  ni regla de conteo. La columna `Peso` de la fila de la hembra (353 celdas
+  numéricas) se propone como pesaje de etapa `MONTA` vinculado a un evento
+  `EMPADRE`, respetando el `CHECK` de `0005`; no se publican valores.
+  Responsable: Diery aporta trazabilidad; responsable del Centro (por definir)
+  valida; revisor técnico revisa. Detalle:
+  `lope-eventos-valores-encontrados.md` §3 y §7.
 
 ## Uso de este documento
 
