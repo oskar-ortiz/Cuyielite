@@ -28,6 +28,13 @@ rag\.venv\Scripts\python -m rag.ask index
 rag\.venv\Scripts\python -m rag.ask ask "¿Qué prácticas recomienda el manual?" --top-k 5
 ```
 
+`index` conserva su modo incremental: al cambiar el texto de un fragmento,
+su hash cambia y el anterior no se retira automáticamente. Para sustituir la
+extracción completa de un documento existe `index --replace-document`, con
+ensayo `--dry-run`. Consulta el [procedimiento de reindexación segura](../docs/operacion/reindexacion-rag-documento.md)
+antes de actualizar un índice existente. El identificador de fuente es el
+nombre del PDF (`--pdf`), no su ruta completa.
+
 El modelo predeterminado es `intfloat/multilingual-e5-base`, descargado bajo
 `rag/.cache/`. Para evaluar velocidad, `RAG_EMBEDDING_MODEL` permite seleccionar
 otro nombre; el pipeline valida que produzca 768 dimensiones. `multilingual-e5-small`

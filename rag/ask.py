@@ -26,13 +26,20 @@ def _database_url() -> str:
     return value
 
 
-def _index(pdf_path: Path) -> None:
+def _index(
+    pdf_path: Path, *, replace_document: bool = False, dry_run: bool = False
+) -> None:
     pages = extract_pages(pdf_path)
     chunks = chunk_pages(pages)
     embedder = E5Embedder()
     with psycopg.connect(_database_url()) as connection:
-        count = index_chunks(connection, pdf_path.name, chunks, embedder)
-    print(f"Fragmentos procesados: {count}")
+        count = index_chunks(
+            connection, pdf_path.name, chunks, embedder,
+            replace_document=replace_document, dry_run=dry_run,
+        )
+    mode = "reemplazo del documento" if replace_document else "incremental"
+    outcome = "ROLLBACK (dry-run, sin cambios persistidos)" if dry_run else "COMMIT"
+    print(f"Fragmentos procesados: {count}; modo: {mode}; resultado: {outcome}")
 
 
 def main() -> None:
@@ -41,6 +48,14 @@ def main() -> None:
 
     index_parser = commands.add_parser("index", help="Extraer, fragmentar e indexar el PDF")
     index_parser.add_argument("--pdf", type=Path, default=DEFAULT_PDF)
+    index_parser.add_argument(
+        "--replace-document", action="store_true",
+        help="Sustituir solo este documento y retirar sus fragmentos obsoletos.",
+    )
+    index_parser.add_argument(
+        "--dry-run", action="store_true",
+        help="Ejecutar la indexación en una transacción que se revierte.",
+    )
 
     ask_parser = commands.add_parser("ask", help="Consultar el corpus con citas")
     ask_parser.add_argument("pregunta")
@@ -50,7 +65,7 @@ def main() -> None:
 
     args = parser.parse_args()
     if args.command == "index":
-        _index(args.pdf)
+        _index(args.pdf, replace_document=args.replace_document, dry_run=args.dry_run)
     elif args.command == "ask":
         print(consultar(args.pregunta, args.top_k))
     else:
