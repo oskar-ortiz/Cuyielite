@@ -2,6 +2,8 @@
 
 Estado: **preparación técnica completa; ejecución NO autorizada**. Esta matriz es la única lista de pendientes de carga real. Las demás guías y documentos de verificación enlazan aquí; no debe haber listas divergentes.
 
+La [aprobación técnica de Oskar](aprobacion-tecnica-documentos-lope.md) fue emitida con reservas el 2026-11-17 sobre las versiones identificadas en ese registro. No cierra decisiones D1–D14 ni autoriza la promoción.
+
 Base: `origin/dev` `943947b` (PR #169 fusionado). Revisión documental: `docs/verificaciones/revision-entrega-diery-final.md`. Esquema efectivo y unicidad: `docs/verificaciones/piloto-paridad-documentacion.md` §5. Procedimiento operativo: `docs/operacion/carga-lope-piloto.md`.
 
 ## Nota sobre D1–D14

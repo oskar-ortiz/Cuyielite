@@ -1,6 +1,6 @@
 # Revisión de la entrega final de Diery y contratos vigentes (2026-11-17)
 
-Estado: **revisión técnica terminada; aprobación documental pendiente**. No se atribuye aprobación a Oskar ni al Centro Lope sobre esta versión.
+Estado: **revisión técnica terminada; aprobación técnica de Oskar emitida con reservas el 2026-11-17**. Véase el [registro de aprobación y versiones](aprobacion-tecnica-documentos-lope.md). La aprobación de dominio y la autorización de carga siguen pendientes. Las referencias a aprobación pendiente y el borrador al final se conservan como historial anterior a esa confirmación.
 
 ## Versiones revisadas
 
@@ -54,7 +54,7 @@ Oskar aportó la aclaración **`R` = REEMPLAZO**. Se registra con esa procedenci
 
 Las cifras del informe RF (2256 leídas, 805 usadas, 275 grupos por madre) coinciden con `ENTREGA_FINAL_DATOS_IA.md`; el hash del artefacto coincide con el comunicado y se verá en el bloque 2 antes de deserializar. No se citan métricas como aprobación experta.
 
-## Borrador de aprobación documental — pendiente de envío por Oskar
+## Borrador histórico anterior a la aprobación técnica de Oskar
 
 > Asunto: revisión de documentos Lope v1.0-propuesta (borrador; no enviado)
 >
