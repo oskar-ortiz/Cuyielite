@@ -37,7 +37,7 @@
 | D8 | D8 | PENDIENTE en ambos. |
 | D9 | D9 | Matriz: PENDIENTE; anexo: PROPUESTO (pendiente de validación). El anexo registra una propuesta concreta; no hay aprobación. |
 | D10 | D10 | Matriz: «PREPARADO técnicamente; PENDIENTE registro en el archivo y decisión de dominio»; anexo: COMPROBADO POR OSKAR (PR #170, técnico). La parte técnica queda registrada; la decisión de dominio sigue PENDIENTE. |
-| D11 | D11 | PENDIENTE en ambos. Responsable de dominio: Luis Mangin, zootecnista de cuyes del Centro Lope (SENA) y coasesor del proyecto (detalle en D11 del anexo). Aval y aprobación para la realización del sistema recibidos (`<fecha>`, `<medio>`); entregó la información en PDF y Excel. Validación de decisiones concretas: PENDIENTE; se hará con la retroalimentación al probar el sistema en el SENA. Designación formal registrada por Oskar: pendiente. |
+| D11 | D11 | PENDIENTE en ambos. Responsable de dominio: Luis Mangin, zootecnista de cuyes del Centro Lope (SENA) y coasesor del proyecto. Aval y aprobación para la realización del sistema recibidos (2026-05-18, por WhatsApp); entregó la información en PDF y Excel. Revisor y responsable de dominio son la misma persona; las decisiones y correspondencias las revisará al probar el sistema en el SENA. Validación de decisiones concretas: PENDIENTE. Designación formal registrada por Oskar: pendiente. |
 | D12 | D12 | Matriz: «PREPARADO el comando; PENDIENTE ejecución y revisión»; anexo: PENDIENTE. Equivalente. |
 | D13 | D13 | Matriz: «PREPARADO y comprobado en laboratorio; PENDIENTE comprobación inmediata»; anexo: PENDIENTE. Equivalente. |
 | D14 | D14 | Matriz: «COMPROBADO como disponible; PENDIENTE confirmación de destino»; anexo: COMPARTIDO POR CANAL PRIVADO (por Oskar), valor no registrado en Git. Equivalente; falta la confirmación de destino. |
@@ -88,7 +88,7 @@ lista canónica de pendientes ni reemplaza la matriz.
 | D8 | ¿Cuál es la fuente autorizada de abortos? | `AB` aparece en las celdas `T.C.N.` (17 apariciones: reproductivo G1 6; reproductivo G2 viejo 11), pero no hay cantidad verificable ni regla aprobada para contar ocurrencias; no convertirlo en número. Al cargar se conserva archivo, hoja y celda de cada ocurrencia como procedencia (en la herramienta, nunca en Git). Ver §Información y propuesta de Oskar (D8) y `lope-eventos-valores-encontrados.md` §3. (a) definir la regla de conteo; (b) no publicar sin regla. | `lope-modelo-ddl-propuesto.md` §Estructuras y semánticas (fuente de abortos); `lope-diccionario-mapeo.md` §Mapeos y decisiones (abortos); `lope-identidad-conciliacion.md` §Decisiones que requieren evidencia (abortos); `lope-eventos-valores-encontrados.md` §3. | Los abortos no entran como cantidad al dry-run; cualquier conteo queda fuera hasta aprobar una regla. | Diery aporta trazabilidad; responsable del Centro (por definir) valida la regla; revisor técnico revisa. | PENDIENTE |
 | D9 | ¿Cuál es la fuente y significado del peso de monta frente a `PESO PARTO` y el peso del bloque reproductivo? | Fuente identificada: columna `Peso` de la fila de la hembra en el bloque reproductivo. Su interpretación como peso de monta requiere revisión por registro con procedencia; destino propuesto: pesaje de etapa `MONTA` vinculado a un evento `EMPADRE`, respetando el `CHECK` de `0005`. Ver §Información y propuesta de Oskar (D9) y `lope-eventos-valores-encontrados.md` §7. (a) validar la propuesta; (b) confirmar por registro; (c) rechazar. | `lope-diccionario-mapeo.md` §Mapeos y decisiones (peso de monta; propuesta `MONTA`); `lope-identidad-conciliacion.md` §Decisiones que requieren evidencia (peso de monta); `lope-eventos-valores-encontrados.md` §7. | Sin validación, la propuesta `MONTA` no se promueve; el dry-run excluye esos pesajes. | Diery aporta procedencia por registro; responsable del Centro (por definir) valida; revisor técnico revisa. | PROPUESTO (pendiente de validación) |
 | D10 | ¿Se resuelve la discrepancia de unicidad de `cuyes.codigo_identificacion` (migración 0001 elimina UNIQUE y crea índice no único; matriz de paridad dice UNIQUE)? | Comprobado por Oskar (PR #170: merge `0bb3a98`, commit `b0204ea`): PostgreSQL y SQLite permiten repetir `codigo_identificacion`; la identidad única es el UUID `id`; `0001` elimina `cuyes_codigo_identificacion_key` y crea el índice no único `idx_cuyes_codigo`. Un código repetido es un asunto de conciliación de datos, no una restricción de base de datos. La corrección documental quedó registrada en `piloto-paridad-documentacion.md` §5. | `docs/verificaciones/matriz-carga-real-lope.md` (D10); `docs/verificaciones/revision-entrega-diery-final.md` §D10; `docs/verificaciones/piloto-paridad-documentacion.md` §5; `db/ddl/central/002_nucleo.sql:27`; `db/migrations/central/0001_lope_domain.sql:46-47`; `client/src/data/work.schema.ts`. | No afecta `parto_crias` directamente; habilita tratar códigos repetidos como casos de conciliación, no como error de carga. | Oskar aportó la comprobación; Diery registra la parte técnica; el revisor de dominio decide la parte pendiente. | COMPROBADO POR OSKAR (PR #170; técnico) — DECISIÓN DE DOMINIO PENDIENTE |
-| D11 | ¿Quién es el revisor técnico designado (alcance escrito)? | No hay persona del Centro identificada. Oskar revisa solo la integración técnica de plataforma; falta designar quién valida las correspondencias y las decisiones zootécnicas. Nombre: POR DEFINIR (sin nombre ni firma). Ver §Información y propuesta de Oskar (D11). (a) Oskar/Centro Lope designa y registra por canal autorizado. | `lope-plan-migracion-validacion.md` §Compuertas (revisor técnico designado); `lope-diccionario-mapeo.md` §Estados y fuentes. | Sin revisor designado no se acepta ninguna correspondencia; el dry-run no se puede validar. | Oskar/Centro Lope designa; Nombre: POR DEFINIR. | PENDIENTE |
+| D11 | ¿Quién es el revisor técnico designado (alcance escrito)? | Responsable de dominio: Luis Mangin, zootecnista de cuyes del Centro Lope (SENA) y coasesor del proyecto. Aval y aprobación para la realización del sistema recibidos (2026-05-18, por WhatsApp); entregó la información en PDF y Excel. Revisor y responsable de dominio son la misma persona; las decisiones y correspondencias las revisará al probar el sistema en el SENA. Validación de decisiones concretas: PENDIENTE. Designación formal registrada por Oskar: pendiente. | `lope-plan-migracion-validacion.md` §Compuertas (revisor técnico designado); `lope-diccionario-mapeo.md` §Estados y fuentes. | Sin revisor designado no se acepta ninguna correspondencia; el dry-run no se puede validar. | Luis Mangin (dominio); designación formal por Oskar, pendiente. | PENDIENTE |
 | D12 | ¿Se revisa el dry-run (conteos por entidad, exclusiones, errores y diferencias) antes de promover? | (a) Diery ejecuta solo tras autorización coordinada por Oskar; (b) revisor valida el resultado. | `lope-plan-migracion-validacion.md` §Compuertas (dry-run revisado). | Es la compuerta que habilita o no la promoción real; el dry-run debe quedar revisado y archivado. | Diery ejecuta tras autorización; coordinación de Oskar; revisor valida. | PENDIENTE |
 | D13 | ¿Se cuenta con respaldo restaurable y prueba de restauración inmediatamente antes de la promoción? | (a) administrador autorizado genera respaldo; (b) un administrador comprueba la restauración; coordinado por Oskar. | `lope-plan-migracion-validacion.md` §Compuertas (respaldo restaurable). | Sin respaldo verificable no hay promoción real; no afecta el dry-run en sí. | Administrador autorizado comprueba la restauración; coordinación de Oskar. | PENDIENTE |
 | D14 | ¿Se autoriza el `scope_id` por canal privado (configuración autorizada)? | (a) Oskar comparte por canal privado; (b) no guardar el valor en Git. | `lope-plan-migracion-validacion.md` §Compuertas (ámbito autorizado por canal privado); `lope-identidad-conciliacion.md` §Controles de identidad. | Sin `scope_id` autorizado el manifiesto no se puede generar; el dry-run no es promocionable. | Oskar (canal privado). | COMPARTIDO POR CANAL PRIVADO (por Oskar); valor no registrado en Git |
@@ -116,10 +116,14 @@ lista canónica de pendientes ni reemplaza la matriz.
   el `CHECK` de `0005` (un pesaje no puede tener `parto_id` y `evento_id` a la
   vez). No se publican valores. Detalle en
   `lope-eventos-valores-encontrados.md` §7.
-- **D11 — revisor técnico.** No hay persona del Centro identificada. Oskar
-  revisa solo la integración técnica de plataforma; falta designar quién valida
-  las correspondencias y las decisiones zootécnicas. Nombre: POR DEFINIR, sin
-  nombre ni firma.
+- **D11 — revisor técnico y responsable de dominio.** Responsable de dominio:
+  Luis Mangin, zootecnista de cuyes del Centro Lope (SENA) y coasesor del
+  proyecto. Aval y aprobación para la realización del sistema recibidos
+  (2026-05-18, por WhatsApp); entregó la información en PDF y Excel. Revisor y
+  responsable de dominio son la misma persona; las decisiones y
+  correspondencias las revisará al probar el sistema en el SENA. Validación de
+  decisiones concretas: PENDIENTE. Designación formal registrada por Oskar:
+  pendiente.
 - **D15 — motivo de salida de `R`.** `R` = REEMPLAZO, pero `R` no aparece en
   `DESTINO` en los archivos revisados (solo 15 veces en `COLOR`, que es la
   columna de color). `DESTINO` observado: `M` 545, `V` 297, vacío 6465.
@@ -127,6 +131,18 @@ lista canónica de pendientes ni reemplaza la matriz.
   `R`. No hay vínculo por fila entre `DESTINO` y observaciones, así que el motivo
   de salida no es demostrable con estos archivos. Detalle en
   `lope-eventos-valores-encontrados.md` §4–§6.
+
+### Antecedentes de la relación con el Centro Lope (relato de Diery, pendiente de soporte documental)
+
+a) El equipo se reunió y habló con Luis Mangin, zootecnista de cuyes del Centro Lope (SENA). [fecha no registrada]
+
+b) Luis Mangin dio su aval y aprobación para la realización del sistema (2026-05-18, por WhatsApp) y aceptó acompañar el proyecto como coasesor.
+
+c) Entregó al equipo los PDF y Excel con la información del Centro, incluido el libro de producción `db/raw_Lope/produccion_cuyes.pdf`, usada para el ETL, el modelo, el corpus del RAG y la validación.
+
+d) Acuerdo: el equipo entrega el sistema funcional, el Centro lo prueba y da retroalimentación según su criterio; las revisiones de decisiones y correspondencias se harán en esa prueba.
+
+e) La autorización por escrito del uso de los datos y del corpus en el trabajo de grado: [pendiente de soporte documental].
 
 ## Coherencia D1–D4 con D10
 
