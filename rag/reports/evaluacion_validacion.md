@@ -159,3 +159,52 @@
 - Conjunto pequeño y sin revisión zootécnica independiente.
 - La heurística de términos puede marcar una cita correcta como incompleta si el fragmento no repite todos los términos de la pregunta.
 - Entorno: el índice PostgreSQL no estaba accesible en este entorno; se reconstruyó el mismo corpus con extract_pages + chunk_pages (76 fragmentos) y se ejecutó la misma recuperación en memoria, sin reindexar.
+
+## Medición final de ligaduras y ranking
+
+- Fecha: 2026-11-18.
+- Modelo: `intfloat/multilingual-e5-base`; `top_k=5`.
+- Umbral: `0.807566308073`, calibrado con el texto previo y mantenido sin recalibrar.
+- Se midió una sola vez al final sobre los mismos 76 fragmentos reconstruidos en memoria; no se consultó ni escribió en PostgreSQL.
+- Antes significa extracción previa a la normalización; después, el extractor del commit `09d7e248aac42287ab9d2021b04445719b7596a3`.
+
+| Condición | hit@1 | hit@3 | hit@5 | MRR | Abstención fuera de corpus | Abstención en dominio sin respuesta |
+|---|---:|---:|---:|---:|---:|---:|
+| Antes de normalizar | 0.8235 | 0.8824 | 0.9412 | 0.8578 | 7/10 | 0/3 |
+| Después de normalizar | 0.8235 | 0.8824 | 0.9412 | 0.8676 | 7/10 | 0/3 |
+
+Cambió la decisión de abstención en 0 de las 13 sondas (10 fuera de corpus y 3
+en dominio sin respuesta). La métrica de ranking que mejoró fue MRR; el umbral
+y las etiquetas no cambiaron.
+
+### Selección previa en calibración y desarrollo
+
+Las alternativas se compararon solo con `rag/eval/preguntas.yaml` (20 válidas
+y 5 fuera de corpus) y el conjunto de desarrollo de dos consultas piloto, todas
+con `top_k=5` y el mismo umbral. Las páginas probables del piloto siguen
+**pendientes de verificar por Diery**: gestación, 26/32/71; vitamina C, 32/42.
+
+| Conjunto y condición | hit@1 | hit@3 | hit@5 | MRR | Abstención fuera de corpus |
+|---|---:|---:|---:|---:|---:|
+| Calibración, texto previo | 0.7500 | 0.9500 | 0.9500 | 0.8333 | 5/5 |
+| Calibración, ligaduras normalizadas | 0.8500 | 0.9500 | 0.9500 | 0.8917 | 5/5 |
+| Piloto, texto previo | 0.0000 | 0.5000 | 0.5000 | 0.2500 | — |
+| Piloto, ligaduras normalizadas | 0.5000 | 0.5000 | 0.5000 | 0.5000 | — |
+
+Una única variante adicional, fusión RRF de BM25 y ranking semántico con
+constante 60 y compuerta del mismo umbral, se probó solo en esos dos conjuntos.
+Con ligaduras normalizadas dio hit@1=0.7500, hit@3=0.9500, hit@5=0.9500 y
+MRR=0.8333 en calibración (abstención 5/5); en piloto dio
+0.5000/0.5000/0.5000 y MRR=0.5000. Se **descartó**: empeoró la calibración y no
+mejoró el piloto; no se midió en validación ni se incorporó al recuperador.
+
+En la reconstrucción local actual, las páginas devueltas para las consultas de
+desarrollo después de normalizar fueron gestación: 68; vitamina C: 42, 75, 71,
+76, 83. Estos resultados no sustituyen las páginas probables pendientes de
+verificación ni las salidas Android registradas anteriormente; no se ajustó el
+umbral a partir de ellos.
+
+La pregunta válida cuya página esperada es 85 (B9) permanece sin cambios; esa
+página es bibliografía y su etiqueta queda pendiente de revisión manual por
+Diery. No se editaron las etiquetas ni las páginas esperadas del conjunto de
+validación.
