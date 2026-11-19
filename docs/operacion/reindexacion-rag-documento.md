@@ -1,8 +1,8 @@
 # Reindexación transaccional de un documento RAG
 
-Estado: mecanismo preparado y comprobado con datos sintéticos. **No se actualizó el índice del piloto en esta entrega.** El extractor corregido y la pertinencia siguen en revisión con Diery.
+Estado actual: mecanismo comprobado y [actualización del índice del piloto ejecutada el 2026-11-18](../verificaciones/rag-actualizacion-piloto.md), con respaldo restaurado, dry-run, reemplazo y replay verificados. La pertinencia continúa pendiente con Diery; el recorrido de pantallas de esta actualización queda separado.
 
-El [ensayo posterior sobre una restauración de la base RAG](../verificaciones/rag-reindexacion-aislada.md) comprueba dry-run, reemplazo y replay con el extractor de #183. Documenta una variante numérica de embeddings y las limitaciones de pertinencia que permanecen; el índice activo no fue actualizado.
+El [ensayo previo sobre una restauración de la base RAG](../verificaciones/rag-reindexacion-aislada.md) comprobó dry-run, reemplazo y replay con el extractor de #183 sin modificar entonces el índice activo. Documenta la variante numérica local de embeddings utilizada posteriormente y las limitaciones de pertinencia que permanecen.
 
 ## Comportamiento
 
