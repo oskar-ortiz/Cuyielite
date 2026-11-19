@@ -9,6 +9,7 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        manifestPlaceholders = [appLabel: "@string/app_name"]
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -25,10 +26,17 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
         debug {
+            if (project.hasProperty("labAppId") && project.hasProperty("ensayoAppId")) {
+                throw new GradleException("Usa solo labAppId o ensayoAppId, no ambos")
+            }
             // Variante de laboratorio: mismo código, paquete y almacenamiento
             // propios, para no tocar una instalación con datos reales.
             if (project.hasProperty("labAppId")) {
                 applicationIdSuffix ".lab"
+            }
+            if (project.hasProperty("ensayoAppId")) {
+                applicationIdSuffix ".ensayo"
+                manifestPlaceholders = [appLabel: "CuyiElite Ensayo"]
             }
         }
     }
