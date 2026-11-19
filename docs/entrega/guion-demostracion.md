@@ -2,6 +2,8 @@
 
 Presentación prevista, aún no realizada al escribir este guion. Duración estimada: **20–25 minutos**. Usar el escenario comprobado de [Ensayo aislado](ensayo-funcional-aislado.md); no modificar la aplicación principal ni importar datos reales para la exposición.
 
+B8 queda aplazado por Oskar (19/11/2026) para una mejora futura. No bloquea este recorrido; se conserva como limitación conocida y no se presenta la pertinencia global como resuelta.
+
 ## Preparación previa (5 min, antes de la sesión)
 
 1. Conservar el computador encendido/alimentado, abrir Docker Desktop y conectar el teléfono físico por USB. Mantener Pixel_36 cerrado para ahorrar memoria.

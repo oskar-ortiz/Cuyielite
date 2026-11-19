@@ -83,8 +83,8 @@ No se ejecuta ETL real, carga, aceptación, migración, evaluación ni cambio de
 
 | Tema | Responsable | Estado |
 |---|---|---|
-| Pertinencia RAG (gestación, vitamina C) y umbral | Diery | PENDIENTE; handoff `docs/integracion/handoff-diery-pertinencia-rag.md` |
-| Procedencia de preguntas RAG | Diery | PENDIENTE |
+| Límites de pertinencia RAG (gestación, vitamina C, B8) | Mejora futura coordinada con Diery | Limitaciones documentadas; Oskar aplaza B8 el 19/11/2026. No bloquea presentar Ensayo ni se declara resuelto; conservar handoff y evaluación |
+| Procedencia de preguntas RAG | Diery | ENTREGADA/DOCUMENTADA en `rag/reports/evaluacion_validacion.md`; no equivale a validación experta |
 | Validación experta ciega del RF | Diery + revisor experto | PENDIENTE |
 
 Aprobar la documentación no cierra ninguno de estos tres trabajos.
