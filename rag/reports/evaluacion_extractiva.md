@@ -90,3 +90,67 @@ Heurística, no calificación zootécnica: «el extracto proviene de una página
 - B9: la p. 85 esperada no aparece en el top 5; la selección no puede compensar una omisión de recuperación.
 - Vitamina C: la p. 42 no aparece en el top 5 y el manual no explica el porqué; la limitación documentada permanece.
 - La selección acorta el extracto y prioriza frases literales, pero no añade evidencia nueva ni valida respuestas.
+
+## Limitaciones conocidas
+
+Medición de seguimiento del PR #192, sin cambios en recuperación, corpus,
+modelo, umbral, `top_k`, criterio de selección ni YAML de preguntas.
+
+### (a) Tablas del PDF: columnas separadas y unidad perdida
+
+La extracción aplane la tabla de requerimientos de la p. 32 física en el orden
+`Nutrientes`, `Unidad`, `Gestación`, `Lactancia`, `Crecimiento`. La fila de
+interés se lee como `Vitamina C | Mg | 200 | 200 | 200`; en el texto plano
+aparece `... Vitamina C 200 200 200 % % % % Mg Nutrientes Unidad Etapa %
+kcal/kg %`, con la unidad desplazada al final. Por coordenadas, `Mg` está en la
+columna `Unidad` (x≈253) y los valores `200` en x≈321/366: el extracto puede
+mostrar `200` sin su `mg`. La cadena `2000.` cercana (y≈275) corresponde al año
+de la referencia `Fuente: Caycedo, 2000.`, no a un valor de la tabla; la unidad
+`Mg` sí está en otra columna, separada de los valores.
+
+### (b) Página 85 en la consulta HTTP de gestación
+
+El extractor sí tomó una frase de la p. 85 física: `Producción sostenible de
+cuyes.` Es el título de una entrada bibliográfica (`… (2011). Producción
+sostenible de cuyes. San Juan de Pasto …`), dentro de la sección de
+bibliografía, no contenido zootécnico de respuesta. Esa página se recupera en
+segunda posición con similitud 0.8395, por encima del umbral 0.8076 y delante
+de la p. 26 con `La gestación dura entre 63 y 70 días.` Corregir este orden
+exigiría cambiar el corpus y queda fuera de este alcance.
+
+### (c) B8 y B9: extracto antes y después
+
+B8 (`¿A qué se debe que los cuyes sean clasificados como animales "precoces" al
+momento de nacer?`), páginas recuperadas 28, 12, 80, 85, 70:
+
+- Antes: el extracto completo incluía la p. 28 con `Los cuyes son animales
+  precoces; nacen con pelo y con capacidad de alimentarse solos`, además de las
+  demás páginas recuperadas.
+- Después: se eligieron `Se realizará la inspección para descartar animales
+  enfermos y vísceras, que no sean aptas para consumo.` [p. 80] y `- Evitar
+  compartir la indumentaria para otras labores; debe ser exclusiva para el
+  manejo de los cuyes.` [p. 70].
+- Conclusión: en B8 el extracto anterior sí incluía la p. 28 y el nuevo no; es
+  una regresión de selección, aunque la recuperación no cambió.
+
+B9 (`¿Cuál es el nombre científico oficial con el que se clasifica taxonómicamente
+al cuy doméstico?`), páginas recuperadas 28 y 12:
+
+- Antes: p. 28 (`de aluminio galvanizado flexible, de calibre 40…`) y p. 12
+  (`La crianza y explotación del cuy a nivel tecnificado…`).
+- Después: las mismas dos páginas, con una frase por página; no hay pérdida de
+  página respecto del extracto anterior.
+- La p. 85 esperada nunca se recuperó y contiene solo bibliografía, por lo que
+  la etiqueta de B9 es dudosa. No se modifica el YAML.
+
+### (d) y (e)
+
+- La p. 42 física sigue sin recuperarse en la consulta de vitamina C.
+- El manual da el requerimiento y la suplementación, pero no explica el porqué
+  fisiológico de la vitamina C; no se construye una explicación sin respaldo.
+
+### (f) Alcance
+
+La conclusión sigue acotada a «queda concluida esta repetición local de la
+evaluación de extracción y recuperación». No se cierra la pertinencia global
+del asistente.
