@@ -2,6 +2,8 @@
 
 Estado: mecanismo preparado y comprobado con datos sintéticos. **No se actualizó el índice del piloto en esta entrega.** El extractor corregido y la pertinencia siguen en revisión con Diery.
 
+El [ensayo posterior sobre una restauración de la base RAG](../verificaciones/rag-reindexacion-aislada.md) comprueba dry-run, reemplazo y replay con el extractor de #183. Documenta una variante numérica de embeddings y las limitaciones de pertinencia que permanecen; el índice activo no fue actualizado.
+
 ## Comportamiento
 
 `rag.ask index` conserva la indexación incremental existente. Cuando cambia el texto, el hash cambia: ejecutar solo ese comando puede conservar fragmentos obsoletos.
