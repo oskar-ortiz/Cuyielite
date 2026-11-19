@@ -315,8 +315,8 @@ al pie. Se informan como referencias; no se calcula hit@k con ellas.
   productivo y tipo de explotación a que se destina el animal.»
 
 **Verificado por Diery:** en D15, la p. 66 física corresponde a la impresa 65
-y la p. 67 física a la impresa 66. **Numeración por confirmar:** la p. 61
-física citada en la evidencia de D15 no tiene número impreso verificado.
+y la p. 67 física a la impresa 66; la p. 61 física corresponde a la impresa
+60, verificada por Diery.
 
 La ligadura se acepta como mejora de extracción. La pertinencia que siga
 fallando queda pendiente.

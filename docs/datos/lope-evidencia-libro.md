@@ -77,7 +77,7 @@ en observaciones, pero no un campo de "motivo" ni una causa de enfermedad.
 - Observaciones del registro reproductivo, p. 67 (física; impresa p. 66, verificada por Diery): «reporte de fecha de
   reproductores muertos y fecha de reemplazo». Son fechas, no un motivo.
 - La decisión de destino se describe por disponibilidad, p. 61 (física;
-  impresa: numeración por confirmar): «El destino de
+  impresa p. 60, verificada por Diery): «El destino de
   cada grupo dependerá de la disponibilidad de animales para cubrir los
   requerimientos para venta o reproducción».
 - **No se encuentra en el libro** un campo o código para registrar "enfermedad"
