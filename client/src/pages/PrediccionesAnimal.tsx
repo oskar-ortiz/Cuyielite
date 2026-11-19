@@ -101,6 +101,8 @@ const PrediccionesAnimal: React.FC = () => {
   const requestRef = useRef(0);
   const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
   const [evidence, setEvidence] = useState<EvidenceRow[]>([]);
+  const [evidenceLoaded, setEvidenceLoaded] = useState(false);
+  const [readingEvidence, setReadingEvidence] = useState(false);
   const [busyEval, setBusyEval] = useState(false);
   const [evalError, setEvalError] = useState<string | null>(null);
   const canWrite = snapshot().canWrite;
@@ -119,11 +121,23 @@ const PrediccionesAnimal: React.FC = () => {
         evidencias?: EvidenceRow[];
       };
       setEvidence(context.evidencias ?? []);
+      setEvidenceLoaded(true);
       setEvalError(null);
     } catch (error) {
       setEvalError(error instanceof Error ? error.message : String(error));
     }
   }, [accessToken, animalId]);
+
+  const readEvidence = async () => {
+    setBusyEval(true);
+    setReadingEvidence(true);
+    try {
+      await loadContext();
+    } finally {
+      setReadingEvidence(false);
+      setBusyEval(false);
+    }
+  };
 
   const runEvaluation = useCallback(
     async (kind: 'reproductora' | 'candidata', declareOnly = false) => {
@@ -450,9 +464,19 @@ const PrediccionesAnimal: React.FC = () => {
                     Solo una evaluación confirmada cambia la categoría. Lo provisional, lo insuficiente y la evidencia
                     sin revisar no se guardan como categoría oficial.
                   </p>
-                  {evalError && <p className="estado-vacio">{evalError}</p>}
+                  <IonButton fill="outline" disabled={busyEval} onClick={() => void readEvidence()}>
+                    {readingEvidence ? 'Consultando evidencia…' : 'Consultar evidencia del servidor'}
+                  </IonButton>
+                  {evalError && (
+                    <p role="alert" className="estado-vacio">
+                      {evalError}
+                    </p>
+                  )}
+                  {!evidenceLoaded && (
+                    <p className="texto-ayuda">La evidencia del servidor todavía no se ha consultado.</p>
+                  )}
                   <IonList>
-                    {evidence.length === 0 && (
+                    {evidenceLoaded && evidence.length === 0 && (
                       <IonItem>
                         <IonLabel>Sin evidencia registrada para este animal.</IonLabel>
                       </IonItem>

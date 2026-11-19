@@ -1,67 +1,69 @@
-# Recorrido funcional con animales sintéticos
+# Usar CuyiElite Ensayo en Windows y celular
 
-El laboratorio usa una base PostgreSQL propia, un perfil Windows separado y el paquete Android `co.ucc.cuyielite.ensayo`. No publica registros en la base del piloto ni usa Excel reales. El backend de ensayo y el del piloto se alternan en el puerto 8000; nunca se deben usar indistintamente desde el mismo perfil/dispositivo lógico.
+El ensayo está preparado en este equipo con PostgreSQL propio, un perfil Windows separado y Android `co.ucc.cuyielite.ensayo`. Permite mostrar operación local, intercambio de pesajes, reglas/RF, categorías, alertas y asistente. La aplicación principal conserva sus datos. Los registros tienen nombres naturales; su procedencia sigue siendo sintética, sin aceptaciones ni carga de datos reales de Lope.
 
-## Entrar al ensayo preparado en este equipo
+## Empezar
 
-1. Abrir **CuyiElite Ensayo** del Escritorio de Windows, no el acceso habitual. Ese acceso utiliza el ejecutable instalado con `--user-data-dir` propio.
-2. En el celular abrir **CuyiElite Ensayo**, no CuyiElite ni la variante `.lab`. Tiene nombre de launcher diferenciado y sus propias bases/Keystore.
-3. En ambos: **Trabajo → Acceso**. Usuario `ensayo.admin`; contraseña privada en `%LOCALAPPDATA%\CuyiElite\ensayo-funcional\cuentas.json`. La cuenta `ensayo.viewer` sirve para consulta. No son las cuentas del piloto.
-4. Abrir **Sincronización** y sincronizar hasta que termine. Volver a **Galpones**.
-5. Abrir **ENSAYO · Galpón A → ENS-P01 → Animales**. Aparecen `ENS-MADRE`, `ENS-CANDIDATA` y `ENS-MACHO`. En `ENS-P02` está `ENS-CRIA`.
+1. Abrir Docker Desktop y esperar a que esté disponible el contenedor del piloto.
+2. Conectar el celular por USB y aceptar la autorización de depuración en el teléfono.
+3. Ejecutar **Iniciar Ensayo Local.cmd** del Escritorio. Debe indicar `ensayo listo` y `USB: teléfono enlazado con backend 8000`. Abre Windows con el perfil del ensayo y reutiliza el backend si ya corresponde a esa base.
+4. En el teléfono abrir **CuyiElite Ensayo**. En ambos usar **Entrar a trabajo**, no la base independiente de Demostración.
+5. Si no hay sesión, entrar en **Acceso** con `ensayo.admin`. Contraseña privada: `%LOCALAPPDATA%\CuyiElite\ensayo-funcional\cuentas.json`. `ensayo.viewer` es la cuenta de consulta.
+6. Abrir **Sincronización → Sincronizar**. Al terminar, volver a **Galpones → Galpón Norte → P-01 → Animales**.
 
-El dominio tiene un galpón, dos pozas, cuatro animales, cuatro partos de ENS-MADRE, un pesaje inicial de 950 g de ENS-CANDIDATA, un evento y un vínculo cría–parto. Son ejemplos ficticios, no recomendaciones de manejo ni datos del Centro Lope. La fecha del cuarto parto es 2026-11-01 para facilitar un caso verificable de evaluación.
+Si Windows funciona y el teléfono muestra `failed to connect /127.0.0.1:8000`, mantener el USB conectado y ejecutar **Reconectar celular Ensayo.cmd**. Repetir después la acción fallida. El enlace USB se debe restablecer tras una desconexión; no abre puertos de red.
 
-## Demostración guiada, un paso por vez
+## Qué mostrar
 
-| Paso | Dónde | Acción / resultado a comprobar |
-|---|---|---|
-| 1 | Ambos | Acceso como admin, sincronización y mismo galpón/animales |
-| 2 | Windows | Ficha ENS-CANDIDATA: registrar un pesaje ficticio de `975.50` g; elegir fecha y etapa según los campos reales del formulario |
-| 3 | Windows y luego celular | Sincronizar ambos; comprobar que el pesaje aparece una sola vez en el teléfono |
-| 4 | Celular | Desconectar USB; registrar otro pesaje ficticio de `980.25` g y comprobar que queda local/pendiente |
-| 5 | Celular y luego Windows | Reconectar, restablecer reverse por serial, sincronizar; comprobar el pesaje y repetir sync sin duplicación |
-| 6 | Ficha de animal | Consultar predicción informativa: reglas principales y RF separado; no equivale a evaluación oficial |
-| 7 | ENS-MADRE | Revisar historial de cuatro partos y ejecutar evaluación explícita; observar fundamento y fecha sugerida, sin ejecutar descarte |
-| 8 | Ambos | Consulta con ensayo.viewer: sin acciones de escritura; conserva datos del mismo ensayo |
-| 9 | Ambos | Cerrar/reabrir y comprobar datos y sesión |
+| Registro | Caso preparado |
+|---|---|
+| Galpón Norte | Unidad productiva con P-01 y P-02 |
+| H-001, P-01 | Cuatro partos, DESCARTE confirmada; causa 01/11/2026 y límite sugerido 21/11/2026 |
+| H-002, P-01 | Candidata ELITE; historial de pesajes y consulta informativa con RF |
+| H-003, P-01 | Reproductora NORMAL confirmada |
+| H-004, P-01 | Supuesto de dos abortos: provisional, sin categoría definitiva ni alerta |
+| H-005, P-01 | Cuarto parto sin fecha: DESCARTE confirmada, sin vencimiento inventado |
+| H-006, P-01 | Evidencia sin validar/datos incompletos; sin categoría oficial |
+| M-001 / CR-001 | Macho en P-01 y cría en P-02, con vínculo cría–parto preparado |
 
-Estos pasos son el **guion a ejecutar**, no resultados ya observados. La preparación comprueba login/pull con el backend real; el recorrido se registra según se complete. Conflictos y evidencia declarada/revisada pueden añadirse después, sin modificar manualmente versiones, cursores ni recibos.
+Las evaluaciones iniciales y sus evidencias se prepararon mediante API reales con cuentas del laboratorio. Revisar evidencia sintética no representa una aprobación zootécnica de Lope. Consultar una predicción no equivale a guardar una evaluación oficial ni ejecuta un descarte.
 
-## Arranque y retorno al piloto
+## Recorrido de 15–20 minutos
 
-La configuración y las cuentas de este laboratorio son privadas y locales a este computador. Se dejó un controlador privado en `%LOCALAPPDATA%\CuyiElite\ensayo-funcional\control.py`. Ejecutar desde la raíz del repositorio:
+1. **Inventario:** abrir el galpón, las dos pozas, H-001 y su historial; mostrar genealogía y actividades de las fichas.
+2. **Windows → celular:** en H-002 registrar un peso nuevo, guardar y sincronizar Windows; sincronizar el celular y comprobar el mismo registro. Se ejecutó con **982,75 g**.
+3. **Celular sin enlace → Windows:** interrumpir USB, registrar otro pesaje y conservarlo pendiente. Reconectar, ejecutar el acceso de reconexión y sincronizar ambos. Se comprobó con **990,25 g**: pendiente offline, envío aceptado y una sola fila en Windows. Repetir sync terminó **0/0**.
+4. **Predicción:** H-002 → Predicciones → Candidata. NUPAR `3`, TCNV `4`, nacimiento `150`, destete `320`, días `15`, monta `950`, ojos `1 / Negro`. Pulsar **Evaluar candidata**, sin declarar evidencia ni guardar evaluación. Se observó **ELITE / CONFIRMADO**, apoyo exploratorio separado **ELITE 83,4 % / NORMAL 16,6 %**. Es el resultado de ese artefacto y esos datos, no una garantía para otros casos. Más abajo, **Consultar evidencia del servidor** permite leer los siete criterios revisados; no los modifica.
+5. **Categorías y alertas:** comparar H-001, H-004 y H-005. La alerta recomienda; no cambia automáticamente el estado productivo. Sus fechas son fijas: pueden quedar vencidas con el paso del tiempo.
+6. **Asistente:** Resultados `5`; consultar el manual y después `¿Cómo configuro una impresora Wi-Fi?`. La segunda se abstiene sin fuentes. Mostrar las citas y los límites de la primera sin presentar un fragmento poco pertinente como respuesta correcta.
+7. **Consulta y reapertura:** con `ensayo.viewer` la escritura está bloqueada. Cerrar/reabrir conserva datos y sesión; la autorización offline sigue limitada por la política vigente. Volver a admin para continuar registrando.
+
+Para repetir el intercambio elegir valores nuevos y comprobar conteos; no borrar filas ni editar cursores/recibos para aparentar un ciclo nuevo. Conflictos conserva el flujo ya verificado **Conservar versión central / Reintentar cambio local**; no se dejó un conflicto artificial pendiente ni se repitió ese caso en este recorrido.
+
+## Estado comprobado y límites
+
+La [evidencia del recorrido](../verificaciones/ensayo-funcional-windows-celular.md) separa preparación API, observación nativa, intervención manual y comprobación de bases. Ambas apps intercambiaron pesajes, consultaron RF real y asistente. Oskar confirmó sesión y galpón conservados al reabrir ambos.
+
+El selector RAG de #192 está activo. La consulta de materiales devuelve fuentes reales pero mezcla texto de jaulas/pozas: no acredita pertinencia. Gestación/vitamina C y la regresión B8 siguen con Diery; no se cambió corpus, modelo, umbral ni índice. Véase [handoff RAG](../integracion/handoff-diery-pertinencia-rag.md).
+
+## Aislamiento y recuperación
+
+Ensayo y piloto alternan en `127.0.0.1:8000`. **No usar la app principal mientras ese puerto sirva Ensayo.** Para volver al piloto, cerrar Ensayo y ejecutar desde la raíz del repositorio:
 
 ```powershell
-# Activar/reanudar el laboratorio (detiene solo el backend propio de este repo):
-python "$env:LOCALAPPDATA\CuyiElite\ensayo-funcional\control.py" ensayo
-
-# Consultar el modo registrado y /health:
-python "$env:LOCALAPPDATA\CuyiElite\ensayo-funcional\control.py" status
-
-# Al terminar, cerrar las apps de ensayo y volver al piloto habitual:
 python "$env:LOCALAPPDATA\CuyiElite\ensayo-funcional\control.py" piloto
 ```
 
-El controlador valida proceso y directorio antes de detenerlo. Lee la configuración privada del ensayo o el `.env` original según el modo; no reescribe el `.env`, no borra bases ni recalcula identidades. Conserva el laboratorio para repetir el recorrido. No sustituye un instalador portable del backend.
+Abrir después la app/perfil habitual. El controlador no reescribe `.env`, no borra bases ni cambia identidades. Los accesos del Escritorio son locales a este computador, no un backend portable.
 
-Con teléfono conectado, confirmar primero `adb devices -l` y luego `adb -s SERIAL_DEL_TELEFONO reverse tcp:8000 tcp:8000`. Para volver al piloto, abrir la app/perfil habituales después de restaurar el backend; no reutilizar las cuentas o cursores de Ensayo.
+Respaldo privado: `%LOCALAPPDATA%\CuyiElite\ensayo-funcional\respaldos\`, con dump `PGDMP`, hash y reporte de restauración. Se restauró en una base nueva y se eliminó solo esa copia. **No restaurar sobre una base activa**: reiniciar un escenario exige coordinar perfiles, sesiones, cursores y dispositivos. No hay reset destructivo automático.
 
-## Variante Android
+El escenario anterior con UUID no admitidos se respaldó y sustituyó por uno UUIDv4; Oskar autorizó reiniciar exclusivamente Ensayo. El pesaje previo de 975,50 g se recuperó mediante push normal. No se relajó el contrato ni se alteraron manualmente cursores o recibos.
 
-`assembleDebug -PensayoAppId=true` genera el paquete `.ensayo` con nombre **CuyiElite Ensayo**. `-PlabAppId=true` conserva la variante `.lab`; los flags son excluyentes. Sin flags se mantiene el paquete habitual y su nombre. No cambia la lógica de negocio ni los transportes.
+## Artefactos
 
-En esta preparación: build JDK 21, SDK local API36, un worker y heap 768 MB, **BUILD SUCCESSFUL**. También se procesó el manifiesto debug sin flags: paquete `co.ucc.cuyielite`, etiqueta `@string/app_name`. Se verificó que app_name y title_activity_main contienen el mismo texto habitual.
+- Windows: **CuyiElite Ensayo.lnk** apunta ahora a un ejecutable propio en `%LOCALAPPDATA%\CuyiElite\ensayo-funcional\windows-app\win-unpacked\CuyiElite Ensayo.exe`, con el mismo perfil separado. SHA-256 del ejecutable `fd34cd713c02e23d1e3f327bfbc10dcdba3574b284117cb186e95523af2a3eef`; del `app.asar`, `8a8c93381a98bc3e8b1057719705f0a799540edf7c983af708febfbbd4aa58c6`. El ejecutable y acceso habituales no cambiaron.
+- APK actualizado: `%USERPROFILE%\Downloads\CuyiElite-Piloto-20261118\CuyiElite-Ensayo.apk`, SHA-256 `2f384c997e89e69b9da7b366ba93dd36ac447b1cf203117afc0fc89e435203a3`. Oskar lo actualizó manualmente sin desinstalar; el hash del APK instalado coincide. En esa carpeta se incluye `LEEME-ENSAYO.txt`.
+- Android: `assembleDebug -PensayoAppId=true`, JDK 21, SDK API36. Flags `labAppId` y `ensayoAppId` excluyentes; sin flags queda el paquete habitual. APK debug, no publicación de tienda.
 
-APK privado: `%USERPROFILE%\Downloads\CuyiElite-Piloto-20261118\CuyiElite-Ensayo.apk`, SHA-256 `b031f5a7e4ce3d42db9c004d57362259239ce8d63c003e693e21f7531f901877`. No reemplaza el APK `.lab` ya entregado. El teléfono rechazó la instalación ADB con `INSTALL_FAILED_USER_RESTRICTED`; Oskar instaló el archivo manualmente y se confirmó su paquete mediante `pm path`. No se cambiaron restricciones de seguridad.
-
-## Evidencia de preparación
-
-- PostgreSQL aislado preparado con bootstrap y migraciones oficiales. Cuentas nuevas y ámbito sintético propio.
-- Galpón/pozas publicados mediante push v1 real; las cinco entidades de dominio, mediante `publicar_cambios` real en transacción.
-- Login real y pull HTTP comprobados: v1 devolvió 14 items y v2 11; hay solapamiento de registros, no 25 entidades distintas. El cliente debe aplicar su idempotencia normal.
-- El conteo de las siete tablas de dominio del piloto se comparó antes/después y no cambió.
-- Artefacto RF configurado con hash autorizado `744349c43b4781dc5acef88e3db9dd6522d7b76c26a3f91e82d578792d6adce9`; no se reentrenó ni se versionó.
-- RAG conserva corpus, índice, modelo y umbral; su pertinencia sigue en el frente de Diery.
-
-No se declara todavía observado el intercambio de pesajes en UI ni una evaluación oficial en este nuevo laboratorio. El acceso, registro y sincronización se completarán con intervención manual de Oskar. No hay datos reales, aprobaciones de correspondencias ni autorización de carga institucional en este ensayo.
+No se versionan contraseñas, configuraciones privadas, copias de bases, modelos ni binarios.
