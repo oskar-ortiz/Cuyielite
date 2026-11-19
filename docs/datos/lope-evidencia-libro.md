@@ -17,16 +17,16 @@ siguen PENDIENTES o PROPUESTAS hasta la validación del responsable del Centro.
 - Libro: *Producción de Cuyes*, SENA, Centro Internacional de Producción Limpia
   Lope, 2018; 86 páginas de PDF. El contenido con números de página está en la
   p. 8 del PDF.
-- **Convención de cita:** se cita la página del PDF, que equivale a la página
-  impresa + 1 (la portada y las páginas legales no llevan número impreso). Por
-  ejemplo, la sección 8.3 figura en el índice en la impresa 64 y su contenido
-  empieza en la p. 65 del PDF.
+- **Convención de cita:** las páginas citadas son físicas del PDF (visor). La
+  página impresa se añade solo cuando Diery la ha verificado; no se infiere
+  para las referencias de D15: p. 66 (física; impresa: pendiente de verificar)
+  y p. 67 (física; impresa: pendiente de verificar).
 - Citas textuales cortas, de una frase. No se copian tablas completas,
   identificadores ni datos de animales.
 
 ## Resumen
 
-| Punto | Resultado | Páginas del PDF |
+| Punto | Resultado | Páginas físicas del PDF (visor) |
 |---|---|---|
 | 1. Significado de `R` | Evidencia encontrada; contradice la lectura `R` = REEMPLAZO | 66, 67 |
 | 2. Códigos `M` y `V` en `DESTINO` | Evidencia encontrada | 66 |
@@ -40,12 +40,12 @@ siguen PENDIENTES o PROPUESTAS hasta la validación del responsable del Centro.
 **Evidencia encontrada.** El libro usa `R` con dos significados, según la
 columna; ninguno es "reemplazo".
 
-- Color (p. 66): «COLOR: color del pelo la cría. B: blanco; By: bayo; R:
+- Color, p. 66 (física; impresa: pendiente de verificar): «COLOR: color del pelo la cría. B: blanco; By: bayo; R:
   rojo; N: negro; G: gris; Ag: agutí».
-- Destino (p. 66): «R: reproductor; D: descarte; V: vendido; M:muerto; L:
+- Destino, p. 66 (física; impresa: pendiente de verificar): «R: reproductor; D: descarte; V: vendido; M:muerto; L:
   levante; E: engorde».
 - El término "reemplazo" aparece en el registro reproductivo como una fecha de
-  observación, no como la sigla `R` (p. 67): «OBSERVACIONES: reporte de fecha de
+  observación, no como la sigla `R`, p. 67 (física; impresa: pendiente de verificar): «OBSERVACIONES: reporte de fecha de
   reproductores muertos y fecha de reemplazo».
 
 **Contradicciones.** La aclaración de Oskar dice `R` = REEMPLAZO. El libro
@@ -59,7 +59,7 @@ resuelve aquí: queda para el responsable del Centro.
 ## 2. Códigos `M` y `V` en la columna `DESTINO`
 
 **Evidencia encontrada.** El libro define ambos códigos en la nomenclatura de
-`DESTINO` (p. 66): «V: vendido; M:muerto».
+`DESTINO`, p. 66 (física; impresa: pendiente de verificar): «V: vendido; M:muerto».
 
 - La lista completa de `DESTINO` en el libro es `R`, `D`, `V`, `M`, `L`, `E`
   (reproductor, descarte, vendido, muerto, levante, engorde).
@@ -72,9 +72,9 @@ resuelve aquí: queda para el responsable del Centro.
 **Evidencia parcial.** El libro registra el destino por código y algunas fechas
 en observaciones, pero no un campo de "motivo" ni una causa de enfermedad.
 
-- `DESTINO` (p. 66): «V: vendido; M:muerto» y «D: descarte». El código indica
+- `DESTINO`, p. 66 (física; impresa: pendiente de verificar): «V: vendido; M:muerto» y «D: descarte». El código indica
   la salida, no la causa.
-- Observaciones del registro reproductivo (p. 67): «reporte de fecha de
+- Observaciones del registro reproductivo, p. 67 (física; impresa: pendiente de verificar): «reporte de fecha de
   reproductores muertos y fecha de reemplazo». Son fechas, no un motivo.
 - La decisión de destino se describe por disponibilidad (p. 61): «El destino de
   cada grupo dependerá de la disponibilidad de animales para cubrir los
@@ -92,9 +92,9 @@ asocia `R` con el motivo de salida.
 **Evidencia parcial.** El libro indica registrar el aborto en la casilla
 `T.C.N.`, pero no define la sigla `AB` ni una regla de conteo.
 
-- Registro reproductivo (p. 67): «ABORTOS: reportar fecha y en la casilla TCN,
+- Registro reproductivo, p. 67 (física; impresa: pendiente de verificar): «ABORTOS: reportar fecha y en la casilla TCN,
   aborto».
-- `T.C.N.` (p. 67): «tamaño de camada o número de crías vivas y muertas al
+- `T.C.N.`, p. 67 (física; impresa: pendiente de verificar): «tamaño de camada o número de crías vivas y muertas al
   nacimiento».
 - **No se encuentra en el libro** la sigla `AB` ni una instrucción de cuántos
   abortos contar por parto o por celda. La indicación es registrar la fecha y
@@ -107,12 +107,12 @@ asocia `R` con el motivo de salida.
 
 **Evidencia encontrada.** Se pesa la hembra al empadre.
 
-- Registro reproductivo (p. 67): «PESO MONTA: peso en gramos (g) de la hembra
+- Registro reproductivo, p. 67 (física; impresa: pendiente de verificar): «PESO MONTA: peso en gramos (g) de la hembra
   al empadre».
 - Reproducción (p. 26): «el apareamiento o empadre deber ser al alcanzar pesos
   de 800 a 900 gramos».
-- El registro distingue el peso del macho (p. 67, «PESO: peso del macho en
-  gramos (g)») y el peso de la madre al parto (p. 66, «PESO PARTO: peso en
+- El registro distingue el peso del macho, p. 67 (física; impresa: pendiente de verificar) («PESO: peso del macho en
+  gramos (g)»), y el peso de la madre al parto, p. 66 (física; impresa: pendiente de verificar) («PESO PARTO: peso en
   gramos (g) de la madre al parto»). El peso de monta es el de la hembra.
 
 **Alcance.** El libro confirma qué se pesa y en qué momento; no confirma que la
@@ -124,14 +124,14 @@ correspondencia sigue requiriendo revisión por registro (D9 sigue PROPUESTO).
 **Evidencia parcial.** El libro describe campos y abreviaturas del registro
 reproductivo, no un catálogo cerrado de eventos.
 
-- Registro reproductivo (p. 67): «FECHA DE MONTA: fecha de empadre»; «FECHA P1:
+- Registro reproductivo, p. 67 (física; impresa: pendiente de verificar): «FECHA DE MONTA: fecha de empadre»; «FECHA P1:
   fecha del parto número 1» (y P2–P4); «FECHA DESCARTE: fecha de finalización de
   la etapa reproductiva»; «ABORTOS: reportar fecha y en la casilla TCN,
   aborto»; «OBSERVACIONES: reporte de fecha de reproductores muertos y fecha de
   reemplazo».
-- `T.C.N.` (p. 67): «tamaño de camada o número de crías vivas y muertas al
+- `T.C.N.`, p. 67 (física; impresa: pendiente de verificar): «tamaño de camada o número de crías vivas y muertas al
   nacimiento».
-- `DESTINO` (p. 66): «R: reproductor; D: descarte; V: vendido; M:muerto; L:
+- `DESTINO`, p. 66 (física; impresa: pendiente de verificar): «R: reproductor; D: descarte; V: vendido; M:muerto; L:
   levante; E: engorde».
 - **No se encuentra en el libro** un catálogo de eventos con códigos de evento
   ni una lista de tipos publicables. Los nombres y abreviaturas son campos del
