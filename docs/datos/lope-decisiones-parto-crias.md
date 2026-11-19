@@ -2,9 +2,9 @@
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.1-propuesta |
-| Fecha | 2026-11-17 |
-| Estado | **ANEXO DE LA MATRIZ CANÓNICA; decisiones abiertas, ninguna aprobada** |
+| Versión | 1.2 |
+| Fecha | 2026-11-19 |
+| Estado | **ANEXO DE LA MATRIZ CANÓNICA; D6 CONFIRMADO POR EL CENTRO; D1–D5 y D7–D15 sin aprobación de dominio** |
 | Matriz canónica | `docs/verificaciones/matriz-carga-real-lope.md` |
 
 ## Relación con la matriz canónica
@@ -32,7 +32,7 @@
 | D3 | D3 | Sin diferencia de numeración; PENDIENTE en ambos. |
 | D4 | D4 | Matriz: «PREPARADO la parte técnica; PENDIENTE la decisión»; anexo: PENDIENTE. Mismo fondo: falta la decisión de dominio. |
 | D5 | D5 | La matriz D5 agrupa los conflictos de animales e identidades; el anexo D5 trata la aceptación de correspondencias origen↔entidad. Apuntan a la misma compuerta de correspondencias; ambos PENDIENTES. |
-| D6 | D6 | Matriz: «PREPARADO la aclaración; PENDIENTE el motivo y su fuente»; anexo: aclaración de Oskar pendiente de validación de dominio. Equivalente; ver la nota de `R` en la fila D6. |
+| D6 | D6 | Matriz: «PREPARADO la aclaración; PENDIENTE el motivo y su fuente»; anexo: `R` = REMPLAZO CONFIRMADO por el Centro (Luis Mangin, 2026-11-18). Sigue pendiente el motivo concreto por fila (D15). |
 | D7 | D7 | PENDIENTE en ambos. |
 | D8 | D8 | PENDIENTE en ambos. |
 | D9 | D9 | Matriz: PENDIENTE; anexo: PROPUESTO (pendiente de validación). El anexo registra una propuesta concreta; no hay aprobación. |
@@ -41,7 +41,7 @@
 | D12 | D12 | Matriz: «PREPARADO el comando; PENDIENTE ejecución y revisión»; anexo: PENDIENTE. Equivalente. |
 | D13 | D13 | Matriz: «PREPARADO y comprobado en laboratorio; PENDIENTE comprobación inmediata»; anexo: PENDIENTE. Equivalente. |
 | D14 | D14 | Matriz: «COMPROBADO como disponible; PENDIENTE confirmación de destino»; anexo: COMPARTIDO POR CANAL PRIVADO (por Oskar), valor no registrado en Git. Equivalente; falta la confirmación de destino. |
-| D15 | D6 (motivo de salida) | **No existe en la matriz; propuesta de nueva fila para Oskar.** El motivo concreto de salida está incluido en la matriz D6; este anexo lo separa como D15. PENDIENTE. |
+| D15 | D6 (motivo de salida) | **No existe en la matriz; propuesta de nueva fila para Oskar.** El motivo concreto de salida está incluido en la matriz D6; este anexo lo separa como D15. Sigue PENDIENTE: la leyenda de `DESTINO` da la salida, pero `R` no aparece en esa columna y el motivo no se registra junto a la letra. |
 
 ## Declaración de alcance
 
@@ -65,11 +65,12 @@
   en `docs/verificaciones/piloto-paridad-documentacion.md` §5; los cuatro
   documentos aprobados no se editan aquí.
 - **Pendiente:** los requisitos operativos, sus responsables y sus evidencias
-  están en la matriz canónica; este anexo no repite esa lista. Las decisiones
-  D1–D15 siguen sin aprobación de dominio: D10 solo tiene la comprobación
-  técnica de Oskar, D6 solo la aclaración `R` = REEMPLAZO y D9 sigue PROPUESTO.
-  La aprobación técnica con reservas de los cuatro documentos (PR #171) no
-  cierra ninguna decisión ni compuerta de carga.
+  están en la matriz canónica; este anexo no repite esa lista. D6 quedó
+  CONFIRMADO por el Centro (`R` = REMPLAZO); D1–D5 y D7–D15 siguen sin
+  aprobación de dominio: D10 solo tiene la comprobación técnica de Oskar, D15
+  sigue sin fuente de motivo por fila y D9 sigue PROPUESTO. La aprobación
+  técnica con reservas de los cuatro documentos (PR #171) no cierra ninguna
+  decisión ni compuerta de carga.
 
 ## Decisiones abiertas
 
@@ -86,7 +87,7 @@ propuesta para el revisor; no aprueba ni cambia los estados.
 | D3 | ¿Qué `rol` corresponde a cada vínculo parto↔cría? | (a) `CRIA` (default del DDL, no es evidencia); (b) otro rol con evidencia de columna/contexto; (c) dejar pendiente. | `lope-diccionario-mapeo.md` §Mapeos y decisiones (item 3); `lope-identidad-conciliacion.md` §Decisiones que requieren evidencia (punto 3). | Sin `rol` resuelto no se promueve el vínculo; el dry-run no incluye la fila. | Diery aporta evidencia; revisor técnico designado aprueba. | PENDIENTE |
 | D4 | ¿Cómo resolver los casos que contradicen la unicidad vigente de `parto_crias` (`UNIQUE (cuy_id)` y `UNIQUE (parto_id, cuy_id)`), distinta de la chapa repetible? | (a) dejar sin aceptar los casos no resueltos; (b) resolver con evidencia; (c) no cambiar la restricción. | `lope-diccionario-mapeo.md` §Mapeos y decisiones (item 4); `lope-identidad-conciliacion.md` §Decisiones que requieren evidencia (punto 4). | Los conflictos no resueltos se excluyen del dry-run; la restricción no se modifica. | Diery prepara evidencia; revisor técnico designado decide. | PENDIENTE |
 | D5 | ¿Se acepta la correspondencia origen↔entidad para cada vínculo, con motivo, evidencia y revisor técnico designado? | (a) `ACEPTADO`; (b) `RECHAZADO`; (c) `AMBIGUO`; (d) `PENDIENTE`. | `lope-identidad-conciliacion.md` §Decisiones que requieren evidencia (primer punto); `lope-plan-migracion-validacion.md` §Compuertas (decisiones humanas de correspondencias). | Sin `ACEPTADO` no hay promoción; el dry-run no incluye la correspondencia. | Diery prepara propuestas; Oskar/Centro Lope designan revisor; ese revisor decide. | PENDIENTE |
-| D6 | ¿Cuál es el significado de `R` en su columna y contexto? | Aclaración de Oskar: `R` = REEMPLAZO, un animal que sale de su función (por ejemplo enfermedad o venta); por sí sola no demuestra muerte ni descarte. El motivo de salida se conserva en un campo separado; ver D15. En los archivos de datos `R` aparece en `COLOR` (15 veces), no en `DESTINO`; no confundir columnas. El motivo y su fuente siguen pendientes (matriz D6). | `lope-modelo-ddl-propuesto.md` §Estructuras y semánticas (valor `R`); `lope-diccionario-mapeo.md` §Mapeos y decisiones (R); `lope-identidad-conciliacion.md` §Decisiones que requieren evidencia (R); `lope-eventos-valores-encontrados.md` §4; `docs/verificaciones/matriz-carga-real-lope.md` (D6); `lope-evidencia-libro.md` §1, §3. | `tools/lope_import` no normaliza `R`; no afecta `parto_crias` directamente pero bloquea publicación de campos con `R`. | Oskar aporta la aclaración; responsable de dominio (por definir) valida; Oskar actualiza el documento normativo. | ACLARACIÓN DE OSKAR — PENDIENTE DE VALIDACIÓN DE DOMINIO |
+| D6 | ¿Cuál es el significado de `R` en su columna y contexto? | **CONFIRMADO por el Centro:** en `DESTINO`, `R` = REMPLAZO (Luis Mangin, 2026-11-18). El motivo puede variar (enfermedad u otro) y en la columna solo se anota la `R`, no el motivo; ver D15. El libro (p. 66 física) define `R` de `DESTINO` como «reproductor», pero la leyenda del registro individual del Centro manda para sus registros y fue confirmada por el responsable de dominio. La `R` de `COLOR` forma parte de los códigos `RB` y `BR` (rojo con blanco): no es un remplazo. | Leyenda del registro individual del Centro (fotografía; soporte conservado fuera del repositorio) y confirmación de Luis Mangin (2026-11-18, medio: `[WhatsAPP]`), registradas en §Leyenda del registro individual del Centro. Contraste: `lope-evidencia-libro.md` §1, §3. | `tools/lope_import` no normaliza `R`; no afecta `parto_crias` directamente. Tampoco se publica un motivo derivado de `R`. | Luis Mangin (responsable de dominio) confirma; Oskar actualiza el documento normativo. | CONFIRMADO POR EL CENTRO (2026-11-18) |
 | D7 | ¿Cuál es el catálogo de eventos y la semántica de `detalle`? | No hay catálogo de dominio cerrado; los tipos previstos en el sistema no prueban cuáles registra el Centro. Ver §Información y propuesta de Oskar (D7) y `lope-eventos-valores-encontrados.md`. (a) acordar valores permitidos, significado de `detalle` y evidencia por evento; (b) no publicar eventos sin catálogo revisado. | `lope-modelo-ddl-propuesto.md` §Estructuras y semánticas (eventos.tipo); `lope-diccionario-mapeo.md` §Mapeos y decisiones (catálogo eventos); `lope-identidad-conciliacion.md` §Decisiones que requieren evidencia (catálogo eventos); `lope-eventos-valores-encontrados.md`; `lope-evidencia-libro.md` §6. | Sin catálogo revisado, los eventos no se promueven; el dry-run excluye esa entidad. | Oskar aporta la información; responsable del Centro (por definir) valida. | PENDIENTE |
 | D8 | ¿Cuál es la fuente autorizada de abortos? | `AB` aparece en las celdas `T.C.N.` (17 apariciones: reproductivo G1 6; reproductivo G2 viejo 11), pero no hay cantidad verificable ni regla aprobada para contar ocurrencias; no convertirlo en número. Al cargar se conserva archivo, hoja y celda de cada ocurrencia como procedencia (en la herramienta, nunca en Git). Ver §Información y propuesta de Oskar (D8) y `lope-eventos-valores-encontrados.md` §3. (a) definir la regla de conteo; (b) no publicar sin regla. | `lope-modelo-ddl-propuesto.md` §Estructuras y semánticas (fuente de abortos); `lope-diccionario-mapeo.md` §Mapeos y decisiones (abortos); `lope-identidad-conciliacion.md` §Decisiones que requieren evidencia (abortos); `lope-eventos-valores-encontrados.md` §3; `lope-evidencia-libro.md` §4. | Los abortos no entran como cantidad al dry-run; cualquier conteo queda fuera hasta aprobar una regla. | Diery aporta trazabilidad; responsable del Centro (por definir) valida la regla; revisor técnico revisa. | PENDIENTE |
 | D9 | ¿Cuál es la fuente y significado del peso de monta frente a `PESO PARTO` y el peso del bloque reproductivo? | Fuente identificada: columna `Peso` de la fila de la hembra en el bloque reproductivo. Su interpretación como peso de monta requiere revisión por registro con procedencia; destino propuesto: pesaje de etapa `MONTA` vinculado a un evento `EMPADRE`, respetando el `CHECK` de `0005`. Ver §Información y propuesta de Oskar (D9) y `lope-eventos-valores-encontrados.md` §7. (a) validar la propuesta; (b) confirmar por registro; (c) rechazar. | `lope-diccionario-mapeo.md` §Mapeos y decisiones (peso de monta; propuesta `MONTA`); `lope-identidad-conciliacion.md` §Decisiones que requieren evidencia (peso de monta); `lope-eventos-valores-encontrados.md` §7; `lope-evidencia-libro.md` §5. | Sin validación, la propuesta `MONTA` no se promueve; el dry-run excluye esos pesajes. | Diery aporta procedencia por registro; responsable del Centro (por definir) valida; revisor técnico revisa. | PROPUESTO (pendiente de validación) |
@@ -95,7 +96,7 @@ propuesta para el revisor; no aprueba ni cambia los estados.
 | D12 | ¿Se revisa el dry-run (conteos por entidad, exclusiones, errores y diferencias) antes de promover? | (a) Diery ejecuta solo tras autorización coordinada por Oskar; (b) revisor valida el resultado. | `lope-plan-migracion-validacion.md` §Compuertas (dry-run revisado). | Es la compuerta que habilita o no la promoción real; el dry-run debe quedar revisado y archivado. | Diery ejecuta tras autorización; coordinación de Oskar; revisor valida. | PENDIENTE |
 | D13 | ¿Se cuenta con respaldo restaurable y prueba de restauración inmediatamente antes de la promoción? | (a) administrador autorizado genera respaldo; (b) un administrador comprueba la restauración; coordinado por Oskar. | `lope-plan-migracion-validacion.md` §Compuertas (respaldo restaurable). | Sin respaldo verificable no hay promoción real; no afecta el dry-run en sí. | Administrador autorizado comprueba la restauración; coordinación de Oskar. | PENDIENTE |
 | D14 | ¿Se autoriza el `scope_id` por canal privado (configuración autorizada)? | (a) Oskar comparte por canal privado; (b) no guardar el valor en Git. | `lope-plan-migracion-validacion.md` §Compuertas (ámbito autorizado por canal privado); `lope-identidad-conciliacion.md` §Controles de identidad. | Sin `scope_id` autorizado el manifiesto no se puede generar; el dry-run no es promocionable. | Oskar (canal privado). | COMPARTIDO POR CANAL PRIVADO (por Oskar); valor no registrado en Git |
-| D15 | ¿Cuál es la fuente autorizada del motivo de salida de un animal marcado `R` (REEMPLAZO) y cómo impacta el diccionario de mapeo? | `R` = REEMPLAZO (aclaración de Oskar). No se deduce de `R`: revisar `DESTINO` y observaciones con evidencia. En los archivos revisados `R` no aparece en `DESTINO` (solo 15 veces en `COLOR`, donde es color); `DESTINO` observado: `M` 545, `V` 297, vacío 6465. Observaciones: EMPADRE/MONTA 13, VENTA 5, MUERTE 1 (macho), sin mención de `R`. Ver §Información y propuesta de Oskar (D15) y `lope-eventos-valores-encontrados.md` §4–§5. (a) identificar el campo fuente del motivo con trazabilidad; (b) no publicar el motivo sin fuente; (c) no inferir muerte ni descarte desde `R`. | Aclaración de Oskar en este documento (D6); `docs/verificaciones/matriz-carga-real-lope.md` (D6, motivo de salida); `lope-diccionario-mapeo.md` §Mapeos y decisiones (R); `lope-identidad-conciliacion.md` §Decisiones que requieren evidencia (R); `lope-eventos-valores-encontrados.md` §4–§5; `lope-evidencia-libro.md` §1 y §3. | Sin motivo de salida resuelto, ese campo queda fuera del manifiesto; el dry-run no lo incluye. | Diery aporta la fuente; responsable del Centro (por definir) valida; revisor técnico revisa. | PENDIENTE |
+| D15 | ¿Cuál es la fuente autorizada del motivo de salida y cómo impacta el diccionario de mapeo? | La salida se lee de `DESTINO` con la leyenda `M` = muere, `D` = descarte, `V` = vendido, `R` = remplazo, `SP` = sin placa, `L` = levante, `E` = engorde. El motivo concreto NO se registra en `DESTINO` para `R` (solo la letra), así que NO se deduce un motivo de la `R`. En el registro individual disponible solo aparecen `M` y `V`; `R`, `D`, `L`, `E` y `SP` están ausentes en `DESTINO`. Queda PENDIENTE si la `R` marca al animal que reemplaza o al reemplazado; hoy ninguna fila de `DESTINO` la contiene y no se mapea ni como salida ni como motivo hasta aclararlo. | Leyenda del registro individual del Centro (fotografía; soporte conservado fuera del repositorio) y confirmación de Luis Mangin (2026-11-18, medio: `[MEDIO: ___]`), §Leyenda del registro individual del Centro. Recuento agregado por archivo y hoja en ese mismo apartado. | Sin motivo de salida resuelto, ese campo queda fuera del manifiesto; el dry-run no lo incluye. | Diery aporta la fuente; Luis Mangin valida; revisor técnico revisa. | PENDIENTE |
 
 ## Información y propuesta de Oskar, pendiente de validación del responsable del Centro
 
@@ -129,16 +130,69 @@ propuesta para el revisor; no aprueba ni cambia los estados.
   Mangin las validará con la retroalimentación al probar el sistema en el SENA.
   Designación formal registrada por Oskar: pendiente.
 - **D15 — motivo de salida de `R`; no existe en la matriz y se propone como
-  nueva fila para Oskar.** `R` = REEMPLAZO, pero `R` no aparece en
-  `DESTINO` en los archivos revisados (solo 15 veces en `COLOR`, que es la
-  columna de color). `DESTINO` observado: `M` 545, `V` 297, vacío 6465.
-  En observaciones: EMPADRE/MONTA 13, VENTA 5, MUERTE 1 (macho), sin mención de
-  `R`. No hay vínculo por fila entre `DESTINO` y observaciones, así que el motivo
-  de salida no es demostrable con estos archivos. Detalle en
-  `lope-eventos-valores-encontrados.md` §4–§6. La evidencia del libro para D15
-  cita p. 66 (física; impresa p. 65, verificada por Diery) y p. 67 (física;
-  impresa p. 66, verificada por Diery). La referencia a p. 61 es física; su
-  impresa p. 60, verificada por Diery.
+  nueva fila para Oskar.** `R` = REMPLAZO confirmado por el Centro, pero `R` no
+  aparece en `DESTINO` en los archivos revisados. En `COLOR` sí hay 15 celdas
+  sueltas `R` (14 + 1), además de `RB`/`BR`; son códigos de color, no remplazos.
+  `DESTINO` observado: `M` 545, `V` 297, vacío 11250; no hay `D`, `L`, `E`, `SP`
+  ni `R`. El desglose por archivo y hoja está en §Leyenda del registro
+  individual del Centro. En observaciones: EMPADRE/MONTA 13, VENTA 5, MUERTE 1
+  (macho), sin mención de `R`. No hay vínculo por fila entre `DESTINO` y
+  observaciones, así que el motivo de salida no es demostrable con estos
+  archivos. Detalle en `lope-eventos-valores-encontrados.md` §4–§6. La evidencia
+  del libro para D15 cita p. 66 (física; impresa p. 65, verificada por Diery) y
+  p. 67 (física; impresa p. 66, verificada por Diery). La referencia a p. 61 es
+  física; su impresa p. 60, verificada por Diery.
+
+### Leyenda del registro individual del Centro (D6, D15 y codificaciones)
+
+**Fuente:** leyenda del registro individual del Centro (fotografía; soporte
+conservado fuera del repositorio) y confirmación de Luis Mangin, responsable de
+dominio (2026-11-18, medio: `[MEDIO: ___]`). El soporte fotográfico no se
+versiona; aquí solo se registra su lectura agregada, sin identificadores,
+códigos de animal ni pesos individuales.
+
+#### D6 — `R` en `DESTINO`
+
+- **R = Remplazo. CONFIRMADO por el Centro.** Luis Mangin confirmó que en
+  `DESTINO` la `R` significa reemplazo; el motivo puede variar (por ejemplo
+  enfermedad u otro) y en la columna solo se anota la `R`, no el motivo.
+- El libro (p. 66 física) define `R` de `DESTINO` como «reproductor». Esa
+  definición queda como contraste documental; para los registros individuales
+  del Centro manda su leyenda y la confirmación del responsable de dominio.
+- La `R` de la columna `COLOR` forma parte de los códigos de color `RB` y `BR`
+  (rojo con blanco). No es un remplazo y no debe trasladarse a `DESTINO`.
+
+#### D15 — motivo de salida
+
+- La fuente de la salida es la columna `DESTINO` con la leyenda: `M` = muere,
+  `D` = descarte, `V` = vendido, `R` = remplazo, `SP` = sin placa, `L` =
+  levante, `E` = engorde.
+- El motivo concreto NO se registra en `DESTINO` para `R` (solo la letra), así
+  que NO se deduce un motivo de la `R`.
+- Queda **PENDIENTE**: si la `R` marca al animal que reemplaza o al reemplazado.
+  Hoy ninguna fila de `DESTINO` la contiene y no se mapea ni como salida ni como
+  motivo hasta aclararlo.
+
+**Recuento agregado (solo conteos; sin valores individuales):**
+
+| Archivo | Hoja | `DESTINO` observado | Vacío en `DESTINO` | `R` suelta en `COLOR` |
+|---|---|---|---:|---:|
+| `REG IND GALPON 1 2026.xlsx` | ` R. INDIVIDUAL 2026` | `M` 179; `V` 0; `R`/`D`/`L`/`E`/`SP` 0 | 5867 | 14 |
+| `REG IND GALPON 2 2025-2026.xlsx` | ` R. INDIVIDUAL 2025` | `M` 366; `V` 297; `R`/`D`/`L`/`E`/`SP` 0 | 5383 | 1 |
+| `REGISTRO REPRODUCTIVO GALPON 1.xlsx` | ` GALPON 1 2026` | Sin columna `DESTINO` | n/a | 0 |
+| `REGISTRO REPRODUCTIVO GALPON 2 VIEJO.xlsx` | ` GALPON 2 2026` | Sin columna `DESTINO` | n/a | 0 |
+
+- Totales en `DESTINO`: `M` 545, `V` 297, vacío 11250; `R`, `D`, `L`, `E` y
+  `SP` no aparecen en esa columna en ninguno de los cuatro archivos.
+- Sí aparece `R` como valor suelto: 15 celdas en total, todas en `COLOR`
+  (14 + 1), además de los códigos compuestos `RB` y `BR`. El recuento anterior
+  de «15 en COLOR» queda confirmado; no debe interpretarse como 15 remplazos ni
+  como presencia de `R` en `DESTINO`.
+
+#### Codificaciones confirmadas
+
+- `SEXO`: `1` = machos, `2` = hembras.
+- `COLOR OJOS`: `1` = negros, `2` = rojos.
 
 ### Antecedentes de la relación con el Centro Lope (relato de Diery, pendiente de soporte documental)
 
@@ -173,8 +227,8 @@ e) La autorización por escrito del uso de los datos y del corpus en el trabajo 
   parte de esa aprobación.
 - **Comprobado técnicamente:** D10 (PR #170). La decisión de dominio de D10
   sigue pendiente.
-- **Aclarado, sin validación de dominio:** D6 (`R` = REEMPLAZO); el motivo y su
-  fuente siguen pendientes.
+- **CONFIRMADO por el Centro:** D6 (`R` = REMPLAZO en `DESTINO`, 2026-11-18);
+  D15 (motivo concreto) sigue PENDIENTE.
 - **Propuesto:** D9 (peso de monta), pendiente de validación.
 - Los demás estados, bloqueos y responsables se consultan en la matriz; este
   anexo no mantiene una lista paralela.
