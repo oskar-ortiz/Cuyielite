@@ -6,8 +6,9 @@ La fuente canónica de requisitos de carga sigue siendo `docs/verificaciones/mat
 |---|---|---|---|
 | Plataforma Windows (ejecutable empaquetado, perfil aislado, reapertura) | Oskar | **Cerrado por plataforma** | Verificado en esta sesión; `ensayo-candidata-luis-sena.md` |
 | Plataforma Android (`.lab`, A–D, viewer, reapertura) | Oskar | **Cerrado por plataforma** | Verificado con evidencia equivalente; `rag-comprobacion-ui.md` |
-| Instalador NSIS actualizado y firma | Oskar | **Pendiente de entorno** | Regenerar con herramienta disponible; ejecutable `win-unpacked` verificado y sin firma |
-| Acceso directo habitual desactualizado | Oskar | **Pendiente** | Solo si se decide actualizar la instalación; se entregó acceso directo separado |
+| Instalador NSIS actualizado | Oskar | **Comprobado, sin firma comercial** | Instalación y reinstalación con datos conservados; [evidencia](../verificaciones/instaladores-piloto.md) |
+| Acceso directo habitual | Oskar | **Actualizado** | Destino instalado contrastado con ejecutable y app.asar verificados |
+| APK para celular físico | Oskar | **Archivo preparado; teléfono no observado** | Firma/debug y ABI comprobados; Oskar instalará según la [guía](instalar-piloto.md) |
 | Pertinencia RAG (gestación, vitamina C), procedencia de preguntas y validación experta | Diery | **Pendiente** | Revisión de fuentes/páginas y criterio experto; no se ajustó umbral ni generación |
 | Aprobación técnica de los cuatro documentos Lope | Oskar | **Emitida con reservas** | No volver a presentar como pendiente |
 | Validación zootécnica / correspondencias | Luis / SENA + revisor | **Pendiente** | Revisión de los cuatro documentos sobre datos sintéticos y criterio de dominio |

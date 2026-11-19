@@ -14,6 +14,8 @@ No incluye: datos reales del Centro Lope, credenciales, modelos `.pkl`, Excel/PD
 
 ## 2. Cómo arrancarla
 
+**Actualización posterior:** el [instalador Windows y APK para el celular](instalar-piloto.md) ya están preparados y el instalador se comprobó sobre la instalación existente. La guía enlazada contiene los archivos actuales, hashes y límites. El antiguo Setup del 12/11 sigue sin representar la candidata.
+
 Guía operativa completa: [guia-usuario.md](guia-usuario.md). Resumen:
 
 1. Windows: requisitos y backend local en `docs/operacion/piloto-local.md`.
@@ -28,9 +30,9 @@ Guía operativa completa: [guia-usuario.md](guia-usuario.md). Resumen:
 |---|---|---|---|---|
 | Windows empaquetado (verificado) | `client/electron/dist/win-unpacked/CuyiElite.exe` | `0.0.0` (Electron 45.2.1), `candidata-ac81eef-20261118`, 21:56 del 2026-11-18, 249.793.536 bytes, debug/desempaquetado | `05799d0dec2d91ce18a81a6f0a23718ca8563b80ee7e4e2c88d000b8f0db2c5a` | **Sin firmar**: `no code signing certificate configured, signing is skipped` |
 | Android aislado (`.lab`, instalado y verificado) | `client/android/app/build/outputs/apk/debug/app-debug.apk` | `1.0` / `versionCode 1`, debug, JDK 21, `-PlabAppId=true`, 14.260.229 bytes | `ef41d9d628c16c02013ee8a24a9bd3bcb8cd4e25f7389eb7b3a8d1b5916ec1d3` | Debug; no es release de producción |
-| Instalador NSIS | — | **No regenerado**: electron-builder falló con `spawn UNKNOWN` durante `installAppDependencies`; el `Setup 0.0.0.exe` presente en `dist` es anterior (12/11) y no corresponde a la candidata | — | — |
+| Instalador NSIS (comprobado posteriormente) | `client/electron/dist/instaladores-piloto/CuyiElite Setup 0.0.0.exe` | Windows x64, per-user, 121.691.665 bytes; generado desde el paquete anterior mediante `--prepackaged` | `79d7c194edb4b0d6838344677c1562cd66d20b060d555974910f683a3809f164` | Sin firma comercial |
 
-El acceso directo habitual apunta a `%LOCALAPPDATA%\Programs\cuyielite-electron\CuyiElite.exe` (SHA `a01f383a…`, 16/11): **está desactualizado respecto de la candidata**. No se sobrescribió. Se creó `CuyiElite Candidata ac81eef.lnk` en el Escritorio, apuntando al ejecutable verificado.
+El acceso directo habitual apunta a `%LOCALAPPDATA%\Programs\cuyielite-electron\CuyiElite.exe`: **la instalación ya se actualizó** y se contrastaron binario y `app.asar` con el paquete verificado, conservando las bases. El acceso separado `CuyiElite Candidata ac81eef.lnk`, creado en la entrega inicial, sigue apuntando al paquete del repositorio; para uso habitual se utiliza **CuyiElite** del Escritorio o menú Inicio.
 
 No se subió ningún binario al repositorio ni a una release pública.
 
