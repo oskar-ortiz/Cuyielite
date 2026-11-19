@@ -152,7 +152,9 @@
 | `gestación` | 65 (0.843255); 67 (0.836926); 17 (0.835437); 66 (0.832289); 16 (0.830511) |
 | `vitamina C` | 71 (0.821071); 42 (0.819587); 75 (0.818508); 76 (0.816332); 84 (0.815263) |
 
-- `gestación` y `vitamina C` se miden sin respuesta esperada verificada: solo se registran páginas y puntuaciones, sin comparar ni declarar acierto.
+- En esa medición aún no se habían verificado las páginas esperadas de
+  gestación y vitamina C: se registraron páginas y puntuaciones sin declarar
+  acierto. La verificación posterior de Diery consta en la sección final.
 
 ### Limitaciones de esta medición
 
@@ -181,8 +183,9 @@ y las etiquetas no cambiaron.
 
 Las alternativas se compararon solo con `rag/eval/preguntas.yaml` (20 válidas
 y 5 fuera de corpus) y el conjunto de desarrollo de dos consultas piloto, todas
-con `top_k=5` y el mismo umbral. Las páginas probables del piloto siguen
-**pendientes de verificar por Diery**: gestación, 26/32/71; vitamina C, 32/42.
+con `top_k=5` y el mismo umbral. En esa selección, las páginas probables del
+piloto estaban **pendientes de verificar por Diery**: gestación, 26/32/71;
+vitamina C, 32/42. La verificación posterior consta en la sección final.
 
 | Conjunto y condición | hit@1 | hit@3 | hit@5 | MRR | Abstención fuera de corpus |
 |---|---:|---:|---:|---:|---:|
@@ -221,7 +224,7 @@ validación.
 - Antes significa extracción previa a la normalización; después, el extractor
   acotado de esta rama. Ambas corridas se hicieron en memoria, sin PostgreSQL.
 
-| Consulta exacta | Páginas esperadas (probables, pendientes de verificar por Diery) | Antes: páginas devueltas (similitud) | Después: páginas devueltas (similitud) | Esperadas en top 5 |
+| Consulta exacta | Páginas esperadas en esa medición (probables, entonces pendientes de verificar por Diery) | Antes: páginas devueltas (similitud) | Después: páginas devueltas (similitud) | Esperadas en top 5 |
 |---|---|---|---|---|
 | `¿Cuál es la duración de la gestación de los cuyes?` | 26 (probables 32, 71) | 28 (0.882710), 85 (0.839569), 26 (0.837789), 80 (0.834542), 25 (0.831932) | 28 (0.882710), 85 (0.839569), 26 (0.837789), 80 (0.834542), 25 (0.831932) | 26 sí; 32 y 71 no |
 | `¿Por qué los cuyes necesitan vitamina C en su alimentación?` | 32, 42 | 31 (0.857437), 28 (0.853332), 85 (0.848907), 32 (0.848079), 12 (0.843784) | 31 (0.857437), 28 (0.853332), 85 (0.848907), 32 (0.848079), 12 (0.843784) | 32 sí; 42 no |
@@ -236,6 +239,7 @@ validación.
 ## Repetición local con las variantes literales de Android y HTTP
 
 - Fecha: 2026-11-18.
+- Convención de páginas: las citas usan la página física del PDF (impresa + 1).
 - Modelo: `intfloat/multilingual-e5-base`; `top_k=5`; umbral sin cambios:
   `0.807566308073`.
 - PDF: SHA-256
@@ -256,7 +260,7 @@ Las preguntas se conservaron literalmente. Cada resultado muestra página y
 similitud coseno, en el orden de recuperación; en Wi-Fi no hubo páginas
 devueltas porque las puntuaciones quedaron debajo del umbral.
 
-| Pregunta exacta | Antes: texto sin normalizar | Después: extractor actual |
+| Pregunta exacta | Antes (texto sin ligaduras): páginas físicas (similitud) | Después (texto normalizado): páginas físicas (similitud) |
 |---|---|---|
 | Android, gestación: `Cuál es la duración de la gestación de los cuyes?` | p. 28 (0.882193), p. 80 (0.833646), p. 85 (0.833463), p. 26 (0.832882), p. 12 (0.828432) | p. 28 (0.884517), p. 25 (0.833045), p. 26 (0.832882), p. 85 (0.832491), p. 80 (0.831892) |
 | HTTP, gestación: `¿Cuál es la duración de la gestación de los cuyes?` | p. 28 (0.882710), p. 85 (0.839569), p. 26 (0.837789), p. 80 (0.834542), p. 25 (0.831932) | p. 28 (0.885213), p. 85 (0.838537), p. 26 (0.837789), p. 25 (0.837672), p. 80 (0.832791) |
@@ -269,14 +273,18 @@ antes las listas difieren tanto en orden como en páginas. Después comparten la
 mismas cinco páginas, pero el orden sigue siendo diferente: Android
 `28, 25, 26, 85, 80`; HTTP `28, 85, 26, 25, 80`.
 
-El handoff registra para la reproducción **HTTP** las páginas de gestación
-`28, 85, 26, 80, 25` y de vitamina C `31, 28, 85, 32, 12`. No registra
-puntuaciones para esas listas. La lista local HTTP de gestación coincide en
-orden antes de normalizar y difiere después (p. 25 y p. 80 intercambian
-posición); vitamina C conserva el mismo orden del handoff antes y después.
-La diferencia de orden de gestación después de normalizar puede deberse a una
-diferencia entre el índice local en memoria y el índice del piloto; no se
-atribuye a una causa confirmada ni se fuerza un ajuste.
+El handoff registra para la reproducción **HTTP** las páginas físicas
+`28, 85, 26, 80, 25` (gestación) y `31, 28, 85, 32, 12` (vitamina C), sin
+puntuaciones. Con las páginas verificadas por Diery de la tabla inferior, en
+gestación solo la p. 26 física (tercera) está verificada; la p. 25 física no
+lo está. En vitamina C solo la p. 32 física (cuarta) está verificada; la p. 42
+no aparece y la p. 31 física no está verificada. La p. 31 aparece primera en
+el ranking local de vitamina C, pero no es un acierto verificado. La lista local
+HTTP de gestación coincide en orden antes de normalizar y difiere después (p.
+25 y p. 80 intercambian posición); vitamina C conserva el mismo orden del
+handoff antes y después. La diferencia de orden de gestación después de
+normalizar puede deberse a una diferencia entre el índice local en memoria y el
+del piloto; no se atribuye a una causa confirmada ni se fuerza un ajuste.
 
 La captura Android solo mostró citas a las páginas 28 y 80 para gestación y a
 la página 32 para vitamina C. No hay puntuaciones recuperables de la app; la
@@ -284,23 +292,31 @@ lista HTTP del handoff no se atribuye a esa pantalla.
 
 ### Páginas de referencia indicadas por Diery
 
-Las páginas y la revisión siguientes se marcan como **verificadas por Diery**,
-según la información aportada para esta comprobación. Se informan como
-referencias y no se calcula hit@k con ellas.
+Las páginas y la revisión siguientes se marcan como **verificadas por Diery**.
+Las páginas físicas son las del visor PDF y las impresas son las que aparecen
+al pie. Se informan como referencias; no se calcula hit@k con ellas.
 
-- **Gestación — p. 25, 26, 31 y 70. Veredicto: responde.** Frase indicada:
-  «La gestación dura entre 63 y 70 días. Se recomienda que este grupo de
-  animales no se manipulen y permanezcan en un ambiente tranquilo hasta el
-  momento del parto.»
-- **Vitamina C — p. 41 y 31. Veredicto: parcial** (da requerimiento, no
-  explica el porqué). En la evidencia indicada por Diery, el libro **no**
-  explica la razón fisiológica; aporta el requerimiento y la suplementación:
+| Tema | Física (visor) | Impresa (al pie) |
+|---|---|---|
+| Gestación | 26, 27, 32, 71 | 25, 26, 31, 70 |
+| Vitamina C | 32, 42 | 31, 41 |
+
+- **Gestación — física p. 26 (impresa p. 25). Veredicto: responde.** Frase
+  indicada: «La gestación dura entre 63 y 70 días…».
+- **Vitamina C — física p. 32 y 42 (impresas p. 31 y 41). Veredicto: parcial**
+  (da el requerimiento, no explica el porqué). La evidencia indicada por Diery
+  no explica la razón fisiológica; aporta el requerimiento y la suplementación.
+  La cita de suplementación corresponde a física p. 42 (impresa p. 41):
   «El concentrado es una mezcla de materias primas altamente ricas en
   nutrientes, que pueden administrarse como fuente única de la ración (en el
   que se deberá proporcionar agua y vitaminas adicionales, ricas en vitamina
   C) o como complemento (cuando se mezcla con forraje), los cuales cubren los
   requerimientos nutricionales, dependiendo de cada especie, edad, estado
   productivo y tipo de explotación a que se destina el animal.»
+
+**Verificado por Diery:** en D15, la p. 66 física corresponde a la impresa 65
+y la p. 67 física a la impresa 66; la p. 61 física corresponde a la impresa
+60, verificada por Diery.
 
 La ligadura se acepta como mejora de extracción. La pertinencia que siga
 fallando queda pendiente.

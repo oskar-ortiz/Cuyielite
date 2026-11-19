@@ -3,6 +3,9 @@
 Fecha: 2026-11-18. Para el seguimiento del extractor acotado en #183 y del
 reemplazo transaccional incorporado por #182.
 
+Convención de páginas: las citas usan la página física del PDF (impresa + 1).
+Si la página impresa no fue verificada, no se deduce: queda pendiente.
+
 ## Alcance y estado
 
 Esta entrega describe el procedimiento; **no se ejecutó ni se escribió en
