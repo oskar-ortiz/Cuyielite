@@ -1,6 +1,6 @@
 # Plan de prueba de aceptación — Luis / Centro Lope (SENA)
 
-Candidata: `candidata-ac81eef-20261118`. **Los campos de resultado, participante, fecha, versión y evidencia se completan en la sesión de prueba; no están prellenados.**
+Versión del escenario: **CuyiElite Ensayo, PR #191 (`0e76da1`)**. Presentación prevista para el 20/11/2026; la prueba de aceptación de Luis/SENA se registrará cuando ocurra. Rutas/hashes vigentes en [Ensayo aislado](ensayo-funcional-aislado.md#artefactos). **Resultados, participantes, fecha real y evidencia se completan durante la sesión; no están preaprobados.**
 
 ## Diferenciación de criterios
 
@@ -16,16 +16,17 @@ Un resultado de usabilidad favorable **no** equivale a validación de dominio ni
 
 | ID | Objetivo | Tarea para el participante | Resultado esperado | Resultado observado | Evidencia |
 |---|---|---|---|---|---|
-| AT-01 | Identificar la candidata | Abrir el acceso directo `CuyiElite Candidata ac81eef.lnk` | Se abre el ejecutable verificado; no el instalado en `%LOCALAPPDATA%\Programs` |  |  |
+| AT-01 | Identificar Ensayo | Ejecutar Iniciar Ensayo Local y abrir CuyiElite Ensayo en ambos equipos | Windows usa su ejecutable/perfil propio; Android es `.ensayo`; principal intacta |  |  |
 | AT-02 | Separar Demo/Trabajo | Entrar a Demo, volver con «Cambiar modo» y entrar a Trabajo | Cada modo muestra su propia base; no se mezclan registros |  |  |
-| AT-03 | Consultar galpones/pozas/animales | Recorrer Demo: galpón → pozas → animales | Listado coherente con datos sintéticos |  |  |
+| AT-03 | Consultar galpones/pozas/animales | Trabajo → Galpón Norte → P-01/P-02 → animales | Ocho animales del escenario; la muestra independiente Demo no se confunde con Trabajo |  |  |
 | AT-04 | Rol viewer | Iniciar sesión como viewer e intentar una acción de escritura | Solo consulta; sin acciones de edición |  |  |
-| AT-05 | Registro local autorizado | Registrar un galpón o poza sintética con admin | Persiste en la base local del modo elegido |  |  |
+| AT-05 | Registro local autorizado | Admin: H-002 → Registrar pesaje, guardar un valor nuevo | Persiste local; la operación queda pendiente hasta sincronizar |  |  |
 | AT-06 | Offline y outbox | Registrar sin backend y comprobar la operación pendiente | La operación queda conservada |  |  |
 | AT-07 | Reconexión y sincronización | Reconectar y sincronizar dos veces | Sin duplicación; mensaje de registros recibidos/enviados |  |  |
-| AT-08 | Conflicto sintético | Resolver un conflicto con una acción autorizada | Sin merge automático; sin edición manual de versiones/recibos |  |  |
-| AT-09 | Reglas y RF | Consultar una predicción con y sin modelo | Reglas en bloque principal; RF como apoyo separado o ausencia explicada |  |  |
+| AT-08 | Conflicto (opcional, si está preparado) | Resolver un conflicto real del escenario con una acción autorizada | Sin merge automático ni edición de versiones; si no hay caso, registrar NO EJECUTADO y citar evidencia previa |  |  |
+| AT-09 | Reglas y RF | H-002, parámetros del guion; Evaluar candidata | ELITE/CONFIRMADO y RF separado; no cambia categoría. El caso sin modelo tiene evidencia previa, no cambiar configuración durante la exposición |  |  |
 | AT-10 | Evaluaciones y alertas | Revisar dos abortos, cuarto parto y evidencia declarada/revisada | Provisional vs oficial; fecha ausente no inventada; sin descarte automático |  |  |
+| AT-10b | Leer evidencia existente | H-002 → Predicciones → Consultar evidencia del servidor | Siete criterios REVISADA; no declarar ni guardar de nuevo |  |  |
 | AT-11 | Asistente | Pregunta con fuentes y pregunta fuera de corpus | Fuentes visibles; abstención correcta |  |  |
 | AT-12 | Límite del asistente | Preguntar por gestación/vitamina C | Se explica que la pertinencia está pendiente; no se declara validado |  |  |
 | AT-13 | Cerrar y reabrir | Cerrar y reabrir la app | Sesión y datos según comportamiento vigente |  |  |

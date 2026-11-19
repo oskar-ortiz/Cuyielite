@@ -11,9 +11,14 @@ La **recepción de la entrega**, la **aceptación técnica**, la **validación z
 
 ## Estado previo registrado
 
+- **Aval del proyecto y responsable de dominio: CONFIRMADOS POR OSKAR el 19/11/2026.** Oskar confirmó la entrega de Diery. Aval original del 18/05/2026 por WhatsApp; Luis Mangin queda registrado como responsable de revisión zootécnica y correspondencias. Soporte privado fuera de Git; no se afirma inspección de firma por el agente. Este registro no prellena la aceptación de la prueba ni autoriza una carga real.
 - La **aprobación técnica de los cuatro documentos Lope ya está emitida con reservas** por Oskar (2026-11-17, PR #171, `aprobacion-tecnica-documentos-lope.md`). No se presenta de nuevo como pendiente.
 - Esa aprobación **no** acepta correspondencias reales, **no** sustituye la validación zootécnica y **no** autoriza una promoción de datos.
 - La confianza expresada por Oskar en el trabajo realizado **no sustituye** la revisión de correspondencias ni las decisiones humanas.
+
+## Presentación del Ensayo — 20/11/2026 (prevista)
+
+Usar [el guion vigente](guion-demostracion.md) y registrar lo que ocurra en [observaciones](observaciones.md). La fecha es de planificación, no prueba que la sesión ya se realizó. Versión base: PR #191, commit `0e76da1`; artefactos en [Ensayo aislado](ensayo-funcional-aislado.md). Participantes, resultados y conformidad de Luis/SENA se completan cuando hagan la prueba.
 
 ## Decisiones que quedan registradas cuando ocurran
 

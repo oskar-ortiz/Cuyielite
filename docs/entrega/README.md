@@ -1,6 +1,21 @@
-# Paquete de entrega — candidata `candidata-ac81eef-20261118`
+# Paquete de entrega — Ensayo Windows y celular
 
-Destinatario: Luis Mangin / Centro Agropecuario Lope (SENA). Estado: **candidata identificable y demostrable; no es una versión liberada ni una validación de dominio**.
+Actualizado: **19/11/2026**. Presentación prevista: **20/11/2026**. Estado: Ensayo funcional comprobado, separado de la aplicación principal. El aval del proyecto está confirmado por Oskar; la prueba de aceptación de Luis/SENA y la carga real se realizarán después.
+
+## Usar mañana
+
+1. [Arranque y recorrido de Ensayo](ensayo-funcional-aislado.md): Docker, **Iniciar Ensayo Local**, USB y app **CuyiElite Ensayo → Trabajo** en ambos equipos.
+2. [Guion con explicación de cada pantalla](guion-demostracion.md).
+3. [Plan de aceptación](plan-aceptacion.md), [observaciones](observaciones.md) y [conformidad/aval](conformidad.md). No prellenar resultados de una sesión que aún no ocurre.
+4. [Evidencia real Windows/teléfono](../verificaciones/ensayo-funcional-windows-celular.md) y [matriz de pendientes actualizada](matriz-pendientes.md).
+
+**Versión del código de Ensayo:** PR #191, commit `0e76da1`, integrado en `dev`. Ejecutable Windows propio y APK `.ensayo` actualizado; rutas y hashes vigentes en [Artefactos](ensayo-funcional-aislado.md#artefactos). La app principal conserva su instalación y sus datos; no usarla contra el backend de Ensayo.
+
+El RAG está conectado y comprobado con respuesta/fuentes y abstención en ambas plataformas. Eso no cierra su pertinencia global: B8 y las limitaciones documentadas siguen con Diery. El RF reconciliado está integrado como apoyo; falta la validación experta, no una nueva entrega obligatoria del mismo binario.
+
+## Referencia histórica de la candidata del 18/11
+
+Las secciones siguientes conservan la identificación de `candidata-ac81eef-20261118` y sus ensayos anteriores. **Sus rutas, APK `.lab` y pasos de emulador no son las instrucciones de la presentación actual.** Para mañana prevalecen los enlaces anteriores y los artefactos de Ensayo.
 
 ## 1. Qué incluye esta candidata
 
