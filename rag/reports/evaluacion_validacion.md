@@ -208,3 +208,99 @@ La pregunta válida cuya página esperada es 85 (B9) permanece sin cambios; esa
 página es bibliografía y su etiqueta queda pendiente de revisión manual por
 Diery. No se editaron las etiquetas ni las páginas esperadas del conjunto de
 validación.
+
+## Comprobación final con consultas completas de Android
+
+- Fecha: 2026-11-18.
+- Modelo: `intfloat/multilingual-e5-base`; umbral: `0.807566308073`; `top_k=5`.
+- Consultas exactas tomadas de `docs/integracion/handoff-diery-pertinencia-rag.md`.
+- El texto de los 76 fragmentos no cambió respecto de la regeneración anterior
+  (`fragments.json` SHA-256 `bd1acac99bbd6c4af588d847ca9abe3c6c2b2aa51dfa9d960994f897b21b680f`);
+  por eso no se re-midió la validación de 17/10/3. Se informa la abstención sobre
+  estas consultas.
+- Antes significa extracción previa a la normalización; después, el extractor
+  acotado de esta rama. Ambas corridas se hicieron en memoria, sin PostgreSQL.
+
+| Consulta exacta | Páginas esperadas (probables, pendientes de verificar por Diery) | Antes: páginas devueltas (similitud) | Después: páginas devueltas (similitud) | Esperadas en top 5 |
+|---|---|---|---|---|
+| `¿Cuál es la duración de la gestación de los cuyes?` | 26 (probables 32, 71) | 28 (0.882710), 85 (0.839569), 26 (0.837789), 80 (0.834542), 25 (0.831932) | 28 (0.882710), 85 (0.839569), 26 (0.837789), 80 (0.834542), 25 (0.831932) | 26 sí; 32 y 71 no |
+| `¿Por qué los cuyes necesitan vitamina C en su alimentación?` | 32, 42 | 31 (0.857437), 28 (0.853332), 85 (0.848907), 32 (0.848079), 12 (0.843784) | 31 (0.857437), 28 (0.853332), 85 (0.848907), 32 (0.848079), 12 (0.843784) | 32 sí; 42 no |
+| `¿Cómo configuro una impresora Wi-Fi?` | ninguna (fuera de corpus) | 15 (0.781993), 17 (0.781667), 52 (0.773322), 50 (0.772398), 16 (0.772029) | 15 (0.781993), 17 (0.781667), 52 (0.773322), 50 (0.772398), 16 (0.772029) | abstención: todas por debajo del umbral |
+
+- Abstención: la consulta Wi-Fi no devuelve resultados por encima del umbral.
+  Las dos consultas en dominio no se abstienen, pero sus páginas esperadas no
+  encabezan el top 5 (26 y 32 aparecen, 42 y 71 no).
+- La ligadura se acepta como mejora de extracción. La pertinencia que sigue
+  fallando queda pendiente.
+
+## Repetición local con las variantes literales de Android y HTTP
+
+- Fecha: 2026-11-18.
+- Modelo: `intfloat/multilingual-e5-base`; `top_k=5`; umbral sin cambios:
+  `0.807566308073`.
+- PDF: SHA-256
+  `c33392cb1422bfe50b0f44ccfcc2917888b4aa9b0329830d2b13db3a289a91ea`.
+- Se regeneró localmente el índice en memoria: 76 fragmentos, cuyo SHA-256
+  volvió a ser `bd1acac99bbd6c4af588d847ca9abe3c6c2b2aa51dfa9d960994f897b21b680f`.
+  Los embeddings regenerados tienen SHA-256
+  `d5fef42582abbe015cf3bc1a1781aba68a773b7e5ed69e207c61a2806bad44a4`.
+- «Antes» reconstruye los fragmentos con el extractor previo a la normalización
+  (`9cd9d00`); «después» usa el extractor actual y los embeddings regenerados.
+  Ambas mediciones son locales y en memoria, sin PostgreSQL.
+- Como el texto y el hash de los fragmentos no cambiaron, no se repitió la
+  evaluación de validación 17/10/3.
+
+### Consultas y resultados
+
+Las preguntas se conservaron literalmente. Cada resultado muestra página y
+similitud coseno, en el orden de recuperación; en Wi-Fi no hubo páginas
+devueltas porque las puntuaciones quedaron debajo del umbral.
+
+| Pregunta exacta | Antes: texto sin normalizar | Después: extractor actual |
+|---|---|---|
+| Android, gestación: `Cuál es la duración de la gestación de los cuyes?` | p. 28 (0.882193), p. 80 (0.833646), p. 85 (0.833463), p. 26 (0.832882), p. 12 (0.828432) | p. 28 (0.884517), p. 25 (0.833045), p. 26 (0.832882), p. 85 (0.832491), p. 80 (0.831892) |
+| HTTP, gestación: `¿Cuál es la duración de la gestación de los cuyes?` | p. 28 (0.882710), p. 85 (0.839569), p. 26 (0.837789), p. 80 (0.834542), p. 25 (0.831932) | p. 28 (0.885213), p. 85 (0.838537), p. 26 (0.837789), p. 25 (0.837672), p. 80 (0.832791) |
+| Vitamina C: `¿Por qué los cuyes necesitan vitamina C en su alimentación?` | p. 31 (0.857437), p. 28 (0.853332), p. 85 (0.848907), p. 32 (0.848079), p. 12 (0.843784) | p. 31 (0.856362), p. 28 (0.854396), p. 85 (0.849156), p. 32 (0.846605), p. 12 (0.841044) |
+| Control: `¿Cómo configuro una impresora Wi-Fi?` | Ninguna: abstención. Los cinco más cercanos, todos bajo el umbral: p. 15 (0.781993), p. 17 (0.781667), p. 52 (0.773322), p. 50 (0.772398), p. 16 (0.772029). | Ninguna: abstención. Los cinco más cercanos, todos bajo el umbral: p. 17 (0.781667), p. 15 (0.780958), p. 52 (0.773322), p. 50 (0.772398), p. 27 (0.771830). |
+
+La pregunta Android de gestación omite el signo inicial `¿`; se comparó
+explícitamente con la variante HTTP que sí lo contiene. En el índice local,
+antes las listas difieren tanto en orden como en páginas. Después comparten las
+mismas cinco páginas, pero el orden sigue siendo diferente: Android
+`28, 25, 26, 85, 80`; HTTP `28, 85, 26, 25, 80`.
+
+El handoff registra para la reproducción **HTTP** las páginas de gestación
+`28, 85, 26, 80, 25` y de vitamina C `31, 28, 85, 32, 12`. No registra
+puntuaciones para esas listas. La lista local HTTP de gestación coincide en
+orden antes de normalizar y difiere después (p. 25 y p. 80 intercambian
+posición); vitamina C conserva el mismo orden del handoff antes y después.
+La diferencia de orden de gestación después de normalizar puede deberse a una
+diferencia entre el índice local en memoria y el índice del piloto; no se
+atribuye a una causa confirmada ni se fuerza un ajuste.
+
+La captura Android solo mostró citas a las páginas 28 y 80 para gestación y a
+la página 32 para vitamina C. No hay puntuaciones recuperables de la app; la
+lista HTTP del handoff no se atribuye a esa pantalla.
+
+### Páginas de referencia indicadas por Diery
+
+Las páginas y la revisión siguientes se marcan como **verificadas por Diery**,
+según la información aportada para esta comprobación. Se informan como
+referencias y no se calcula hit@k con ellas.
+
+- **Gestación — p. 25, 26, 31 y 70. Veredicto: responde.** Frase indicada:
+  «La gestación dura entre 63 y 70 días. Se recomienda que este grupo de
+  animales no se manipulen y permanezcan en un ambiente tranquilo hasta el
+  momento del parto.»
+- **Vitamina C — p. 41 y 31. Veredicto: parcial** (da requerimiento, no
+  explica el porqué). En la evidencia indicada por Diery, el libro **no**
+  explica la razón fisiológica; aporta el requerimiento y la suplementación:
+  «El concentrado es una mezcla de materias primas altamente ricas en
+  nutrientes, que pueden administrarse como fuente única de la ración (en el
+  que se deberá proporcionar agua y vitaminas adicionales, ricas en vitamina
+  C) o como complemento (cuando se mezcla con forraje), los cuales cubren los
+  requerimientos nutricionales, dependiendo de cada especie, edad, estado
+  productivo y tipo de explotación a que se destina el animal.»
+
+La ligadura se acepta como mejora de extracción. La pertinencia que siga
+fallando queda pendiente.
