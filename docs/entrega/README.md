@@ -13,6 +13,8 @@ Actualizado: **19/11/2026**. Presentación prevista: **20/11/2026**. Estado: Ens
 
 El RAG está conectado y comprobado con respuesta/fuentes y abstención en ambas plataformas. Eso no cierra su pertinencia global: B8 y las limitaciones documentadas siguen con Diery. El RF reconciliado está integrado como apoyo; falta la validación experta, no una nueva entrega obligatoria del mismo binario.
 
+**Decisión de Oskar, 19/11/2026:** B8 se aplaza para una mejora futura y no bloquea la presentación del Ensayo. Se conserva su evidencia como limitación conocida; no se marca corregido ni se promete pertinencia global o calidad de producción.
+
 ## Referencia histórica de la candidata del 18/11
 
 Las secciones siguientes conservan la identificación de `candidata-ac81eef-20261118` y sus ensayos anteriores. **Sus rutas, APK `.lab` y pasos de emulador no son las instrucciones de la presentación actual.** Para mañana prevalecen los enlaces anteriores y los artefactos de Ensayo.

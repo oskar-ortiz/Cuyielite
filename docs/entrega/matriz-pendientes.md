@@ -10,7 +10,8 @@ Actualizada el **19/11/2026** para el Ensayo de Windows/teléfono, código PR #1
 | Acceso directo habitual | Oskar | **Actualizado** | Destino instalado contrastado con ejecutable y app.asar verificados |
 | APK para celular físico | Oskar | **Instalado y actualizado sin borrar datos** | Hash instalado coincide con el [APK Ensayo](ensayo-funcional-aislado.md#artefactos); evidencia en UI |
 | Integración RAG en ambas apps | Oskar | **Comprobada** | Respuesta/fuentes, abstención y permisos; no equivale a pertinencia global |
-| Pertinencia RAG (incluida B8) y validación experta | Diery / Luis | **Pendiente de mejora/validación** | Procedencia de preguntas entregada en el repo; conservar evaluación y límites, sin afirmar corrección global |
+| B8 del selector RAG | Mejora futura coordinada con Diery | **APLAZADO por Oskar el 19/11/2026; no bloquea Ensayo** | Conservar evidencia/regresión; no se declara resuelto ni se ajusta validación para aparentar cierre |
+| Resto de límites de pertinencia RAG y validación experta | Diery / Luis | **Limitaciones documentadas / validación posterior** | Procedencia de preguntas entregada en el repo; conservar evaluación y límites, sin afirmar corrección global |
 | Aprobación técnica de los cuatro documentos Lope | Oskar | **Emitida con reservas** | No volver a presentar como pendiente |
 | Aval del proyecto y responsable de dominio | Oskar / Luis | **Confirmados por Oskar el 19/11/2026** | Aval entregado por Diery; Luis Mangin registrado; soporte privado, sin inspección de firma atribuida al agente |
 | Validación zootécnica / correspondencias | Luis / SENA + revisor | **Pendiente** | Revisión de los cuatro documentos sobre datos sintéticos y criterio de dominio |
