@@ -1,15 +1,17 @@
-# Guía breve de usuario — candidata `candidata-ac81eef-20261118`
+# Guía breve de usuario — Ensayo Windows y celular
+
+Versión de código: PR #191 (`0e76da1`), actualizada el 19/11/2026. Inicio completo y hashes en [Ensayo aislado](ensayo-funcional-aislado.md). Abrir Docker, conectar USB y ejecutar **Iniciar Ensayo Local.cmd**. Usar **CuyiElite Ensayo** en ambos equipos; la app principal queda separada.
 
 ## Demo y Trabajo
 
-Al abrir la app se elige **Demostración** o **Trabajo**. Cada modo conserva su base por separado y se puede cambiar con «Cambiar modo». Demo contiene galpones y pozas de prueba; Trabajo es la base del piloto y puede estar vacía en un perfil nuevo. No mezclar registros entre modos.
+Al abrir se elige **Demostración** o **Trabajo**. Cada modo conserva su base separada. Para el recorrido completo actual elegir **Trabajo**: Galpón Norte → P-01/P-02 → Animales. Demostración conserva su muestra independiente de galpones/pozas; no es el inventario preparado de Ensayo.
 
 ## Acceso admin y viewer
 
-En Trabajo → «Acceso» se inicia sesión con la cuenta personal. Las credenciales del piloto se entregan por canal privado de Oskar y no están en este paquete.
+En Trabajo → «Acceso» usar las cuentas privadas de Ensayo (`ensayo.admin` / `ensayo.viewer`). Contraseñas por canal privado de Oskar, nunca en la presentación. No usar las cuentas `lope.*` en este laboratorio.
 
 - **Administrador**: puede registrar y editar en la base local; la sesión tiene ámbito y dispositivo propios.
-- **Viewer (`lope.viewer`)**: solo consulta. No muestra acciones de escritura y no puede sincronizar cambios propios.
+- **Viewer (`ensayo.viewer`)**: solo consulta. Descarga cambios sin enviar operaciones pendientes y no puede escribir ni resolver conflictos.
 - Tras cerrar y reabrir, la sesión activa se recupera según el comportamiento vigente. Si se pierde, volver a «Acceso».
 
 ## Registro y consulta
@@ -19,16 +21,17 @@ En Galpones se pueden crear galpones y pozas; desde una poza se consultan los an
 ## Offline, sincronización y conflictos
 
 - Sin backend, la consulta y el registro local siguen funcionando; la operación pendiente se conserva.
-- «Sincronización» ejecuta `context → pull → push`. El reenvío es idempotente: repetir la sincronización no duplica registros.
+- «Sincronización» envía y recibe cambios mediante los protocolos correspondientes. Repetir un ciclo completo no duplica registros; comprobar siempre el resumen y los pendientes.
 - Si aparece un conflicto, «Revisar conflictos» ofrece conservar la versión central o reenviar una edición revisada. No se hacen merges automáticos y no se editan manualmente versiones ni recibos.
 
 ## Reglas frente al apoyo del modelo
 
-La clase principal la determinan las **reglas zootécnicas**. El Random Forest es un **apoyo separado**: muestra probabilidades cuando el modelo está disponible y «Sin apoyo del modelo» cuando falta o no es válido. «Evaluar y guardar» es la única acción que persiste una evaluación oficial.
+La clase principal la determinan las **reglas zootécnicas**. El Random Forest es un **apoyo separado**: la ausencia se explica sin inventar probabilidades; un artefacto defectuoso puede producir un error y no equivale a modelo ausente. La consulta informativa no cambia categoría ni alertas. **Evaluar y guardar**, con permisos y evidencia aplicables, solicita una evaluación oficial.
 
 ## Evaluaciones, evidencia y alertas
 
 - «Declarada» y «Revisada» son estados distintos; no se presenta evidencia declarada como revisada.
+- **Consultar evidencia del servidor** lee los criterios existentes sin declararlos, revisarlos ni guardar otra evaluación. Antes de consultar, la pantalla no afirma que falten evidencias.
 - Dos abortos son una **propuesta provisional**: sin categoría oficial ni alerta.
 - El cuarto parto confirmado se trata con reglas; si falta la fecha, no se inventa.
 - El descarte **no** se ejecuta automáticamente.
@@ -41,9 +44,9 @@ Escribir una pregunta concreta, conservar `top_k=5` y pulsar «Preguntar». La r
 
 ## Recuperación básica y responsables
 
-- Si `/health` no responde: `python -m tools.piloto.servidor start` (o `status` para diagnosticar).
-- Si el emulador no alcanza el backend: `adb reverse tcp:8000 tcp:8000`. En un teléfono físico esa configuración no aplica.
+- Si el backend no responde: abrir Docker y ejecutar **Iniciar Ensayo Local.cmd**; comprobar `ensayo listo`.
+- Si el celular no conecta: reconectar USB, autorizarlo en el teléfono y ejecutar **Reconectar celular Ensayo.cmd**. El reverse por serial también funciona en el teléfono físico autorizado; no requiere exponer la API por Wi-Fi.
 - No borrar datos ni desinstalar la app habitual para “arreglar” la sesión.
 - Responsables: Oskar (plataforma/integración), Diery (datos, IA y pertinencia), Luis/SENA (dominio y aceptación). Canal privado de credenciales: Oskar.
 
-Detalle operativo: `docs/operacion/piloto-local.md`. Ensayo de esta candidata: `docs/verificaciones/ensayo-candidata-luis-sena.md`.
+Detalle: [Ensayo aislado](ensayo-funcional-aislado.md) y [evidencia vigente](../verificaciones/ensayo-funcional-windows-celular.md). Para volver a la principal hay que restaurar el modo piloto del backend según esa guía; no basta cambiar de acceso directo.
