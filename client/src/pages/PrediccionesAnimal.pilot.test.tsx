@@ -4,11 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import PrediccionesAnimal from './PrediccionesAnimal';
 
-const { predictCandidata, predictHembra, getCuyo, ensureAccessToken } = vi.hoisted(() => ({
+const { predictCandidata, predictHembra, getCuyo, ensureAccessToken, evaluationContext } = vi.hoisted(() => ({
   predictCandidata: vi.fn(),
   predictHembra: vi.fn(),
   getCuyo: vi.fn(),
   ensureAccessToken: vi.fn(),
+  evaluationContext: vi.fn(),
 }));
 
 vi.mock('@ionic/react', () => ({
@@ -63,7 +64,7 @@ vi.mock('../data/auth.session.js', async (importOriginal) => {
 });
 vi.mock('../data/ml.transport', async (importOriginal) => {
   const actual: any = await importOriginal();
-  return { ...actual, getMlTransport: () => ({ predictCandidata, predictHembra, evaluationContext: vi.fn() }) };
+  return { ...actual, getMlTransport: () => ({ predictCandidata, predictHembra, evaluationContext }) };
 });
 vi.mock('../data/work.domain.factory', () => ({ getDomainRepository: () => ({ getCuyo }) }));
 
@@ -85,6 +86,7 @@ describe('Predicciones en modo piloto', () => {
     predictHembra.mockReset();
     ensureAccessToken.mockReset();
     getCuyo.mockReset();
+    evaluationContext.mockReset();
     getCuyo.mockResolvedValue({ id: ANIMAL, codigoIdentificacion: 'C-1', sexo: 'H', estado: 'ACTIVO' });
   });
 
@@ -112,5 +114,40 @@ describe('Predicciones en modo piloto', () => {
     fireEvent.click(screen.getByText('Evaluar candidata'));
     expect(await screen.findByText(/Inicia sesión para consultar/)).toBeInTheDocument();
     expect(predictCandidata).not.toHaveBeenCalled();
+  });
+
+  it('distingue evidencia sin consultar de evidencia revisada del servidor', async () => {
+    ensureAccessToken.mockResolvedValue('token-de-sesion');
+    evaluationContext.mockResolvedValue({
+      evidencias: [{ campo: 'peso_monta_g', valor: '950', estado: 'REVISADA', revisada_at: null }],
+    });
+    renderPage();
+    expect(await screen.findByText('La evidencia del servidor todavía no se ha consultado.')).toBeInTheDocument();
+    expect(screen.queryByText('Sin evidencia registrada para este animal.')).toBeNull();
+    expect(evaluationContext).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByText('Consultar evidencia del servidor'));
+    expect(await screen.findByText('950 · REVISADA')).toBeInTheDocument();
+    expect(evaluationContext).toHaveBeenCalledWith('token-de-sesion', ANIMAL);
+    expect(screen.queryByText('La evidencia del servidor todavía no se ha consultado.')).toBeNull();
+  });
+
+  it('solo afirma ausencia después de una consulta vacía correcta', async () => {
+    ensureAccessToken.mockResolvedValue('token-de-sesion');
+    evaluationContext.mockResolvedValue({ evidencias: [] });
+    renderPage();
+    fireEvent.click(await screen.findByText('Consultar evidencia del servidor'));
+    expect(await screen.findByText('Sin evidencia registrada para este animal.')).toBeInTheDocument();
+  });
+
+  it('permite reintentar un error sin presentarlo como ausencia de evidencia', async () => {
+    ensureAccessToken.mockResolvedValue('token-de-sesion');
+    evaluationContext.mockRejectedValueOnce(new Error('Sin conexión')).mockResolvedValueOnce({ evidencias: [] });
+    renderPage();
+    fireEvent.click(await screen.findByText('Consultar evidencia del servidor'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Sin conexión');
+    expect(screen.queryByText('Sin evidencia registrada para este animal.')).toBeNull();
+    fireEvent.click(screen.getByText('Consultar evidencia del servidor'));
+    expect(await screen.findByText('Sin evidencia registrada para este animal.')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
