@@ -314,8 +314,9 @@ al pie. Se informan como referencias; no se calcula hit@k con ellas.
   requerimientos nutricionales, dependiendo de cada especie, edad, estado
   productivo y tipo de explotación a que se destina el animal.»
 
-**Numeración por confirmar:** D15 cita las páginas físicas 66 y 67 del libro;
-la numeración impresa de ambas está pendiente de verificar y no se deduce.
+**Verificado por Diery:** en D15, la p. 66 física corresponde a la impresa 65
+y la p. 67 física a la impresa 66. **Numeración por confirmar:** la p. 61
+física citada en la evidencia de D15 no tiene número impreso verificado.
 
 La ligadura se acepta como mejora de extracción. La pertinencia que siga
 fallando queda pendiente.

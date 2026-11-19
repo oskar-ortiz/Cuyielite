@@ -136,8 +136,9 @@ propuesta para el revisor; no aprueba ni cambia los estados.
   `R`. No hay vínculo por fila entre `DESTINO` y observaciones, así que el motivo
   de salida no es demostrable con estos archivos. Detalle en
   `lope-eventos-valores-encontrados.md` §4–§6. La evidencia del libro para D15
-  cita p. 66 (física; impresa: pendiente de verificar) y p. 67 (física;
-  impresa: pendiente de verificar); numeración impresa por confirmar.
+  cita p. 66 (física; impresa p. 65, verificada por Diery) y p. 67 (física;
+  impresa p. 66, verificada por Diery). La referencia a p. 61 es física; su
+  numeración impresa queda por confirmar.
 
 ### Antecedentes de la relación con el Centro Lope (relato de Diery, pendiente de soporte documental)
 
