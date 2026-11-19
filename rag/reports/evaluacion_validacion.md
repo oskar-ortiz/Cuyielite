@@ -318,5 +318,22 @@ al pie. Se informan como referencias; no se calcula hit@k con ellas.
 y la p. 67 física a la impresa 66; la p. 61 física corresponde a la impresa
 60, verificada por Diery.
 
-La ligadura se acepta como mejora de extracción. La pertinencia que siga
-fallando queda pendiente.
+### Conclusión de pertinencia de Diery
+
+La ligadura se acepta como mejora de extracción, pero esta repetición no
+demuestra una mejora general de pertinencia. En gestación, la p. 26 física
+verificada pasa de cuarta a tercera en la variante Android y permanece tercera
+en HTTP antes y después. En vitamina C, la p. 32 física verificada queda cuarta
+antes y después; la p. 42 no se recupera y la evidencia del libro es parcial:
+da el requerimiento, pero no explica el porqué. El control Wi-Fi se abstiene
+antes y después, como se esperaba.
+
+**Conclusión:** la recuperación de gestación incluye evidencia pertinente en
+top 5; para la consulta causal de vitamina C, la evidencia recuperada es
+parcial; y el control fuera de tema abstiene. La pertinencia queda concluida
+para esta repetición local, sin afirmar una mejora general atribuible a la
+normalización. La diferencia de orden frente al handoff HTTP puede deberse a
+una diferencia entre el índice local en memoria y el del piloto.
+
+La carga real no forma parte de esta evaluación: sigue condicionada a la
+revisión humana, el dry-run, el respaldo y una autorización concreta.

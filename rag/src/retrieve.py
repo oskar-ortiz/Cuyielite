@@ -32,12 +32,9 @@ class AnswerGenerator(Protocol):
 
 class ExtractiveGenerator:
     def generate(self, question: str, results: Sequence[SearchResult]) -> str:
-        if not results:
-            return "No encontré información en los manuales."
-        return "\n\n".join(
-            f"{result.contenido_chunk}\n[{format_citation(result.documento_fuente, result.pagina)}]"
-            for result in results
-        )
+        from rag.src.select import format_extract
+
+        return format_extract(question, results)
 
 
 def validate_top_k(top_k: int) -> int:
